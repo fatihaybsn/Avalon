@@ -1,0 +1,2 @@
+# Preserve byte-identical upstream files and their recorded SHA256 on Windows.
+/apps/desktop/vendor/openclaw/** -text

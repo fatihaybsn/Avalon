@@ -11,9 +11,15 @@
     "openclaw": true
   },
   "scripts": {
-    "check": "tsc --noEmit",
+    "check": "tsc --noEmit && npm --prefix apps/desktop run check",
     "test": "node --test tests/policy.test.mjs tests/reader.test.mjs tests/tavily.test.mjs",
-    "test:gateway": "pwsh -NoProfile -File scripts/test-jarvis-policy.ps1"
+    "test:gateway": "pwsh -NoProfile -File scripts/test-jarvis-policy.ps1",
+    "desktop:dev": "npm --prefix apps/desktop run dev",
+    "desktop:build": "npm --prefix apps/desktop run build",
+    "desktop:start": "npm --prefix apps/desktop start",
+    "desktop:pack:win": "npm --prefix apps/desktop run pack:win",
+    "test:desktop": "npm --prefix apps/desktop test",
+    "test:desktop:electron": "npm --prefix apps/desktop run test:electron"
   },
   "dependencies": {
     "openclaw": "2026.10.2"

@@ -2,9 +2,10 @@
 
 Windows 11'de doğrudan çalışan, OpenClaw merkezli kişisel asistan projesi.
 Tek merkez **OpenClaw Gateway**, konuşma tarafı **Gemini Live**, ağır görev
-modeli **Space Bunny Free**'dir. Mevcut durum: **03. aşama tamamlandı**
-(Gateway/model temeli, görev izinleri, salt okunur araştırma ve native onay bağlantısı).
-Masaüstü arayüzü, işçiler ve ses sonraki adımlardadır; bu sürüm geliştirme temelidir.
+modeli **Space Bunny Free**'dir. Mevcut durum: **04. aşama yazılı istemci tamamlandı**
+(Gateway, görev izinleri, salt okunur araştırma ve sade Electron/Vite/Lit arayüzü).
+Başarılı ağır görev/yanıt entegrasyonu OpenCode işçisiyle 10'da, canlı ses 11'de,
+sesli onay 13'te; tam kurulabilir dağıtım 16'dadır.
 
 Ayrıntılı mimari: `docs/KESIN_MIMARI.md` · Aşama durumu: `docs/GELISTIRME_DURUMU.md`
 
@@ -21,10 +22,17 @@ Ayrıntılı mimari: `docs/KESIN_MIMARI.md` · Aşama durumu: `docs/GELISTIRME_D
 git clone https://github.com/fatihaybsn/Avalon.git
 cd Avalon
 npm ci
+npm ci --prefix apps/desktop
 ```
 
 `npm ci` proje-yerel OpenClaw `2026.10.2` sürümünü kurar (bütünlük kilitli).
 Global kurulum yapılmaz, mevcut kurulumların üstüne yazılmaz.
+`npm ci --prefix apps/desktop` masaüstünün ayrı kilitli bağımlılıklarını kurar:
+Electron `44.7.0`, Vite `8.3.1`, Lit `3.3.3` ve TypeScript `6.0.3`.
+Komutları bundan sonra depo kökünde çalıştırın; yönetici terminali veya WSL gerekmez.
+İlk masaüstü çalıştırmasında Electron'un resmî Windows binary'si indirilebilir;
+internet erişimi gerekir. `node_modules`, `dist` ve `release` Git'e alınmaz:
+başka bilgisayarda bağımlılıkları kurup uygulamayı yeniden derleyin.
 
 ### 1) API anahtarları (kendi bilgisayarınızda, repoya girmez)
 
@@ -64,12 +72,24 @@ Pay-as-you-go açmayın. Aramalar daima **Advanced** kullanır; Advanced isteği
 
 ### 2) Gateway token'ı üretin
 
+Bu işlem yalnız ilk kurulum içindir. Mevcut kullanıcı token'ını veya eşleşmiş
+cihaz kimliğini her çalıştırmada değiştirmeyin. Aşağıdaki blok kullanıcı kaydı
+varsa onu korur; yoksa yeni token üretir ve değerini ekrana yazmaz:
+
 ```powershell
-$token = [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
-[Environment]::SetEnvironmentVariable('JARVIS_GATEWAY_TOKEN', $token, 'User')
+$token = [Environment]::GetEnvironmentVariable('JARVIS_GATEWAY_TOKEN', 'User')
+if ([string]::IsNullOrWhiteSpace($token)) {
+  $token = [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
+  [Environment]::SetEnvironmentVariable('JARVIS_GATEWAY_TOKEN', $token, 'User')
+}
 $env:JARVIS_GATEWAY_TOKEN = $token
 $token = $null
 ```
+
+Zaten profil `.env` dosyasıyla çalışıyorsanız oradaki mevcut token'ı koruyun;
+bu blokla ikinci bir token üretmeyin. Profildeki `${JARVIS_GATEWAY_TOKEN}`
+başvurusunu gerçek token metniyle değiştirmeyin; masaüstü aynı kullanıcı
+başvurusunu doğrular.
 
 ### 3) Yeni PowerShell açın ve doğrulayın
 
@@ -81,7 +101,27 @@ cd C:\yol\Avalon
 Anahtar satırları kullanıcı kaydı, bu süreç ve profil `.env` varlığını ayrı gösterir.
 Kullanıcı ortamına saklandıysa hem kullanıcı kaydı hem bu süreç `PRESENT` olmalı;
 yalnız kullanıcı kaydında varsa terminali/onu başlatan uygulamayı yeniden açın.
+Windows Terminal veya Codex gibi üst uygulama eski ortamı taşımaya devam ederse,
+kullanıcı kaydındaki mevcut değerleri yalnız bu PowerShell sürecine alın ve
+durum kontrolünü yeniden çalıştırın; bu blok sırları yazdırmaz veya değiştirmez:
+
+```powershell
+foreach ($name in @('JARVIS_GATEWAY_TOKEN', 'OPENCODE_API_KEY', 'TAVILY_API_KEY', 'GEMINI_API_KEY')) {
+  $savedValue = [Environment]::GetEnvironmentVariable($name, 'User')
+  if (-not [string]::IsNullOrWhiteSpace($savedValue)) {
+    [Environment]::SetEnvironmentVariable($name, $savedValue, 'Process')
+  }
+}
+$savedValue = $null
+.\scripts\jarvis-status.ps1
+```
+
 Alternatif saklama yolu `%USERPROFILE%\.openclaw-jarvis\.env` dosyasıdır.
+Bu alternatifi seçerseniz 4. adımda profil oluştuktan sonra, dosya henüz yoksa
+`config/jarvis.env.example` şablonunu bu repo dışı konuma kopyalayın ve bir yerel
+editörde kendi değerlerinizi doldurun. Mevcut `.env` dosyasını şablonla ezmeyin;
+kullanmadığınız boş anahtar satırlarını kaldırın. Gateway betiği bu dosyayı
+yalnız kendi CLI sürecine yükler; masaüstü buradan yalnız Gateway token'ını okur.
 Google anahtarı 11. adıma kadar opsiyoneldir. Gerçek profil varsa ayarlar
 oradan okunur; yoksa şablon açıkça `TEMPLATE ONLY` olarak gösterilir.
 `gateway_health: OK` yalnız kimliği doğrulanan Gateway için gösterilir;
@@ -122,6 +162,9 @@ Bu pencere açık kalır. Profil `%USERPROFILE%\.openclaw-jarvis` içindedir;
 başlangıç mevcut ayarları ezmez. Önce 4. adımı tamamlayın; başlangıç 03
 politikasını ve token kimliğini doğrulayamazsa durur. Port doluysa yabancı
 süreci kapatmaz, hatayla durur. Kapatmak için `Ctrl+C`.
+İlk başlangıç bu makinedeki testte yaklaşık üç dakika sürdü; `ready`/listening
+kaydı ve gerçek sağlık kontrolü gelmeden ikinci Gateway başlatmayın. Yalnız açık
+port görülmesi, doğru JARVIS Gateway'ine bağlandığınız anlamına gelmez.
 
 İkinci pencerede sağlık kontrolü:
 
@@ -162,6 +205,128 @@ URL/query ve özel ağ sınırları host'tadır; fetch yönlendirmeleri kapalıd
 Kota/erişim hatası aynı araştırma run'ını durdurur. Yeni kullanıcı isteği
 kendi kapsamıyla değerlendirilir. [Tavily ayrıntıları](docs/TAVILY_KURULUM.md).
 
+### 7) Masaüstü istemcisini derleyin ve bağlayın
+
+Gateway terminalini açık bırakın. İkinci PowerShell 7 terminalinde depo kökünde:
+
+```powershell
+npm run desktop:build
+npm run desktop:start
+```
+
+Geliştirme sırasında Vite ile arayüzü yenileyerek çalışmak için bunun yerine
+`npm run desktop:dev` kullanın. Aynı anda iki masaüstü modu açmayın; ikinci
+uygulama örneği mevcut pencereyi gösterir. Geliştirme portu `127.0.0.1:5173`
+başka bir uygulamadaysa Vite hata verir; o uygulamayı zorla kapatmayın.
+Renderer yenilemesi Gateway bağlantısını yok etmez. Main/preload kodunu
+değiştirdiğinizde geliştirme komutunu yeniden başlatın.
+
+İstemci `%USERPROFILE%\.openclaw-jarvis\openclaw.json` içindeki **loopback**,
+token ve cihaz kimliği politikasını kullanır. Endpoint/token/model anahtarı
+arayüzden girilmez. Başarıda **Bağlı 2026.10.2** görünür. Gateway sürümü bu
+istemciye sabittir; yalnız OpenClaw'ı rastgele daha yeni sürüme yükseltmeyin.
+
+İlk cihaz bağlantısı Gateway'in mevcut yerel pairing politikasından geçer.
+**Eşleştirme gerekli** görünürse aynı Gateway'i yöneten yetkili terminalde:
+
+```powershell
+.\node_modules\.bin\openclaw.cmd --profile jarvis devices list
+# Listedeki güncel isteğin cihaz kimliğini uygulamada gösterilen kimlikle karşılaştırın.
+# Yalnız incelediğiniz o isteğin gerçek kimliğini aşağıya yazın:
+.\node_modules\.bin\openclaw.cmd --profile jarvis devices approve <requestId>
+```
+
+`<requestId>` bir yer tutucudur; komuta listedeki gerçek kimliği yazın. Sonra
+uygulamada **Yeniden bağlan** seçin. Pairing veya device-auth kontrolünü
+kapatmayın. **Kullanıcı bağlantısı gerekli** durumunda kullanıcı token'ını ve
+profil başvurusunu kontrol edin; yeni sır tanımladıysanız masaüstünden tamamen
+çıkıp yeniden açın. Cihaz private key ve scoped token'ı Windows kullanıcıya
+bağlı DPAPI ile `%APPDATA%\jarvis-desktop\device.dpapi` içinde korunur;
+bu dosyayı başka bilgisayara/kullanıcıya taşımayın. Dev ve paket aynı kaydı kullanır.
+
+**Yeni sohbet** ile günlük veya proje türünü seçin, başlık verip **Oluştur**'a
+basın. Her sohbet aynı JARVIS workspace'inde ayrı geçmişle başlar; ilk açılışta
+otomatik sohbet yaratılmaz. Sohbet değiştirmek devam eden görevi iptal etmez.
+İleti için Enter, yeni satır için Shift+Enter kullanılır. Çalışan sohbetin yeni
+gönderimi mevcut görev bitene kadar kapalıdır; Gateway yönetim slash komutları
+bu istemciden çalıştırılmaz.
+
+Dosya görevi için önce **Görev klasörü seç** ile o sohbetin somut hedefini
+native diyalogdan seçin. Bu izin, sonraki gönderimde aynı run/task kimliğiyle
+mevcut 03 host politikasına bağlanır; korunan dosyalara genel erişim açmaz.
+Klasör seçilmezse dosya araçlarının kapsamı bağlı değildir. Klasör seçimi
+uygulama ömründe tutulur; yeniden açılışta gerektiğinde tekrar seçin.
+Görev ve bekleyen onaylar sağ panelde native OpenClaw kayıtlarından okunur.
+04'te onay **görüntülenir**; karar mevcut yetkili OpenClaw onay istemcisindedir.
+
+X pencereyi **tepsiye gizler**; uygulamayı veya Gateway'i kapatmaz. Tepside
+**JARVIS’i göster** yeniden açar; **Uygulamadan çık** istemciyi kapatır.
+Gateway ayrı terminalde çalışmaya devam eder. Bağlantı kesilince son gözlem
+güncel olmayabilir; **Kayıtları yenile** ile uzlaştırın. **Sonuç belirsiz**
+gönderim otomatik tekrar edilmez; sonucu kontrol etmeden aynı işi yeniden
+göndermeyin.
+
+Bu sürüm gerçek Gateway bağlantısı ve iletinin kabulünü doğrular; başarılı
+Space Bunny yanıtı henüz hazır değildir. Aşağıdaki bilinen `403` davranışı ve
+10. adımdaki OpenCode işçisi kararı geçerlidir. Canlı ses, mikrofon/oynatma,
+sesli onay ve ortak hafıza bağlantısı bu aşamada kurulmaz.
+
+### 8) Windows çalıştırılabilir klasörünü oluşturun ve kontrolleri çalıştırın
+
+Depo kökünde:
+
+```powershell
+npm run desktop:pack:win
+.\apps\desktop\release\win-unpacked\JARVIS.exe
+```
+
+Bu çıktı native Windows **x64** geliştirme paketidir; yönetici/UAC istemez.
+Yalnız `JARVIS.exe` dosyasını ayırıp taşımayın: `win-unpacked` klasöründeki
+DLL, kaynak ve diğer dosyalar birlikte gereklidir. Her bilgisayarda yukarıdaki
+Gateway/profil/hesap kurulumunu kendi kullanıcı kaydıyla tamamlayın; EXE
+Gateway'i kurmaz veya başlatmaz. İmzalı installer, otomatik güncelleme ve
+tam günlük dağıtım 16. adımda yapılacak.
+
+Yerel tip ve sınır kontrolleri:
+
+```powershell
+npm run check
+npm test
+npm run test:desktop
+```
+
+Masaüstü testi 14 IPC/session/stream/pairing/reconnect sınır kontrolüdür;
+gerçek modele çağrı yapmaz. Önceden geçen 16 policy/reader/Tavily testiyle
+birlikte 30 sınır testi vardır. Çalışan JARVIS Gateway'ine karşı Electron
+kontrolleri için masaüstünden **Uygulamadan çık** seçin, sonra:
+
+```powershell
+npm run test:desktop:electron
+npm --prefix apps/desktop run test:dev
+npm --prefix apps/desktop run test:packaged
+```
+
+İlk ve dev testi için `desktop:build`, paket testi için `desktop:pack:win`
+önceden çalışmış olmalıdır. Bu testler sırayla pencere açar; sandbox, dar IPC,
+navigation/popup engeli, X ile gizlenme ve renderer reload davranışını kontrol
+edip kendi istemcisini kapatır. Testler ana Gateway'i kapatmaz.
+
+`npm --prefix apps/desktop run test:live` isteğe bağlı gerçek profil testidir:
+iki adlandırılmış test sohbetini oluşturur/korur ve seçili ücretsiz ana modele
+bir ileti gönderir. Native klasör diyaloğunun seçimi yalnız testte kontrollü
+tmp dizinine taklit edilir; scope bind ve chat send Gateway'de gerçektir.
+Sohbetler otomatik silinmez; bu test başarılı model yanıtı iddiası değildir.
+04'te gerçek deneme bilinen `403 FreeTierError` ile sonlandı.
+
+Seçili upstream UI dosyalarının kaynak/sürüm/SHA256/MIT kaydı
+`apps/desktop/vendor/openclaw/SOURCE.json` ve `LICENSE` içindedir; build kaynak
+hash değişikliğinde durur. Tam OpenClaw deposu ürün içine paketlenmez.
+Bu kaynakların özgün satır sonları `.gitattributes` ile korunur; Windows'un
+otomatik CRLF dönüşümü başka bilgisayarda SHA256 denetimini bozmaz.
+Runtime audit'te 0 bulgu, electron-builder geliştirme zincirinde 8 moderate
+bulgu kaydedildi; `npm audit fix --force` veya toplu kurulum betiği onayıyla
+kilitli sürümleri değiştirmeyin. Ayrıntılar: [04 uygulama kaydı](docs/04_MASAUSTU_ISTEMCISI.md).
+
 ## Bilinen önemli davranış: ücretsiz modeller ve 403
 
 `space-bunny-free` gibi ücretsiz katman modelleri OpenClaw içinden çağrıda
@@ -195,6 +360,9 @@ sessiz geçiş olmaz):
 
 - Durum: `.\scripts\jarvis-status.ps1`
 - Başlat: `.\scripts\jarvis-gateway.ps1` · Durdur: `Ctrl+C`
+- Masaüstü geliştirme: `npm run desktop:dev`
+- Derle/çalıştır: `npm run desktop:build`, ardından `npm run desktop:start`
+- Native Windows x64 klasörü: `npm run desktop:pack:win` → `apps/desktop/release/win-unpacked/JARVIS.exe`
 - Arayüz (Gateway çalışırken): `http://127.0.0.1:18789/`
 - Tanı: `.\node_modules\.bin\openclaw.cmd --profile jarvis doctor --lint`
 
@@ -210,12 +378,20 @@ sessiz geçiş olmaz):
 - Araştırmaya USER/MEMORY/sohbet/anahtar/proje içeriği eklenmez. Web içeriği ve
   okuyucu özeti veri olarak etiketlenir; onay veya kullanıcı emri sayılmaz.
 - Eski FURY klasörü proje dışındadır; state/auth Sohbet içe aktarılmaz.
+- Electron cihaz private key/token'ı aynı Windows kullanıcıya bağlı safeStorage/DPAPI kaydındadır;
+  renderer yalnız dar sohbet işlemleri ve güvenli durum/onay görünümünü alır.
+
+Masaüstünde X tepsiye gizler; tepsi menüsü veya **Uygulamadan çık** ayrı çıkıştır.
+Günlük/proje sohbetleri aynı workspace içinde ayrı geçmiş taşır. Eksik pairing açıkça
+gösterilir; belirsiz yazma reconnect'te tekrar edilmez. Ayrıntılar ve test sınırları:
+[04 masaüstü istemcisi](docs/04_MASAUSTU_ISTEMCISI.md).
 
 ## Proje yapısı
 
 03 izin eklentisi ve profiller uygulanmıştır. Sınırlar, gerçek test kanıtı ve kapalı bağlantılar: [03 yetki sınırları](docs/03_YETKI_SINIRLARI.md). Kontroller: `npm run check`, `npm test`, `npm run test:gateway`. Resmî Tavily Advanced + web_fetch yapılandırıldı; gerçek Advanced API erişimi doğrulandı ([güvenli kurulum](docs/TAVILY_KURULUM.md)). Genel web_search kapalıdır; sesli onay 13'e aittir.
 
 ```
+apps/desktop/ Electron main/preload, Vite + Lit renderer, seçili lisanslı upstream dosyaları
 config/    jarvis.openclaw.json (Gateway+model+Talk şablonu), jarvis.env.example
 scripts/   profil hazırlama, politika uygulama, maskeli Tavily anahtarı, erişim kontrolü, başlatma/durum
 plugins/   jarvis (public SDK görev kapsamı/hook, native araştırma ve onay sınırı)

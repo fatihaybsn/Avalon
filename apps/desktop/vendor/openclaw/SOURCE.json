@@ -1,0 +1,33 @@
+{
+  "commit": "b8952d477f0c932d8ddc6da5c89cab5a169b6ff1",
+  "repository": "https://github.com/openclaw/openclaw",
+  "version": "2026.10.2",
+  "license": "MIT",
+  "files": [
+    {
+      "path": "LICENSE",
+      "sha256": "9efd316ecf1c4c60f6fd5d26433142fff2b6794d7d328e9bc6179b29bf9c82a4",
+      "url": "https://raw.githubusercontent.com/openclaw/openclaw/b8952d477f0c932d8ddc6da5c89cab5a169b6ff1/LICENSE"
+    },
+    {
+      "path": "ui/src/components/panel-empty-state.ts",
+      "sha256": "42ba89c7fb96a3e8ff7b29bd294d74758e42fca750447a0f351b36a9782470ed",
+      "url": "https://raw.githubusercontent.com/openclaw/openclaw/b8952d477f0c932d8ddc6da5c89cab5a169b6ff1/ui/src/components/panel-empty-state.ts"
+    },
+    {
+      "path": "ui/src/lib/text-direction.ts",
+      "sha256": "fd7b56ed18bb13ae8947058bddedb6b7dffc893502809bfc891357eba165fd94",
+      "url": "https://raw.githubusercontent.com/openclaw/openclaw/b8952d477f0c932d8ddc6da5c89cab5a169b6ff1/ui/src/lib/text-direction.ts"
+    },
+    {
+      "path": "ui/src/styles/base.css",
+      "sha256": "9f6b6e163ab3325a16d76cf3fac68340e576f893826aab4c0e97735e32dcbb6b",
+      "url": "https://raw.githubusercontent.com/openclaw/openclaw/b8952d477f0c932d8ddc6da5c89cab5a169b6ff1/ui/src/styles/base.css"
+    },
+    {
+      "path": "packages/gateway-client/src/device-auth.ts",
+      "sha256": "b9a3e2a7281092315d03491f364071cbfc31acbe9152b3f86a41a75438464a00",
+      "url": "https://raw.githubusercontent.com/openclaw/openclaw/b8952d477f0c932d8ddc6da5c89cab5a169b6ff1/packages/gateway-client/src/device-auth.ts"
+    }
+  ]
+}

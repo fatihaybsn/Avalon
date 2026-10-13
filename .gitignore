@@ -4,6 +4,7 @@ dist/
 build/
 coverage/
 *.tsbuildinfo
+apps/desktop/release/
 
 # Secrets and credentials
 .env
