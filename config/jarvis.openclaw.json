@@ -1,0 +1,39 @@
+{
+  "$schema": "https://docs.openclaw.ai/gateway/configuration-reference",
+  "gateway": {
+    "mode": "local",
+    "port": 18789,
+    "bind": "loopback",
+    "auth": {
+      "mode": "token",
+      "token": "${JARVIS_GATEWAY_TOKEN}"
+    },
+    "controlUi": {
+      "enabled": true
+    }
+  },
+  "agents": {
+    "defaults": {
+      "workspace": "~/.openclaw-jarvis/workspace",
+      "model": {
+        "primary": "opencode/space-bunny-free",
+        "fallbacks": []
+      },
+      "utilityModel": "",
+      "modelSelectionScope": "session"
+    }
+  },
+  "talk": {
+    "realtime": {
+      "provider": "google",
+      "transport": "provider-websocket",
+      "brain": "agent-consult",
+      "consultRouting": "provider-direct",
+      "providers": {
+        "google": {
+          "model": "gemini-3.8-live"
+        }
+      }
+    }
+  }
+}

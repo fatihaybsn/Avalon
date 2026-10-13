@@ -1,0 +1,38 @@
+# Dependencies and generated output
+node_modules/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+
+# Secrets and credentials
+.env
+.env.*
+!.env.example
+.npmrc
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Runtime state, models, logs, and browser profiles
+.openclaw/
+.codex/
+**/state/
+**/data/
+**/memory/
+**/models/
+**/logs/
+**/profiles/
+**/browser-profile*/
+
+# Local environments and scratch data
+**/.venv/
+**/__pycache__/
+*.py[cod]
+tmp/
+temp/
+
+# Legacy reference source must stay outside this repository
+/FURY/
+/fury/
