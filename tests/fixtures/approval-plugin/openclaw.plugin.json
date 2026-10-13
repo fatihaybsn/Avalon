@@ -1,0 +1,1 @@
+{ "id": "jarvis-policy-test", "activation": { "onStartup": true }, "contracts": { "gatewayMethodDispatch": ["authenticated-request"] }, "configSchema": { "type": "object", "additionalProperties": false, "properties": {} } }

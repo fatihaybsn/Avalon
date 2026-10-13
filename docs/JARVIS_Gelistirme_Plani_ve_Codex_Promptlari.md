@@ -110,6 +110,8 @@ Yalnız 01'i tamamla. Sonunda hazırladığın temel dosyaları ve bir sonraki a
 
 **Kısaca:** FURY'den bağımsız bir OpenClaw profili oluşturur. Space Bunny model bağlantısını ve Google Live yapılandırmasını hazırlar; sesin kendisi daha sonra bağlanır.
 
+**13 Ekim 2026 güncel kullanıcı kararı:** OpenClaw üzerinden doğrudan ücretsiz model API çağrısı `403 FreeTierError` ile reddedildiği için Space Bunny Free bağlantısında OpenCode istemcisi/işçisi yolu bilinçli olarak seçilmiştir. Bu karar, aşağıdaki başlangıç promptunun doğrudan Zen HTTP erişimi ve ana modele başka harness atamama şartını bu bağlantı bakımından günceller. 403'ü kurulum hatası veya mimari ihlali sayarak modeli değiştirmeyin, ücretli yedek açmayın veya çalışan işçi yolunu yeniden yazmayın. OpenClaw tek görev/izin/hafıza merkezi olarak kalır. Aşama kapsamı ve gerçek entegrasyon durumu için `GELISTIRME_DURUMU.md` esas alınır; bu not sonraki aşamaları tamamlanmış saymaz.
+
 ```text
 AGENTS.md, kısa kesin mimari ve geliştirme durumunu esas alarak yalnız 02'yi uygula: yeni OpenClaw Gateway ve model temeli.
 
@@ -139,7 +141,7 @@ Seçilen sürümün public plugin SDK'sıyla JARVIS eklentisini oluştur. Aynı 
 
 Rol ve görev kapsamını host'ta uygula: kullanıcı/cihaz, session, proje/görev, hedef yol/hesap, araç ve parametreler. Kullanıcının verdiği proje düzenleme kapsamı gerekli olağan yazmaları taşır; her dosyada tekrar soru üretmez. Başka hedef, erişim artışı ve kritik dış etki bu kapsamdan otomatik izin almaz. Serbest komut metni için yalnız regex kara listesi kullanma; executable/argüman/cwd/erişim sınırını denetle. Genel kalıcı silme, taskkill/force-kill, UAC ve hesabın sırlarına serbest erişim kapalı kalsın.
 
-Araştırma profili yalnız web_search/web_fetch gibi okuma yeteneklerine sahip olsun. Workspace bootstrap ve başlangıç bağlamına özel USER/MEMORY/sohbet/anahtar/proje dosyası ekleme. Genel browser, computer, shell, dosya yazma, mesaj gönderme, otomasyon, approval resolver veya başka ajanla yetki genişletme açma. Kısa sorgu da bu profilden geçsin; Gemini'ye özel bağlamla serbest web aracı verme. URL/query, redirect ve özel ağ sınırını host'ta koru. Arama sağlayıcısı için gerekli erişim yoksa ücretli çözümü sessizce açma; gerçek sınırlamayı göster.
+13 Ekim kullanıcı seçimi: araştırma profili yalnız resmî tavily_search (host tarafından daima Advanced) ve web_fetch okuma yeteneklerine sahip olsun. Tavily ücretsiz planı kullanılır; genel web_search ve tavily_extract kapalıdır. Kota/erişim hatasında durumu bildir; Basic, ücretli kullanım veya başka sağlayıcıya sessiz geçme. Workspace bootstrap ve başlangıç bağlamına özel USER/MEMORY/sohbet/anahtar/proje dosyası ekleme. Genel browser, computer, shell, dosya yazma, mesaj gönderme, otomasyon, approval resolver veya başka ajanla yetki genişletme açma. Kısa sorgu da bu profilden geçsin; Gemini'ye özel bağlamla serbest web aracı verme. URL/query, redirect ve özel ağ sınırını host'ta koru. Arama sağlayıcısı için gerekli erişim yoksa ücretli çözümü sessizce açma; gerçek sınırlamayı göster.
 
 Dış içerik ve okuyucu özeti veri olarak etiketlensin. Bunlar hafıza tercihi, görev iptal emri veya kullanıcı onayı sayılmasın. Kaynak kaydı host tarafından alınsın. Kullanıcının yeni gerçek talebi sırf web okunmuş diye engellenmesin; mevcut kapsamıyla değerlendirilsin.
 

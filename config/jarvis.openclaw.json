@@ -20,8 +20,39 @@
         "fallbacks": []
       },
       "utilityModel": "",
-      "modelSelectionScope": "session"
-    }
+      "modelSelectionScope": "session",
+      "skipBootstrap": true,
+      "systemAgent": {
+        "agentId": "main"
+      }
+    },
+    "entries": {
+      "main": {
+        "workspace": "~/.openclaw-jarvis/workspace",
+        "tools": {
+          "allow": [
+            "read",
+            "write",
+            "edit"
+          ]
+        }
+      },
+      "research": {
+        "workspace": "~\\.openclaw-jarvis\\research-empty",
+        "contextInjection": "never",
+        "skills": [],
+        "tools": {
+          "allow": [
+            "tavily_search",
+            "web_fetch"
+          ]
+        },
+        "subagents": {
+          "allowAgents": []
+        }
+      }
+    },
+    "ownership": "explicit"
   },
   "talk": {
     "realtime": {
@@ -32,6 +63,102 @@
       "providers": {
         "google": {
           "model": "gemini-3.8-live"
+        }
+      }
+    }
+  },
+  "plugins": {
+    "load": {
+      "paths": [
+        "./plugins/jarvis"
+      ]
+    },
+    "entries": {
+      "jarvis": {
+        "enabled": true,
+        "hooks": {
+          "allowConversationAccess": true,
+          "allowPromptInjection": true
+        }
+      },
+      "tavily": {
+        "enabled": true,
+        "config": {
+          "webSearch": {
+            "baseUrl": "https://api.tavily.com"
+          }
+        }
+      },
+      "firecrawl": {
+        "enabled": false
+      }
+    },
+    "allow": [
+      "jarvis",
+      "tavily",
+      "opencode",
+      "google",
+      "memory-core"
+    ]
+  },
+  "tools": {
+    "allow": [
+      "read",
+      "write",
+      "edit",
+      "tavily_search",
+      "web_fetch"
+    ],
+    "deny": [
+      "exec",
+      "process",
+      "apply_patch",
+      "code_execution",
+      "browser",
+      "computer",
+      "nodes",
+      "message",
+      "sessions_spawn",
+      "sessions_send",
+      "subagents",
+      "gateway",
+      "plugins",
+      "openclaw",
+      "cron",
+      "automations",
+      "web_search",
+      "tavily_extract",
+      "jarvis_web_fetch",
+      "memory_search",
+      "memory_get"
+    ],
+    "elevated": {
+      "enabled": false
+    },
+    "exec": {
+      "security": "deny",
+      "ask": "always"
+    },
+    "web": {
+      "search": {
+        "enabled": false,
+        "provider": "tavily",
+        "cacheTtlMinutes": 0
+      },
+      "fetch": {
+        "enabled": true,
+        "readability": true,
+        "maxChars": 20000,
+        "maxCharsCap": 20000,
+        "maxResponseBytes": 262144,
+        "timeoutSeconds": 10,
+        "cacheTtlMinutes": 0,
+        "maxRedirects": 0,
+        "useTrustedEnvProxy": false,
+        "ssrfPolicy": {
+          "dangerouslyAllowPrivateNetwork": false,
+          "allowRfc2544BenchmarkRange": false,
+          "allowIpv6UniqueLocalRange": false
         }
       }
     }

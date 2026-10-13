@@ -1,0 +1,7 @@
+{
+  "name": "@jarvis/openclaw-plugin",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "openclaw": { "extensions": ["./index.ts"], "compat": { "pluginApi": "=2026.10.2" } }
+}

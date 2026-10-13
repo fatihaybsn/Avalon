@@ -1,0 +1,8 @@
+{
+  "id": "jarvis",
+  "name": "JARVIS permissions",
+  "description": "Host-bound task scopes and isolated official Tavily Advanced / native web_fetch",
+  "activation": { "onStartup": true },
+  "contracts": { "tools": [] },
+  "configSchema": { "type": "object", "additionalProperties": false, "properties": {} }
+}

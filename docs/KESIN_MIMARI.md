@@ -6,7 +6,9 @@ Bu kısa özet, kaynak proje kaydındaki seçilmiş A-01–A-16 kararlarını uy
 
 - **OpenClaw**, doğrudan Windows 11 üzerinde çalışan tek asistan, Gateway, görev yürütme, araç/izin sahibi ve Memory Core'dur. Electron istemcisi ayrı bir backend veya görev koordinatörü değildir.
 - **Gemini Live (`gemini-3.8-live`)**, hazır OpenClaw Talk / Google Live yoluyla `provider-direct` konuşma rolündedir. Kısa sohbet, yetkili kayıtları okuma ve dar küçük işlemleri yapar. Kısa web kontrolü de yalnız aynı salt okunur araştırma profilinden geçer; Gemini'ye genel web, keyfî URL, terminal veya serbest dosya yetkisi verilmez.
-- **Space Bunny Free**, HTTP API üzerinden ağır, çok adımlı görevlerin başlangıç modelidir: derin araştırma, kodlama ve uzman işçi yönetimi. Model veya sağlayıcı sessizce değiştirilmez; ücretli yedeğe otomatik geçiş yapılmaz.
+- **Space Bunny Free**, ağır, çok adımlı görevlerin başlangıç modelidir: derin araştırma, kodlama ve uzman işçi yönetimi. **13 Ekim 2026 kullanıcı teyidi:** OpenClaw üzerinden doğrudan ücretsiz model API çağrısındaki `403 FreeTierError` nedeniyle seçilen bağlantı yolu **OpenCode istemcisi/işçisi** üzerindendir. Bu bilinçli ve onaylı tercihtir; doğrudan HTTP yolunun reddedilmesi düzeltilmesi gereken bir kurulum arızası veya mimari uyumsuzluk sayılmaz. Başlangıçtaki doğrudan HTTP hedefi bu erişim kararı bakımından güncellenmiştir. OpenClaw tek görev/izin/hafıza merkezi olarak kalır; model veya sağlayıcı sessizce değiştirilmez, ücretli yedeğe otomatik geçiş yapılmaz. Bu karar, sonraki işçi entegrasyonu aşamalarının tamamlandığına dair teknik doğrulama yerine geçmez.
+
+Salt okunur araştırma için seçilen yol resmî Tavily `tavily_search` (daima Advanced) ve yerel `web_fetch` araçlarıdır. Genel `web_search` kapalıdır; ücretsiz hesap erişimi doğrulanmadan arama hazır sayılmaz. Kota/erişim hatasında ücretli veya başka sağlayıcıya sessiz geçiş yapılmaz.
 
 ## Hafıza ve istemci
 
