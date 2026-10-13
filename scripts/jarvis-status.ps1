@@ -120,6 +120,7 @@ if ($tokenState.StartsWith('UNAVAILABLE')) {
   JARVIS_GATEWAY_TOKEN = Get-Presence 'JARVIS_GATEWAY_TOKEN'
   OPENCODE_API_KEY     = Get-Presence 'OPENCODE_API_KEY'
   GEMINI_API_KEY       = Get-Presence 'GEMINI_API_KEY'
+  JARVIS_DREAMING_GEMINI_API_KEY = Get-Presence 'JARVIS_DREAMING_GEMINI_API_KEY'
   TAVILY_API_KEY       = Get-Presence 'TAVILY_API_KEY'
 } | Format-List
 

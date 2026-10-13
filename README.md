@@ -2,9 +2,10 @@
 
 Windows 11'de doğrudan çalışan, OpenClaw merkezli kişisel asistan projesi.
 Tek merkez **OpenClaw Gateway**, konuşma tarafı **Gemini Live**, ağır görev
-modeli **Space Bunny Free**'dir. Mevcut durum: **04. aşama yazılı istemci tamamlandı**
+modeli **Space Bunny Free**'dir. Mevcut durum: **05. aşama yerel hafıza tamamlandı**
 (Gateway, görev izinleri, salt okunur araştırma ve sade Electron/Vite/Lit arayüzü).
-05 ile tek yerel hafıza, kontrollü kısa not araçları ve yetkili ortak erişim eklendi.
+05 ile tek yerel hafıza, kontrollü kısa not araçları, yetkili ortak erişim ve
+Gemini ile altı saatlik native Dreaming düzenlemesi eklendi.
 Başarılı ağır görev/yanıt entegrasyonu OpenCode işçisiyle 10'da, canlı ses 11'de,
 sesli onay 13'te; tam kurulabilir dağıtım 16'dadır.
 
@@ -15,7 +16,7 @@ Ayrıntılı mimari: `docs/KESIN_MIMARI.md` · Aşama durumu: `docs/GELISTIRME_D
 - Windows 11, PowerShell 7
 - Node.js `>=24.16.0 <25 || >=26.1.0` (doğrulanan: `v24.20.0`; 22/23/25 ve 26.0 desteklenmez)
 - npm `11.19.0`, Git
-- Hesaplar: OpenCode (görev modeli), Tavily ücretsiz hesap (araştırma), Google AI Studio (konuşma, 11. adıma kadar gerekmez)
+- Hesaplar: OpenCode (görev modeli), Tavily ücretsiz hesap (araştırma), Google AI Studio (05 Dreaming için gerekli; canlı konuşma 11'de)
 
 ## Kurulum (sıfırdan)
 
@@ -41,6 +42,7 @@ başka bilgisayarda bağımlılıkları kurup uygulamayı yeniden derleyin.
 |---|---|---|
 | `OPENCODE_API_KEY` | [opencode.ai/auth](https://opencode.ai/auth) | Görev modeli kataloğu |
 | `GEMINI_API_KEY` | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) | 11. adımdaki ses (şimdilik opsiyonel) |
+| `JARVIS_DREAMING_GEMINI_API_KEY` | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) | 05 Dreaming; seçilmiş hafıza notlarını düzenleyen ayrı anahtar |
 | `TAVILY_API_KEY` | [app.tavily.com](https://app.tavily.com/) | Salt okunur Advanced araştırma; ücretsiz plan |
 
 OpenCode anahtarını komut geçmişine yazmadan kaydetmek için PowerShell 7'de:
@@ -59,8 +61,14 @@ try {
 }
 ```
 
-Google anahtarı gerektiğinde aynı blokta `OPENCODE_API_KEY` adını tüm yerlerde
-`GEMINI_API_KEY` ile değiştirin. Anahtarların değerlerini README'ye, sohbete veya
+Dreaming için aynı blokta `OPENCODE_API_KEY` adını tüm yerlerde
+`JARVIS_DREAMING_GEMINI_API_KEY` ile değiştirip kendi Google anahtarınızı kaydedin.
+Ses aşamasında `GEMINI_API_KEY` için ayrıca uygulayın; Dreaming anahtarı Live
+veya mevcut OpenCode hesabının yerine geçmez. Google projesinin ücretsiz
+katmanını panelden kontrol edin; faturalandırma/otomatik ödeme açmayın.
+[Resmî fiyatlandırmada](https://ai.google.dev/gemini-api/docs/pricing) ücretsiz
+görünen model, billing etkin bir projede ücretsiz çağrı garantisi değildir.
+Anahtarların değerlerini README'ye, sohbete veya
 repo dosyalarına yazmayın. Tavily için hazır maskeli giriş yardımcısını kullanın:
 
 ```powershell
@@ -107,7 +115,7 @@ kullanıcı kaydındaki mevcut değerleri yalnız bu PowerShell sürecine alın 
 durum kontrolünü yeniden çalıştırın; bu blok sırları yazdırmaz veya değiştirmez:
 
 ```powershell
-foreach ($name in @('JARVIS_GATEWAY_TOKEN', 'OPENCODE_API_KEY', 'TAVILY_API_KEY', 'GEMINI_API_KEY')) {
+foreach ($name in @('JARVIS_GATEWAY_TOKEN', 'OPENCODE_API_KEY', 'TAVILY_API_KEY', 'JARVIS_DREAMING_GEMINI_API_KEY', 'GEMINI_API_KEY')) {
   $savedValue = [Environment]::GetEnvironmentVariable($name, 'User')
   if (-not [string]::IsNullOrWhiteSpace($savedValue)) {
     [Environment]::SetEnvironmentVariable($name, $savedValue, 'Process')
@@ -123,7 +131,8 @@ Bu alternatifi seçerseniz 4. adımda profil oluştuktan sonra, dosya henüz yok
 editörde kendi değerlerinizi doldurun. Mevcut `.env` dosyasını şablonla ezmeyin;
 kullanmadığınız boş anahtar satırlarını kaldırın. Gateway betiği bu dosyayı
 yalnız kendi CLI sürecine yükler; masaüstü buradan yalnız Gateway token'ını okur.
-Google anahtarı 11. adıma kadar opsiyoneldir. Gerçek profil varsa ayarlar
+Dreaming anahtarı 05 için gereklidir; yalnız sesin `GEMINI_API_KEY` anahtarı
+11. adıma kadar opsiyoneldir. Gerçek profil varsa ayarlar
 oradan okunur; yoksa şablon açıkça `TEMPLATE ONLY` olarak gösterilir.
 `gateway_health: OK` yalnız kimliği doğrulanan Gateway için gösterilir;
 ilk başlatma öncesinde `STOPPED` beklenir. Değerler ekrana yazılmaz.
@@ -150,7 +159,10 @@ başka paket/sürüm/ücretli sağlayıcıya sessiz geçmeyin.
 
 Politika betiği ilk değişiklik öncesindeki profili repo dışında
 `openclaw.before-stage05.json` olarak yedekler. Model/Talk/auth ayarlarını korur;
-03 ve 05'in araç, rol, hafıza ve hook sınırlarını uygular. Profil önceki aşamadan geliyorsa
+03 ve 05'in araç, rol, hafıza ve hook sınırlarını uygular. Yalnız Dreaming'e
+ayrılan `jarvis-dream-google` sağlayıcısı ve ayrı env SecretRef'ini de kurar;
+bu sağlayıcının model listesi aşağıdaki beşli sıraya güncellenir.
+Profil önceki aşamadan geliyorsa
 yine eklentileri kurup bu politika komutlarını çalıştırın. Projeyi başka klasöre
 taşıdığınızda politika betiğini yeniden çalıştırın; plugin yolu yeni konuma bağlanır.
 
@@ -174,6 +186,37 @@ veritabanı/servisi kurmayın. Kaynaklar `%USERPROFILE%\.openclaw-jarvis\workspa
 altında `MEMORY.md`, `USER.md`, `memory/` olur; başlangıç betiği mevcut
 notları ezmez. Ham sohbet kopyalama ve sessionMemory kapalı kalır.
 Yerel arama başarısızsa buluta veya başka embedding sağlayıcısına geçilmez.
+
+### 4b) Dreaming düzenlemesini hazırlayın
+
+1. adımda `JARVIS_DREAMING_GEMINI_API_KEY` kaydedilmiş, 4. adımda politika
+uygulanmış olmalıdır. Native Google bağlantısı OpenClaw'a dahildir;
+Gemini için ikinci işçi, veritabanı veya servis kurmayın. Model/anahtar
+başvuruları profil hazırlanırken kurulur; anahtar metnini JSON'a yazmayın.
+
+Dreaming yalnız şu metin modellerini bu sırayla kullanır:
+**3.8 Flash → 3.6 Flash → 3.5 Flash → 3.5 Flash-Lite → 3.1 Flash-Lite**.
+Google'dan kesin yoğunluk/kota/servis hatası dönerse aynı turda sıradakini
+dener, ilk geçerli kararda durur. Sonucu belirsiz ağ/zaman aşımı veya
+izin/revizyon ihlali otomatik başka çağrıyla aşılmaz. Ana Space Bunny
+ve ses modeli değişmez; ücretli-only model veya farklı sağlayıcı yedeği yoktur.
+
+Tek native Memory Core cron'u **00:00 / 06:00 / 12:00 / 18:00** İstanbul
+saatinde çalışır (`0 */6 * * *`, `Europe/Istanbul`, stagger 0). Windows
+Görev Zamanlayıcı'ya ikinci görev eklemeyin. Otomatik çalışması için Gateway
+açık kalmalıdır; masaüstü pencereyi tepsiye gizlemek Gateway'i kapatmaz.
+Yalnız Deep açıktır; Light/REM, sessionMemory, session backfill ve ham
+sohbet aktarımını açmayın.
+
+Önemli notlar Dreaming'i beklemeden kaynak dosyasına ve yerel aramaya yazılır.
+Seçilmiş güncel kısa notlar kaynak/revizyon/tarih/proje referansıyla native
+aday olur. Kaynak metadata'sı ve tam metni birlikte 600 karakteri aşan veya
+web kaynağından gelen notlar Dreaming adayı yapılmaz; asıl kayıt yine hemen
+kaydedilir/aranır. Kaynak kısa not sınırı 1800 karakterdir. Gemini'ye yalnız
+seçilmiş adaylar ve bunlarla ilgili sınırlı eski kayıtlar gönderilir; yerel
+EmbeddingGemma araması bulut çağrısı değildir. Model kararı host tarafından
+denetlenir; görünmeyen kayıtlar veya eski revizyonlar üzerinden yazamaz.
+Kalıcı consolidation ve `DREAMS.md` raporunu aynı OpenClaw yazar.
 
 ### 5) Gateway'i başlatın
 
@@ -210,6 +253,21 @@ indeksinin kullanılabilir olması beklenir. Eksik model/kurulum görünür kal�
 Model kimlikleri ve yerel servis ayarlarını kurulum üretir; başka bilgisayarın
 model yollarını veya kimlik/state dosyalarını kopyalamayın.
 
+Dreaming yapılandırmasını aynı çalışan Gateway'de kontrol edin:
+
+```powershell
+.\node_modules\.bin\openclaw.cmd --profile jarvis gateway call jarvis.memory.dreaming.status --json
+.\node_modules\.bin\openclaw.cmd --profile jarvis cron list --json
+```
+
+Durumda `configuredModel: jarvis-dream-google/gemini-3.8-flash` ve beşli
+`modelSequence` görünmelidir. Cron listesinde tek Memory Core Dreaming işi ve
+yukarıdaki saatler olmalıdır; farklıysa ikinci cron eklemeyin. İlk kurulumda
+`idle` ve `published: false` normaldir. Gerçek seçilmiş aday/model/native yazma
+sonrası `native-published` ve `published: true` yalnız o Gateway çalışmasında
+gözlenen turu doğrular; yeniden başlatmada önceki başarı canlı kanıt diye
+üretilmez. Kalıcı kaynaklar ve native raporlar workspace'te kalır.
+
 ### 6) Araştırma erişimini ve izin temelini doğrulayın
 
 Tavily anahtarını tanımladığınız yeni terminalde:
@@ -227,10 +285,12 @@ anahtar veya ham sağlayıcı yanıtını yazdırmaz. Başarıda `ok: true`,
 kanıtlamaz. Hata durumunda eksik anahtar, erişim, kota ya da ağ kategorisi
 bildirilir; otomatik tekrar veya alternatif sağlayıcı yoktur.
 
-`npm test` 25 sınır testini çalıştırır; gerçek Tavily hesabına çağrı yapmaz.
+`npm test` 28 sınır testini çalıştırır; gerçek Tavily/Gemini hesabına çağrı yapmaz.
 Gateway testi ayrı geçici profilde gerçek onay kayıtlarını ve dosya etkisini
 kontrol eder: deny/allow-always yazmaz, allow-once sabit parametrelerle yazar.
-Test kendi Gateway sürecini ve başarılı profilini kapatıp temizler; ana
+Test kendi Gateway sürecini ve başarılı profilini kapatıp temizler. Bellek
+yükünü artırmamak için önce ana Gateway'i kendi terminalinde `Ctrl+C` ile
+durdurun; test bitince 5. adımdan yeniden başlatın. Test ana
 `jarvis` profiline test resolver'ı eklemez. Tavily'nin resmî paketi önce kurulmuş olmalıdır.
 
 Araştırma yalnız `tavily_search` ve `web_fetch` kullanır. Host aramayı
@@ -334,8 +394,8 @@ npm run test:desktop
 ```
 
 Masaüstü testi 14 IPC/session/stream/pairing/reconnect sınır kontrolüdür;
-gerçek modele çağrı yapmaz. 25 policy/reader/Tavily/hafıza testiyle
-birlikte 39 sınır testi vardır. Çalışan JARVIS Gateway'ine karşı Electron
+gerçek modele çağrı yapmaz. 28 policy/reader/Tavily/hafıza/Dreaming testiyle
+birlikte 42 sınır testi vardır. Çalışan JARVIS Gateway'ine karşı Electron
 kontrolleri için masaüstünden **Uygulamadan çık** seçin, sonra:
 
 ```powershell
@@ -399,6 +459,7 @@ sessiz geçiş olmaz):
 - Durum: `.\scripts\jarvis-status.ps1`
 - Hafıza durumu: `.\scripts\jarvis-memory-status.ps1 -Deep`. Kısa notlar `memory/records/<UUID>/r<revizyon>.md` altında kaynak ve tarih bilgisiyle tutulur; proje çıktıları ayrı dosyalarda referanslanır. Düzeltme güncel revizyonu ister; çakışmada eski kayıt ezilmez.
 - Hafıza araçları: `jarvis_memory_search/get` okur/arar, `jarvis_note_read/write` kısa kayıt okur/yazar. Kullanıcı tercihi/kararı/düzeltmesi hemen kaydedilir; model/web bulgusu ayrı kaynakla tutulur. Araştırma profili kişisel notları başlangıç bağlamı olarak almaz.
+- Dreaming: yukarıdaki `gateway call jarvis.memory.dreaming.status --json` ile durumunu görün. Gateway açıkken altı saatte bir seçilmiş güncel notları Gemini ile düzenler; yeni önemli notları kaydetmek için bu saati beklemeyin. Ham sohbeti hafızaya kopyalamayın; seçici fiziksel unutma ve ham kayıt ömrü 14. adımdadır.
 - Başlat: `.\scripts\jarvis-gateway.ps1` · Durdur: `Ctrl+C`
 - Masaüstü geliştirme: `npm run desktop:dev`
 - Derle/çalıştır: `npm run desktop:build`, ardından `npm run desktop:start`
@@ -408,7 +469,7 @@ sessiz geçiş olmaz):
 
 ## Güvenlik
 
-- Sırlar (`OPENCODE_API_KEY`, `GEMINI_API_KEY`, `TAVILY_API_KEY`, `JARVIS_GATEWAY_TOKEN`) yalnız
+- Sırlar (`OPENCODE_API_KEY`, `GEMINI_API_KEY`, `JARVIS_DREAMING_GEMINI_API_KEY`, `TAVILY_API_KEY`, `JARVIS_GATEWAY_TOKEN`) yalnız
   kullanıcı ortam değişkenlerinde veya repo dışı profil `.env` dosyasında durur; repoda, prompt'ta, log'da olmaz.
   Şablon: `config/jarvis.env.example`.
 - Olağan proje yazmaları görev kapsamıyla yürür; başka hedef için ek izin gerekir.

@@ -67,6 +67,12 @@ if (-not (Test-Path $profileEnv) -and [string]::IsNullOrWhiteSpace($env:JARVIS_G
 if (-not (Test-Path $openclawEntry)) { Write-Error 'Proje-yerel OpenClaw bulunamadı; proje klasöründe npm ci çalıştırın.' }
 try { $rawConfig = Get-Content -LiteralPath $profileConfig -Raw | ConvertFrom-Json -ErrorAction Stop }
 catch { Write-Error 'Profil JSON okunamadı; Gateway başlatılmadı. Mevcut profil değiştirilmedi.' }
+# Dedicated Dreaming credential never replaces GEMINI_API_KEY / Live auth.
+$dreamingKeyInFile = (Test-Path -LiteralPath $profileEnv) -and [bool](Select-String -LiteralPath $profileEnv -Pattern '^\s*(?:export\s+)?JARVIS_DREAMING_GEMINI_API_KEY\s*=\s*\S+' -Quiet)
+if ($rawConfig.models.providers.'jarvis-dream-google'.apiKey.id -eq 'JARVIS_DREAMING_GEMINI_API_KEY' -and -not $dreamingKeyInFile -and [string]::IsNullOrWhiteSpace($env:JARVIS_DREAMING_GEMINI_API_KEY)) {
+  $env:JARVIS_DREAMING_GEMINI_API_KEY = [Environment]::GetEnvironmentVariable('JARVIS_DREAMING_GEMINI_API_KEY', 'User')
+  if ([string]::IsNullOrWhiteSpace($env:JARVIS_DREAMING_GEMINI_API_KEY)) { Write-Error 'Dedicated Dreaming credential missing; no Live credential fallback.' }
+}
 if ($rawConfig.gateway.auth.mode -ne 'token' -or -not $rawConfig.gateway.auth.token) {
   Write-Error 'JARVIS için açık token kimliği gerekli; mevcut profil değiştirilmedi. Gateway başlatılmadı.'
 }

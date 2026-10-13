@@ -27,11 +27,55 @@ function checked(workspace: string, relative: string, make = false): string {
   }
   return absolute;
 }
+export function noteView(workspace: string, note: Note): { path: string; marker: string; text: string } | null {
+  if (note.origin.kind === 'web') return null;
+  const first = note.revision === 1 ? note : readNote(workspace, note.id, 1);
+  const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Istanbul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(first.recordedAt));
+  const marker = `JARVIS_NOTE_CURRENT_${note.id.replaceAll('-', '_')}_R${String(note.revision).padStart(8, '0')}`;
+  const body = `${marker} Source: ${recordPath(note.id, note.revision)}; kind=${note.origin.kind}; project=${JSON.stringify(note.origin.projectId)}; date=${note.recordedAt}; ${note.content.replace(/\s+/gu, ' ').trim()}`;
+  // Native recall and promotion truncate snippets. Never silently truncate a
+  // user statement or lose its source/revision marker to fit that budget.
+  if (body.length > 600) return null;
+  return { path: `memory/current/${day}-${note.id}-${revName(note.revision)}`, marker, text: `${body}\n` };
+}
+function invalidateNoteView(workspace: string, prior: Note) {
+  const probe = noteView(workspace, { ...prior, content: '' });
+  if (!probe) return;
+  // Invalidate only this record's old view, including the stable-path view
+  // from the admission probe. Other native candidates and history are intact.
+  for (const relative of [probe.path, probe.path.replace(/-r\d{8}\.md$/, '.md')]) {
+    const target = checked(workspace, relative);
+    if (!fs.existsSync(target)) continue;
+    const old = fs.readFileSync(target, 'utf8');
+    if (old && !old.startsWith(`JARVIS_NOTE_CURRENT_${prior.id.replaceAll('-', '_')}_R`)) throw new Error('Unowned note view; no overwrite');
+    fs.writeFileSync(target, '', 'utf8');
+  }
+}
+export function publishNoteView(workspace: string, note: Note): string | null {
+  if (readNote(workspace, note.id).revision !== note.revision) throw new Error('REVISION_CONFLICT: stale view');
+  const view = noteView(workspace, note);
+  if (!view) return null;
+  const target = checked(workspace, view.path, true);
+  if (fs.existsSync(target)) {
+    const old = fs.readFileSync(target, 'utf8');
+    if (old && !old.startsWith(`JARVIS_NOTE_CURRENT_${note.id.replaceAll('-', '_')}_R`)) throw new Error('Unowned note view; no overwrite');
+  }
+  fs.writeFileSync(target, view.text, 'utf8');
+  return view.path;
+}
+export function refreshNoteView(workspace: string, id: string, assertCurrent: () => void): Note {
+  idCheck(id); assertCurrent();
+  const lock = checked(workspace, `memory/records/${id}/.publish.lock`);
+  let fd: number;
+  try { fd = fs.openSync(lock, 'wx'); } catch (e) { if ((e as NodeJS.ErrnoException).code === 'EEXIST') throw new Error('REVISION_CONFLICT: publication in progress'); throw e; }
+  try { const note = readNote(workspace, id); assertCurrent(); publishNoteView(workspace, note); return note; }
+  finally { fs.closeSync(fd); fs.unlinkSync(lock); }
+}
 export function readNote(workspace: string, id: unknown, wanted?: number): Note {
   const valid = idCheck(id);
   const folder = checked(workspace, `memory/records/${valid}`);
   const names = fs.readdirSync(folder).filter(n => /^r\d{8}\.md$/.test(n)).sort();
-  if (!names.length) throw new Error('Record missing');
+  if (!names.length) throw Object.assign(new Error('Record missing'), { code: 'ENOENT' });
   const filename = wanted === undefined ? names.at(-1)! : revName(revision(wanted));
   const raw = fs.readFileSync(checked(workspace, `memory/records/${valid}/${filename}`), 'utf8');
   const first = raw.split('\n')[0];
@@ -39,7 +83,7 @@ export function readNote(workspace: string, id: unknown, wanted?: number): Note 
   if (!first.startsWith('<!-- jarvis-note ') || note.id !== valid || revName(note.revision) !== filename) throw new Error('Corrupt note; no overwrite');
   return note;
 }
-export function writeNote(workspace: string, input: Record<string, unknown>, origin: Origin, assertCurrent: () => void, root?: string): { note: Note; path: string } {
+export function writeNote(workspace: string, input: Record<string, unknown>, origin: Origin, assertCurrent: () => void, root?: string): { note: Note; path: string; dreaming: { viewPath?: string; error?: string; eligible: boolean } } {
   exactKeys(input, ['id', 'expectedRevision', 'category', 'content', 'sources', 'derivedFrom', 'artifacts']);
   const expected = revision(input.expectedRevision);
   const id = input.id === undefined ? randomUUID() : idCheck(input.id);
@@ -56,6 +100,17 @@ export function writeNote(workspace: string, input: Record<string, unknown>, ori
   for (const artifact of artifacts) { if (!root || !path.isAbsolute(artifact) || !within(root, artifact)) throw new Error('Artifact outside project'); const target = checked(root, path.relative(root, artifact)); if (!fs.statSync(target).isFile()) throw new Error('Artifact must be an existing project file'); }
   if (input.derivedFrom !== undefined && (!Array.isArray(input.derivedFrom) || input.derivedFrom.length > 8)) throw new Error('Invalid derivation');
   const derivedFrom = ((input.derivedFrom ?? []) as Record<string, unknown>[]).map(r => { exactKeys(r, ['id', 'revision']); const ref = { id: idCheck(r.id), revision: revision(r.revision) }; readNote(workspace, ref.id, ref.revision); return ref; });
+  // Serialize publication of this record and its native daily view across
+  // processes. No wait/retry or stale lock reclamation; an unknown prior effect
+  // remains visible. This lock contains no note or conversation data.
+  assertCurrent();
+  const lock = checked(workspace, `memory/records/${id}/.publish.lock`, true);
+  let fd: number;
+  try { fd = fs.openSync(lock, 'wx'); } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === 'EEXIST') throw new Error('REVISION_CONFLICT: publication in progress; reread, no automatic retry');
+    throw e;
+  }
+  try {
   let prior: Note | undefined;
   try { prior = readNote(workspace, id); } catch (e) { if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e; }
   if ((prior?.revision ?? 0) !== expected) throw new Error('REVISION_CONFLICT: reread latest record; prior information preserved');
@@ -68,9 +123,16 @@ export function writeNote(workspace: string, input: Record<string, unknown>, ori
   const metadata = JSON.stringify(note).replaceAll('<', '\\u003c').replaceAll('>', '\\u003e');
   const body = `<!-- jarvis-note ${metadata} -->\n# ${category} — ${id} / revision ${note.revision}\n\n${content}\n\nSource kind: ${origin.kind}; user: ${origin.userId}; task: ${origin.taskId}; project: ${origin.projectId}; date: ${note.recordedAt}.\n${prior ? `Supersedes: ${note.priorPath}\n` : ''}Sources: ${sources.join(', ')}\nDerived from: ${derivedFrom.map(r => recordPath(r.id, r.revision)).join(', ')}\nArtifacts (stored separately): ${artifacts.join(', ')}\n`;
   assertCurrent();
+  // Retire old candidate evidence BEFORE publishing a correction. Native Deep
+  // rehydrates and fingerprints this same source before its final commit.
+  if (prior) invalidateNoteView(workspace, prior);
   try { fs.writeFileSync(target, body, { flag: 'wx', encoding: 'utf8' }); }
   catch (e) { if ((e as NodeJS.ErrnoException).code === 'EEXIST') throw new Error('REVISION_CONFLICT: concurrent write; prior information preserved'); throw e; }
-  return { note, path: rel };
+  // A view/index failure must not disguise the already committed immediate
+  // source write as a failed mutation or invite a duplicate user-note retry.
+  try { const viewPath = publishNoteView(workspace, note); return { note, path: rel, dreaming: { eligible: Boolean(viewPath), ...(viewPath ? { viewPath } : {}) } }; }
+  catch (e) { return { note, path: rel, dreaming: { eligible: false, error: e instanceof Error ? e.message : 'Daily view unavailable' } }; }
+  } finally { fs.closeSync(fd); fs.unlinkSync(lock); }
 }
 export function originFor(scope: Scope, kind: Origin['kind']): Origin {
   const { userId, taskId, projectId, sessionId, sessionKey, runId, deviceId } = scope;
@@ -81,7 +143,7 @@ export function currentDerivedText(workspace: string, textValue: string) {
   const markers = textValue.matchAll(/JARVIS_(?:NOTE_CURRENT|CURRENT|ACTIVE)_([0-9a-f_]{36})_R(\d{8})/g);
   for (const marker of markers) {
     const note = readNote(workspace, marker[1].replaceAll('_', '-'));
-    if (note.revision !== Number(marker[2]) || note.origin.kind !== 'user' || !['preference', 'decision', 'correction'].includes(note.category)) return false;
+    if (note.revision !== Number(marker[2]) || note.origin.kind === 'web') return false;
   }
   return true;
 }

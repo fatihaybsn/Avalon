@@ -74,7 +74,7 @@ test('actual SDK dispatch freezes selected parameters and blocks unscoped calls'
 });
 test('plugin registration and host grants reject model identity; reader cannot inherit private bootstrap', async () => {
   const hooks = {}, methods = {}, store = new Map(); let factory;
-  plugin.register({ registerCliBackend() {}, config: {}, logger: { warn() {} }, on: (name, fn) => { hooks[name] = fn; }, registerTool: fn => { factory = fn; }, registerGatewayMethod: (name, fn) => { methods[name] = fn; }, runContext: { setRunContext: p => (store.set(p.runId, p.value), true), getRunContext: p => store.get(p.runId), clearRunContext: p => store.delete(p.runId) }, agent: { events: { emitAgentEvent: () => ({ emitted: true }) } } });
+  plugin.register({ registerCliBackend() {}, registerProvider() {}, config: {}, logger: { warn() {} }, on: (name, fn) => { hooks[name] = fn; }, registerTool: fn => { factory = fn; }, registerGatewayMethod: (name, fn) => { methods[name] = fn; }, runContext: { setRunContext: p => (store.set(p.runId, p.value), true), getRunContext: p => store.get(p.runId), clearRunContext: p => store.delete(p.runId) }, agent: { events: { emitAgentEvent: () => ({ emitted: true }) } } });
   assert.equal(factory.contextVersion, 2); // Only host-guarded memory tools added in 05
   assert.equal(factory.create({ agentId: 'research' }), null);
   assert.equal((await hooks.before_tool_call(write, ctx)).block, true);

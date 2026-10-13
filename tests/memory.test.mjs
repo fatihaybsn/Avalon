@@ -84,13 +84,13 @@ test('public config refuses cloud fallback, raw hooks, chat model and changed Dr
 test('admitted operator writes user notes, different authorized chat reads, revoked authority blocks', async () => {
   const methods = {}, hooks = {}, store = new Map(); let factory;
   const config = applyPolicy({ agents: { defaults: { workspace, model: { primary: 'opencode/space-bunny-free', fallbacks: [] } } } }, scratch);
-  plugin.register({ registerCliBackend() {}, config, runtime: { agent: { resolveAgentWorkspaceDir: () => workspace } }, logger: { warn() {} }, on: (name, fn) => hooks[name] = fn, registerTool: f => factory = f, registerGatewayMethod: (name, fn) => methods[name] = fn, runContext: { setRunContext: p => (store.set(p.runId, p.value), true), getRunContext: p => store.get(p.runId), clearRunContext: p => store.delete(p.runId) } });
+  plugin.register({ registerCliBackend() {}, registerProvider() {}, config, runtime: { agent: { resolveAgentWorkspaceDir: () => workspace } }, logger: { warn() {} }, on: (name, fn) => hooks[name] = fn, registerTool: f => factory = f, registerGatewayMethod: (name, fn) => methods[name] = fn, runContext: { setRunContext: p => (store.set(p.runId, p.value), true), getRunContext: p => store.get(p.runId), clearRunContext: p => store.delete(p.runId) } });
   const abort = new AbortController(); let current = true;
   const authority = { target: identity, assertCurrent() { if (!current) throw new Error('revoked'); }, retain: () => ({ assertCurrent() { if (!current) throw new Error('revoked'); }, signal: abort.signal, release() {} }) };
   const client = { authenticatedUserId: identity.userId, connect: { role: 'operator', scopes: ['operator.write'], device: { id: identity.deviceId } } };
   let result; const respond = (...r) => result = r;
   await methods['jarvis.scope.bind']({ params: input, client, sessionAccessAuthority: authority, respond }); assert.equal(result[0], true);
-  methods['jarvis.memory.write']({ params: { runId: scope.runId, expectedRevision: 0, category: 'decision', content: 'Only local memory' }, client, sessionAccessAuthority: authority, respond }); assert.equal(result[0], true);
+  await methods['jarvis.memory.write']({ params: { runId: scope.runId, expectedRevision: 0, category: 'decision', content: 'Only local memory' }, client, sessionAccessAuthority: authority, respond }); assert.equal(result[0], true);
   const id = result[1].note.id;
   const currentPath = result[1].path;
   const other = { ...identity, sessionId: 'session-two', sessionKey: 'agent:main:two' };

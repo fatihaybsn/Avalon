@@ -54,7 +54,7 @@ test('exact official plugin sends Advanced to Tavily; access/quota errors cause 
 test('host records only safe native source URLs, labels data and stops same run after native failure', async () => {
   const hooks = {}, methods = {}, runStore = new Map(), events = [];
   const abort = new AbortController();
-  jarvis.register({ registerCliBackend() {}, config, logger: { warn() {} }, registerTool() {}, on: (name, fn) => hooks[name] = fn, registerGatewayMethod: (name, fn) => methods[name] = fn,
+  jarvis.register({ registerCliBackend() {}, registerProvider() {}, config, logger: { warn() {} }, registerTool() {}, on: (name, fn) => hooks[name] = fn, registerGatewayMethod: (name, fn) => methods[name] = fn,
     runContext: { setRunContext: patch => (runStore.set(patch.runId, patch.value), true), getRunContext: p => runStore.get(p.runId), clearRunContext: p => runStore.delete(p.runId) },
     agent: { events: { emitAgentEvent: e => { events.push(e); return { emitted: true }; } } } });
   const oldKey = process.env.TAVILY_API_KEY; process.env.TAVILY_API_KEY = 'tvly-test-dummy-not-a-real-key';

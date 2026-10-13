@@ -120,7 +120,7 @@
         "subagent": {
           "allowModelOverride": true,
           "allowedModels": [
-            "jarvis-opencode-memory/space-bunny-free"
+            "jarvis-dream-google/gemini-3.8-flash"
           ]
         },
         "config": {
@@ -137,7 +137,7 @@
             "enabled": true,
             "frequency": "0 */6 * * *",
             "timezone": "Europe/Istanbul",
-            "model": "jarvis-opencode-memory/space-bunny-free",
+            "model": "jarvis-dream-google/gemini-3.8-flash",
             "storage": {
               "mode": "separate",
               "separateReports": false
@@ -275,5 +275,110 @@
   },
   "cron": {
     "enabled": true
+  },
+  "models": {
+    "providers": {
+      "jarvis-dream-google": {
+        "apiKey": {
+          "provider": "jarvis-dreaming",
+          "source": "env",
+          "id": "JARVIS_DREAMING_GEMINI_API_KEY"
+        },
+        "models": [
+          {
+            "name": "gemini-3.8-flash (selected Dreaming only)",
+            "maxTokens": 65536,
+            "reasoning": true,
+            "contextWindow": 1048576,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheWrite": 0,
+              "cacheRead": 0
+            },
+            "input": [
+              "text"
+            ],
+            "id": "gemini-3.8-flash"
+          },
+          {
+            "name": "gemini-3.6-flash (selected Dreaming only)",
+            "maxTokens": 65536,
+            "reasoning": true,
+            "contextWindow": 1048576,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheWrite": 0,
+              "cacheRead": 0
+            },
+            "input": [
+              "text"
+            ],
+            "id": "gemini-3.6-flash"
+          },
+          {
+            "name": "gemini-3.5-flash (selected Dreaming only)",
+            "maxTokens": 65536,
+            "reasoning": true,
+            "contextWindow": 1048576,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheWrite": 0,
+              "cacheRead": 0
+            },
+            "input": [
+              "text"
+            ],
+            "id": "gemini-3.5-flash"
+          },
+          {
+            "name": "gemini-3.5-flash-lite (selected Dreaming only)",
+            "maxTokens": 65536,
+            "reasoning": true,
+            "contextWindow": 1048576,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheWrite": 0,
+              "cacheRead": 0
+            },
+            "input": [
+              "text"
+            ],
+            "id": "gemini-3.5-flash-lite"
+          },
+          {
+            "name": "gemini-3.1-flash-lite (selected Dreaming only)",
+            "maxTokens": 65536,
+            "reasoning": true,
+            "contextWindow": 1048576,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheWrite": 0,
+              "cacheRead": 0
+            },
+            "input": [
+              "text"
+            ],
+            "id": "gemini-3.1-flash-lite"
+          }
+        ],
+        "api": "google-generative-ai",
+        "baseUrl": "https://generativelanguage.googleapis.com/v1beta"
+      }
+    }
+  },
+  "secrets": {
+    "providers": {
+      "jarvis-dreaming": {
+        "allowlist": [
+          "JARVIS_DREAMING_GEMINI_API_KEY"
+        ],
+        "source": "env"
+      }
+    }
   }
 }

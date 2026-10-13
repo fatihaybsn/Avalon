@@ -4,30 +4,55 @@ import { isBlockedHostnameOrIp, resolvePinnedHostnameWithPolicy } from 'openclaw
 import { getMemoryCapabilityRegistration } from 'openclaw/plugin-sdk/memory-host-core';
 import { MEMORY_TOOLS, memoryParams, originFor, readNote, writeNote, currentDerivedText } from './notes.ts';
 import { buildMemoryBackend } from './opencode-memory.ts';
-import { admitDreamingNotes, DREAMING_TOKEN } from './dreaming.ts';
+import { buildDreamProvider, DREAM_ROUTE, DREAM_MODELS } from './gemini-dreaming.ts';
+import { admitDreamingNotes, admitNativeRecallCall, readNativeDreaming, DREAMING_TOKEN } from './dreaming.ts';
+import fs from 'node:fs';
+import path from 'node:path';
 
 export default definePluginEntry({
   id: 'jarvis', name: 'JARVIS permissions', description: 'Scoped host policy; no model-owned grants or resolver',
   register(api) {
-    api.registerCliBackend(buildMemoryBackend());
     let dreamingActive = false;
     let stopped = false;
-    let dreamingStatus: { phase: string; error?: string; admitted?: number; at?: string } = { phase: 'idle' };
-    api.registerGatewayMethod('jarvis.memory.dreaming.status', ({ respond }) => respond(true, dreamingStatus), { scope: 'operator.read', profileAccess: 'required' });
+    // Only completed availability failures may resume at the next native cron.
+    // Unknown transport outcomes and host boundary failures remain held.
+    const completionBlock = 'DREAMING_CONFIGURATION_BLOCKED: the dedicated Gemini free-tier route and its separate SecretRef must be configured. No alternate provider, paid fallback or unselected memory prompt is admitted.';
+    let modelEvidence: Parameters<NonNullable<Parameters<typeof buildMemoryBackend>[0]>['onDecision']>[0] | undefined;
+    let dreamingStatus: { phase: string; error?: string; admitted?: number; at?: string; evidence?: unknown } = { phase: 'idle' };
+    api.registerCliBackend(buildMemoryBackend({ workspace: () => api.runtime.agent.resolveAgentWorkspaceDir(api.config, 'main'), onDecision: evidence => { modelEvidence = evidence; dreamingStatus = { ...dreamingStatus, phase: 'structured-decision', at: new Date().toISOString() }; } }));
+    api.registerProvider(buildDreamProvider(() => api.runtime.agent.resolveAgentWorkspaceDir(api.config, 'main'), evidence => {
+      modelEvidence = evidence; dreamingStatus = { phase: 'structured-decision', evidence, at: new Date().toISOString() };
+      api.logger.info(`JARVIS Dreaming host-validated decision: ${JSON.stringify(evidence)}`);
+    }, message => { dreamingStatus = { phase: 'failed', error: message, at: new Date().toISOString() }; }));
+    api.registerGatewayMethod('jarvis.memory.dreaming.status', async ({ respond }) => {
+      try {
+        const native = await readNativeDreaming(api);
+        const file = path.join(workspace(), 'MEMORY.md');
+        const content = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
+        const consolidated = new Set<string>();
+        let consolidatedSection = false;
+        for (const line of content.split(/\r?\n/)) {
+          if (line.startsWith('## ')) consolidatedSection = line.startsWith('## Consolidated Memory (');
+          const marker = /^<!-- openclaw-memory-promotion:(.+) -->$/.exec(line);
+          if (consolidatedSection && marker) consolidated.add(marker[1]);
+        }
+        const published = modelEvidence && modelEvidence.keys.every(key => native.promotedEntries.some(e => e.key === key) && consolidated.has(key));
+        const configuredDreaming = api.config.plugins?.entries?.['memory-core']?.config?.dreaming as { model?: unknown } | undefined;
+        respond(true, { ...dreamingStatus, phase: published ? 'native-published' : dreamingStatus.phase, error: published ? undefined : dreamingStatus.error, configuredModel: configuredDreaming?.model, modelSequence: DREAM_MODELS, model: modelEvidence, native: { shortTermCount: native.shortTermCount, promotedTotal: native.promotedTotal }, published: Boolean(published), warning: 'An admitted candidate, empty sweep or append fallback alone is not structured Dreaming success' });
+      } catch (e) { respond(true, { ...dreamingStatus, hostEvidenceError: e instanceof Error ? e.message : 'Native status unavailable', published: false }); }
+    }, { scope: 'operator.read', profileAccess: 'required' });
     api.on('before_agent_reply', async (event, ctx) => {
       if (ctx.trigger !== 'cron' || ctx.agentId !== 'main' || !event.cleanedBody.includes(DREAMING_TOKEN)) return;
       if (dreamingActive || stopped) return { handled: true, reason: 'JARVIS Dreaming admission busy/stopped; no duplicate sweep' };
-      dreamingActive = true;
-      dreamingStatus = { phase: 'admission', at: new Date().toISOString() };
-      try {
-        const result = await admitDreamingNotes(api, () => { if (stopped) throw new Error('Gateway stopped'); });
-        dreamingStatus = { phase: 'native-processing', admitted: result.admitted, at: new Date().toISOString() };
-        // Native Memory Core's next claim hook owns ranking/consolidation/CAS.
-      } catch (error) {
-        dreamingStatus = { phase: 'failed', error: error instanceof Error ? error.message : 'Local admission failed', at: new Date().toISOString() };
-        api.logger.warn(`JARVIS Dreaming deferred: ${error instanceof Error ? error.message : 'local source unavailable'}`);
-        return { handled: true, reason: 'Local Dreaming admission failed; cloud inference withheld' };
-      } finally { dreamingActive = false; }
+      if (dreamingStatus.phase === 'failed' && !dreamingStatus.error?.startsWith('DREAMING_UNAVAILABLE:')) return { handled: true, reason: dreamingStatus.error ?? 'Previous Dreaming failed; inspect before retry' };
+      const config = api.config.plugins?.entries?.['memory-core']?.config?.dreaming as { model?: unknown } | undefined;
+      if (config?.model === DREAM_ROUTE && api.config.models?.providers?.['jarvis-dream-google']?.apiKey) {
+        modelEvidence = undefined;
+        dreamingStatus = { phase: 'native-running', at: new Date().toISOString() };
+        return;
+      }
+      dreamingStatus = { ...dreamingStatus, phase: 'model-blocked', error: completionBlock, at: new Date().toISOString() };
+      return { handled: true, reason: completionBlock };
     }, { priority: 10000, eligibleTriggers: ['cron'] });
     // Ephemeral retained host authority only. OpenClaw owns run metadata,
     // transcripts and durable approvals; this is not a second registry/DB.
@@ -44,6 +69,39 @@ export default definePluginEntry({
       } catch { drop(runId); return undefined; }
     };
     const workspace = () => api.runtime.agent.resolveAgentWorkspaceDir(api.config, 'main');
+    const indexCommittedNote = async () => {
+      try {
+        const memory = getMemoryCapabilityRegistration();
+        if (memory?.pluginId !== 'memory-core' || !memory.capability.runtime) throw new Error('Builtin Memory Core unavailable');
+        const { manager, error } = await memory.capability.runtime.getMemorySearchManager({ cfg: api.config, agentId: 'main' });
+        if (!manager?.sync) throw new Error(error ?? 'Native index sync unavailable');
+        await manager.sync({ force: true, reason: 'jarvis-immediate-note-commit' });
+        return { ready: true };
+      } catch (e) { return { ready: false, error: e instanceof Error ? e.message : 'Index unavailable', sourceCommitted: true }; }
+    };
+    const admitCommittedNote = async (result: { note: { id: string }; dreaming: { eligible: boolean } }, index: { ready: boolean }, assertCurrent: () => void, sessionKey: string, verify = false) => {
+      if (!result.dreaming.eligible || !index.ready) return { eligible: result.dreaming.eligible, requested: 0 };
+      try { return await admitDreamingNotes(api, assertCurrent, [result.note.id], sessionKey, verify ? () => readNativeDreaming(api) : undefined); }
+      catch (error) { return { error: error instanceof Error ? error.message : 'Native admission failed', sourceCommitted: true }; }
+    };
+    api.registerGatewayMethod('jarvis.memory.dreaming.admit', async options => {
+      try {
+        const { params, client, sessionAccessAuthority } = options;
+        const binding = live(String(params.runId));
+        if (!binding || binding.scope.role === 'research' || binding.scope.userId !== (client?.authenticatedUserProfile?.profileId ?? client?.authenticatedUserId) || binding.scope.deviceId !== client?.connect.device?.id || binding.scope.sessionId !== sessionAccessAuthority?.target.sessionId || binding.scope.sessionKey !== sessionAccessAuthority?.target.sessionKey || sessionAccessAuthority?.target.agentId !== 'main' || client?.connect.role !== 'operator' || client?.invalidated || !client?.connect.scopes?.includes('operator.write')) throw new Error('Current admitted operator task required');
+        if (Object.keys(params).some(k => !['sessionKey', 'agentId', 'runId', 'ids'].includes(k)) || !Array.isArray(params.ids) || params.ids.length < 1 || params.ids.length > 6 || params.ids.some(id => typeof id !== 'string')) throw new Error('One to six explicit note IDs required');
+        if (dreamingActive || stopped) throw new Error('Dreaming busy/stopped; no duplicate admission');
+        dreamingActive = true;
+        try {
+          const current = () => { sessionAccessAuthority!.assertCurrent(); binding.assertCurrent(); if (!live(binding.scope.runId) || stopped) throw new Error('Task ended'); };
+          const ids = params.ids as string[];
+          for (const id of ids) if (readNote(workspace(), id).origin.userId !== binding.scope.userId) throw new Error('Record belongs to another principal');
+          const result = await admitDreamingNotes(api, current, ids, binding.scope.sessionKey, () => readNativeDreaming(api));
+          dreamingStatus = { phase: 'native-admitted', admitted: 'admitted' in result ? result.admitted : undefined, evidence: result.evidence, at: new Date().toISOString() };
+          options.respond(true, result);
+        } finally { dreamingActive = false; }
+      } catch (e) { dreamingStatus = { phase: 'failed', error: e instanceof Error ? e.message : 'Admission failed', at: new Date().toISOString() }; options.respond(false, undefined, { code: 'INVALID_REQUEST', message: dreamingStatus.error! }); }
+    }, { scope: 'operator.write', profileAccess: 'required', sessionAccess: { mode: 'write' } });
     const toolScope = (ctx: { agentId?: string; sessionId?: string; sessionKey?: string; assertInvocationCurrent: () => void }) => {
       ctx.assertInvocationCurrent();
       const matches = [...authorities.keys()].map(id => live(id)).filter(b => b && b.scope.agentId === ctx.agentId && b.scope.sessionId === ctx.sessionId && b.scope.sessionKey === ctx.sessionKey && b.scope.role !== 'research');
@@ -70,6 +128,9 @@ export default definePluginEntry({
             if (Array.isArray(input.sources) && input.sources.some(url => typeof url !== 'string' || !scope.userStatement!.includes(url))) throw new Error('A user-source URL must occur in the admitted user input');
             value = writeNote(workspace(), input, { ...originFor(scope, 'user'), userInputHash: fingerprint(scope.userStatement) }, assertCurrent, scope.root);
           } else value = writeNote(workspace(), input, originFor(scope, Array.isArray(p.sources) && p.sources.length ? 'web' : 'model'), assertCurrent, scope.root);
+          const committed = value as ReturnType<typeof writeNote>;
+          const index = await indexCommittedNote();
+          value = { ...committed, index, nativeCandidate: await admitCommittedNote(committed, index, assertCurrent, scope.sessionKey) };
         }
         else if (name === 'jarvis_note_read') { value = readNote(workspace(), p.id); assertCurrent(); }
         else {
@@ -109,7 +170,7 @@ export default definePluginEntry({
     } }, { names: MEMORY_TOOLS });
     // Human operator ingress only: identity and source are admitted host fields.
     // Gemini tool bridging is deliberately deferred to stage 12.
-    api.registerGatewayMethod('jarvis.memory.write', options => {
+    api.registerGatewayMethod('jarvis.memory.write', async options => {
       try {
         const { client, sessionAccessAuthority, params } = options;
         const target = sessionAccessAuthority?.target;
@@ -120,7 +181,9 @@ export default definePluginEntry({
         if (!binding || binding.scope.userId !== userId || binding.scope.deviceId !== deviceId || binding.scope.sessionId !== target.sessionId || binding.scope.sessionKey !== target.sessionKey || binding.scope.role === 'research') throw new Error('Current matching task scope required');
         const { sessionKey: _sessionKey, agentId: _agentId, runId: _runId, ...input } = params;
         const result = writeNote(workspace(), input, originFor(binding.scope, 'user'), () => { sessionAccessAuthority!.assertCurrent(); binding.assertCurrent(); if (!live(binding.scope.runId)) throw new Error('Scope expired'); }, binding.scope.root);
-        options.respond(true, result);
+        const index = await indexCommittedNote();
+        const current = () => { sessionAccessAuthority!.assertCurrent(); binding.assertCurrent(); if (!live(binding.scope.runId)) throw new Error('Scope expired'); };
+        options.respond(true, { ...result, index, nativeCandidate: await admitCommittedNote(result, index, current, binding.scope.sessionKey, true) });
       } catch (e) { options.respond(false, undefined, { code: 'INVALID_REQUEST', message: e instanceof Error ? e.message : 'Note refused' }); }
     }, { scope: 'operator.write', profileAccess: 'required', sessionAccess: { mode: 'write' } });
     api.registerGatewayMethod('jarvis.memory.read', options => {
@@ -165,6 +228,8 @@ export default definePluginEntry({
     }, { scope: 'operator.write', profileAccess: 'required', sessionAccess: { mode: 'write' } });
     api.registerGatewayMethod('jarvis.policy.status', ({ respond }) => respond(true, { version: '2026.10.2', tools: hasTavilyKey() ? ['tavily_search', 'web_fetch'] : ['web_fetch'], search: { provider: 'tavily', depth: 'advanced', key: hasTavilyKey() ? 'present; account access must be tested' : 'missing', genericWebSearch: 'disabled', fallback: 'disabled' }, rawExec: 'closed', payment: 'closed until manual client binding in stage 13', scopes: authorities.size }), { scope: 'operator.read' });
     api.on('before_tool_call', async (event, ctx) => {
+      const native = admitNativeRecallCall(event, ctx);
+      if (native) return native;
       const binding = live(ctx.runId);
       const decision = await evaluate(event, ctx, binding?.scope);
       if (binding?.scope.role === 'research' && !('block' in decision)) {
