@@ -3,6 +3,7 @@
   "name": "JARVIS permissions",
   "description": "Host-bound task scopes and isolated official Tavily Advanced / native web_fetch",
   "activation": { "onStartup": true },
-  "contracts": { "tools": [] },
+  "cliBackends": ["jarvis-opencode-memory"],
+  "contracts": { "tools": ["jarvis_memory_search", "jarvis_memory_get", "jarvis_note_read", "jarvis_note_write"] },
   "configSchema": { "type": "object", "additionalProperties": false, "properties": {} }
 }

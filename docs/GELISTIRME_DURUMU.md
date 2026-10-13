@@ -8,18 +8,34 @@ Son güncelleme: 13 Ekim 2026. Yetkili karar kaynağı [kaynak proje kaydı](sou
 | 02 | Yeni OpenClaw merkezi ve model bağlantıları | **Tamamlandı** | Kapanış kararı (A): birincil model `opencode/space-bunny-free` aynen kalır; yürütme 10. adımda OpenCode istemcisi (worker) üzerinden bağlanır. OpenClaw sağlayıcı yolundaki `403` bilinen politika engelidir, arıza değildir. |
 | 03 | İzin sınırları ve salt okunur araştırma | **Tamamlandı — kullanıcı kapanış teyidi** | Host sınırı/native onay ve gerçek Tavily Advanced erişimi ajan tarafından doğrulandı; kullanıcı kalan doğrulamaları yaptığını ve 03'ün tamamlandığını bildirdi. 10/12/13 bağlantıları sonraki aşamalardadır. |
 | 04 | Sade masaüstü ve sohbet arayüzü | **Tamamlandı — yazılı istemci sınırında** | Gerçek Gateway/cihaz/session/scope/send bağlantısı ve Windows Electron/Vite/Lit istemcisi doğrulandı. Başarılı model yanıtı için kabul edilmiş OpenCode işçisi 10'da; ses 11/13'te. |
-| 05 | Ortak yerel hafıza | Başlamadı | 02–04 gerekli; EmbeddingGemma ve Memory Core davranışı kurulup doğrulanmadı. |
+| 05 | Ortak yerel hafıza | **Kısmen uygulandı — native Dreaming aday kaydı engelli** | Yerel embedding/hibrit arama, kontrollü notlar ve ortak erişim doğrulandı. Space Bunny mevcut OpenCode işçisinde host guard ile cevap verdi. Native CLI aday kaydında `memory-core dreaming SQLite state store is not configured`; cron tek başına tamamlanma kanıtı değildir. |
 | 06 | Görev kaydı, canlı olaylar ve paralellik | Başlamadı | 03–05 gerekli; host olay/kimlik eşlemesi uygulanmadı. |
 | 07 | Hızlı temel Windows ve tarayıcı işlemleri | Başlamadı | 03 ve 06 gerekli; yeni Windows yardımcısı veya tarayıcı bağlantısı yok. |
 | 08 | Windows GUI ve sınırlı tamamlayıcı MCP | Başlamadı | 06–07 gerekli; CUA/Windows-MCP bağlantısı ve araç filtresi yok. |
 | 09 | Codex dış işçisi | Başlamadı | 03 ve 06–08 gerekli; Codex hesabı/CLI bağlantısı doğrulanmadı. |
-| 10 | OpenCode işçisi ve ihtiyaca göre Vibe Coding | Başlamadı | 09 gerekli; OpenCode bağlantısı doğrulanmadı. |
+| 10 | OpenCode işçisi ve ihtiyaca göre Vibe Coding | Başlamadı | Genel görev entegrasyonu 09 sonrasında; 05 için mevcut işçiye dar, etkisiz model çağrısı doğrulandı. |
 | 11 | Hazır Talk/Google Live ve bağımsız ses | Başlamadı | 04 ve 06 gerekli; Google hesabı, provider-direct oturumu ve gerçek cihaz sesi doğrulanmadı. |
 | 12 | Gemini dar araçları, canlı bulgular ve tek kare ekran | Başlamadı | 05–11 gerekli; JARVIS görev/bağlam bağlantısı yok. |
 | 13 | Sesli onay ve kritik dış işlemler | Başlamadı | 03 ve 09–12 gerekli; mevcut OpenClaw onayını yetkili istemci sesine bağlayan uygulama yok. |
 | 14 | Seçici unutma ve ham kayıt ömrü | Başlamadı | 05–06 ve 09–13 gerekli; 30 gün/60 saniye bakım ve seçici türev temizliği uygulanmadı. |
 | 15 | Otomasyon, bildirim ve telefonda aynı JARVIS | Başlamadı | 11–14 gerekli; zamanlayıcı, bildirim ve Tailscale telefon bağlantısı kurulmadı. |
 | 16 | Windows paketi ve günlük çalışma düzeni | Başlamadı | 01–15 gerekli; 04'ün geliştirme EXE'si var, tam installer/imzalama/günlük dağıtım henüz yok. |
+
+## 05 — tek yerel hafıza ve kontrollü notlar, 13 Ekim 2026
+
+**Son gerçek durum: 05 eksiksiz tamamlanmadı.** Tek builtin Memory Core, `local`/`none`, FTS/BM25 + 768 boyutlu vektör arama; resmî managed llama.cpp embedding-only Windows EmbeddingGemma kurulumu doğrulandı. GGUF 328.577.056 byte (~313,4 MiB) model dosyasıdır; toplam RAM/VRAM değildir. Chat modeli eklenmedi; Space Bunny ve Gemini seçimi korunur.
+
+Kontrollü `jarvis_memory_search/get`, `jarvis_note_read/write` araçları, kaynak/kullanıcı/görev/proje/tarih/kayıt kimliği/revizyon ve türev referansları, eşzamanlı CAS, yetkili farklı sohbet erişimi ve araştırma reddi doğrulandı. Kaynaklar `MEMORY.md`, `USER.md`, `memory/`; proje çıktıları ayrı dosyalarda referanslanır. Kısa kullanıcı tercihi/kararı/düzeltmesi hemen yazılır; model/web içeriği kullanıcı beyanı olamaz. Ham sohbet indeksleme, sessionMemory, rememberAcrossConversations ve sohbet kopyalama hook'u kapalıdır. Gemini araç köprüsü 12'de kalır.
+
+Mevcut Memory Core cron'u `0 */6 * * *`, `Europe/Istanbul` (00/06/12/18), yeni scheduler yok. Light ve REM bu sürümde ham transcript ingestion yaptığından kapalı; Deep yapılandırılmıştır. `jarvis-opencode-memory/space-bunny-free` aynı mevcut Space Bunny'nin yönlendirme kimliğidir; yeni chat modeli değildir. Native CLI 2.0.27 / mevcut authenticated worker 2.0.28 doğrulandı. Public V2 host tool/permission hook'larıyla gerçek JSON model yanıtı alındı; zorlanan yazma execution öncesinde engellendi, dosya oluşmadı. Önceki blanket-deny FreeTierError teşhisi bu yeni başarılı host guard yolunun sonucu değildir.
+
+**Kalan gerçek engel:** Public CLI search native Dreaming recall kaydını Gateway dışında ekleyemiyor: `memory-core dreaming SQLite state store is not configured`. Native CLI hatayı yutuyor; arama başarılı görünmesine rağmen aday deposu boş ve sweep `candidates=0, applied=0` dönüyor. `memory/dreaming/` ayrıca native adaylardan dışlanır; tarihli `memory/current/` türev görünüm denemesi de store engelini çözmedi. Otomatik tur açık engel raporlayıp bulut çağrısını durdurur. İç SQLite şeması/import'u, ikinci depo veya ham backfill ile aşılmadı. Aynı Memory Core'da desteklenen Gateway kaynaklı additive admission gerekir. Model hesabı/GGUF şu an eksik değildir.
+
+`npm run check` ve 25 sınır testi geçti; önceki 14 desktop testi/build ve gerçek paired Gateway ortak not/izin sınırı testleri geçti. İkinci Gateway ile Dreaming denemesi bellek tahsis hatasıyla durdu; başarılı sayılmaz. Ana Gateway yeniden başlatılıp hazır olduğu doğrulandı. User ortamındaki yeni API anahtarına çalışan işçinin hesabını geçirdik iddiası yoktur. Ham worker/session kayıtları fiziksel silinmedi; 14 seçici unutma/retention uygulanmış sayılmaz. Gelecek aşamalar açılmadı.
+
+Ayrıntılar: [05_YEREL_HAFIZA.md](05_YEREL_HAFIZA.md). Kalan işi devretme promptu: [05_DREAMING_COZUM_PROMPTU.md](05_DREAMING_COZUM_PROMPTU.md).
+
+Son temizlikte eski blanket-deny teşhis betiği, gerçek kullanıcı UUID'sine bağlı tek kullanımlık doğrulama, çalışmayan live-Dreaming test seçeneği ve kullanılmayan türev üretimi kaldırıldı. Eski türev revizyonlarını reddeden okuma filtresi korundu. README kurulum sırasına embedding-only kurulum ve kontrollü not kullanımı eklendi; Dreaming hatası README'ye eklenmedi. Tip kontrolü + 25 sınır + 14 desktop testi son kaynakla yeniden geçti.
 
 ## 04 — sade masaüstü, 13 Ekim 2026
 
@@ -46,6 +62,10 @@ Son güncelleme: 13 Ekim 2026. Yetkili karar kaynağı [kaynak proje kaydı](sou
 - Ayrıntılı sözleşme, kullanım ve test sınırları: [03_YETKI_SINIRLARI.md](03_YETKI_SINIRLARI.md).
 
 ## OpenCode işçisi bağlantısı — kullanıcı teyidi, 13 Ekim 2026
+
+**05 için yeni kullanıcı yetkilendirmesi:** Kullanıcı mevcut OpenCode işçisi üzerinden dar Dreaming bağlantısını şimdi yetkilendirdi. Genel 10. aşama açılmadı. Space Bunny public host guard ile gerçek çağrıda çalıştı; mevcut engel yukarıdaki Memory Core aday kaydıdır. İlk blanket-deny teşhisi son durum olarak yorumlanmaz.
+
+**05 sırasında yeni anahtar doğrulaması, 13 Ekim 2026:** Kullanıcının sağladığı `OPENCODE_API_KEY` yalnız Windows kullanıcı ortamına kaydedildi; anahtar repo, belge veya test çıktısına yazılmadı. Mevcut resmî uç noktada yalnız `space-bunny-free` için tek kısa çağrı yeniden **403 FreeTierError** verdi. Yeni anahtar doğrudan ücretsiz model API kısıtını kaldırmadı; Dreaming model bağlantısı bu işlemle hazır olmadı. Ücretli model/fallback denenmedi ve mevcut OpenCode işçisi kararı korunur. Çalışan Gateway, yeni kullanıcı ortamını otomatik devralmış sayılmaz.
 
 Kullanıcı, OpenClaw üzerinden ücretsiz modellere doğrudan API erişiminin reddedilmesi nedeniyle Space Bunny Free için OpenCode istemcisi/işçisi yolunu bilerek seçtiğini teyit etti. `403 FreeTierError` yanıtı sağlayıcının ücretsiz katmanı OpenCode istemcisiyle sınırlamasıdır; Gateway araç izni, bozuk anahtar veya yanlış model seçimi olarak yorumlanmaz. İncelemede resmî `https://opencode.ai/inference/v1/chat/completions` uç noktasında aynı ret yeniden doğrulandı.
 

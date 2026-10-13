@@ -58,6 +58,7 @@ test('human-selected scope and chat send use one run/idempotency identity; UI ca
   const bind = rpc.calls.find(c => c.method === 'jarvis.scope.bind')!.params, send = rpc.calls.find(c => c.method === 'chat.send')!.params;
   assert.equal(bind.runId, send.idempotencyKey); assert.equal(bind.taskId, send.idempotencyKey); assert.equal(send.sessionId, 'one');
   assert.equal(bind.sessionKey, first); assert.equal(bind.root, 'C:\\projects\\example'); assert.equal(bind.userId, undefined); assert.equal(bind.deviceId, undefined);
+  assert.equal(bind.userInput, send.message);
   assert.equal(rpc.calls.some(c => c.method === 'approval.resolve'), false);
 });
 test('ambiguous send remains unknown and read reconnect never resends a mutation', async () => {
@@ -82,7 +83,9 @@ test('a replaced session incarnation loses its previous human folder grant', asy
   const { rpc, controller } = setup(); await controller.refresh(); controller.setRoot(first, 'C:\\example');
   rpc.rows[0].sessionId = 'replacement'; await controller.refresh(); await controller.send(first, 'text');
   assert.equal(controller.snapshot.sessions[0].scopeRoot, undefined);
-  assert.equal(rpc.calls.some(c => c.method === 'jarvis.scope.bind'), false);
+  const bind = rpc.calls.find(c => c.method === 'jarvis.scope.bind')!.params;
+  assert.equal(bind.role, 'memory'); assert.equal(bind.root, undefined);
+  assert.equal(bind.userInput, 'text');
 });
 test('chat does not request admin-only provenance fields or permit Gateway slash controls', async () => {
   const { rpc, controller } = setup(); await controller.refresh();

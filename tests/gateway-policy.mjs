@@ -1,9 +1,10 @@
-// Integration fixture: only a disposable Gateway/profile, no model/API calls.
+// Disposable Gateway/profile; no live model calls.
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import net from 'node:net';
 import { spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
+import os from 'node:os';
 import assert from 'node:assert/strict';
 import { applyPolicy } from '../scripts/jarvis-policy-config.mjs';
 import { resolveInstalledTavily } from '../scripts/tavily-installation.mjs';
@@ -18,6 +19,7 @@ const config = applyPolicy({ gateway: { mode: 'local', port, bind: 'loopback', a
 config.gateway.controlUi = { allowedOrigins: [`http://127.0.0.1:${port}`] };
 config.plugins.load.paths.push(path.resolve('tests/fixtures/approval-plugin'));
 config.plugins.load.paths.push(resolveInstalledTavily());
+config.plugins.load.paths.push(path.join(os.homedir(), '.openclaw-jarvis/extensions/llama-cpp'));
 config.plugins.allow.push('jarvis-policy-test');
 config.plugins.entries['jarvis-policy-test'] = { enabled: true };
 await fs.writeFile(configPath, JSON.stringify(config));
@@ -30,10 +32,13 @@ let logs = ''; child.stdout.on('data', b => { logs = (logs + b.toString()).slice
 let reviewer, requester, limited;
 try {
   // Do not let client identity initialization compete with Gateway state bootstrap.
-  const startDeadline = Date.now() + 90000;
+  const startDeadline = Date.now() + 180000;
   while (true) {
-    const listening = await new Promise(resolve => { const socket = net.connect(port, '127.0.0.1'); socket.once('connect', () => { socket.destroy(); resolve(true); }); socket.once('error', () => resolve(false)); });
-    if (listening) break;
+    // The listener binds before slow plugin/auth sidecars settle. Wait for the
+    // public native readiness surface, not an open TCP port or longer WS timer.
+    let ready = false;
+    try { const response = await fetch(`http://127.0.0.1:${port}/readyz`, { headers: { authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(3000), redirect: 'error' }); ready = response.ok; await response.body?.cancel(); } catch { /* startup remains pending */ }
+    if (ready) break;
     if (child.exitCode !== null || Date.now() > startDeadline) throw new Error('Test Gateway did not start');
     await new Promise(resolve => setTimeout(resolve, 400));
   }
@@ -59,6 +64,24 @@ try {
     const bound = await reviewer.request('jarvis.scope.bind', { sessionKey: key, agentId: 'main', runId: 'integration-run', projectId: 'integration-project', taskId: 'integration-task', role: 'project', root: target, confirmationPaths: [path.join(scratch, 'separate.txt')] });
     assert.equal(bound.bound, true); console.log('PASS actual paired-client/session scope binding');
   } catch (error) { console.log('SCOPE_BIND_BLOCKED', error.message); throw error; }
+  const saved = await reviewer.request('jarvis.memory.write', { sessionKey: key, agentId: 'main', runId: 'integration-run', expectedRevision: 0, category: 'preference', content: 'Isolated stage05 fixture preference' });
+  assert.equal(saved.note.origin.kind, 'user'); assert.equal(saved.note.revision, 1);
+  const otherSession = await reviewer.request('sessions.create', { agentId: 'main', label: 'stage05-memory-other' });
+  const otherKey = otherSession.key ?? otherSession.sessionKey;
+  const shared = await requester.request('jarvis.memory.read', { sessionKey: otherKey, agentId: 'main', id: saved.note.id });
+  assert.equal(shared.content, saved.note.content);
+  const memoryBound = await requester.request('jarvis.scope.bind', { sessionKey: otherKey, agentId: 'main', runId: 'memory-only-integration', projectId: 'personal', taskId: 'memory-only-task', role: 'memory', userInput: 'Short test preference' });
+  assert.equal(memoryBound.bound, true);
+  const daily = await requester.request('jarvis.memory.write', { sessionKey: otherKey, agentId: 'main', runId: 'memory-only-integration', expectedRevision: 0, category: 'preference', content: 'Memory-only admitted fixture preference' });
+  assert.equal(daily.note.origin.kind, 'user'); assert.equal(daily.note.origin.projectId, 'personal');
+  await assert.rejects(reviewer.request('jarvis.memory.write', { sessionKey: key, agentId: 'main', runId: 'integration-run', id: saved.note.id, expectedRevision: 0, category: 'correction', content: 'Stale correction' }), /REVISION_CONFLICT/);
+  await assert.rejects(reviewer.request('jarvis.memory.write', { sessionKey: key, agentId: 'main', runId: 'integration-run', expectedRevision: 0, category: 'preference', content: 'Spoof', userId: 'spoof' }));
+  const researchSession = await reviewer.request('sessions.create', { agentId: 'research', label: 'stage05-denied' });
+  await assert.rejects(reviewer.request('jarvis.memory.read', { sessionKey: researchSession.key ?? researchSession.sessionKey, agentId: 'research', id: saved.note.id }));
+  const jobs = await reviewer.request('cron.list', { includeDisabled: true });
+  const dream = jobs.jobs.find(j => j.declarationKey?.includes('memory') || j.name === 'Memory Dreaming Promotion');
+  assert.ok(dream); assert.equal(dream.schedule.expr, '0 */6 * * *'); assert.equal(dream.schedule.tz, 'Europe/Istanbul'); assert.equal(dream.payload.lightContext, true);
+  console.log('PASS real admitted note write/CAS, shared chat read, researcher denial and native six-hour Dreaming schedule');
   // The actual loaded JARVIS hook runs in the actual Gateway. The test-only RPC
   // drives its deferred snapshot through authenticated core registry dispatch.
   const separate = path.join(scratch, 'separate.txt');

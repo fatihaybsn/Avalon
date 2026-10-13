@@ -24,7 +24,14 @@
       "skipBootstrap": true,
       "systemAgent": {
         "agentId": "main"
-      }
+      },
+      "compaction": {
+        "memoryFlush": {
+          "enabled": false
+        }
+      },
+      "userTimezone": "Europe/Istanbul",
+      "contextInjection": "never"
     },
     "entries": {
       "main": {
@@ -33,12 +40,16 @@
           "allow": [
             "read",
             "write",
-            "edit"
+            "edit",
+            "jarvis_memory_search",
+            "jarvis_memory_get",
+            "jarvis_note_read",
+            "jarvis_note_write"
           ]
         }
       },
       "research": {
-        "workspace": "~\\.openclaw-jarvis\\research-empty",
+        "workspace": "C:\\Users\\Fatih\\.openclaw-jarvis\\research-empty",
         "contextInjection": "never",
         "skills": [],
         "tools": {
@@ -49,6 +60,15 @@
         },
         "subagents": {
           "allowAgents": []
+        },
+        "memory": {
+          "search": {
+            "enabled": false,
+            "rememberAcrossConversations": false,
+            "experimental": {
+              "sessionMemory": false
+            }
+          }
         }
       }
     },
@@ -91,6 +111,56 @@
       },
       "firecrawl": {
         "enabled": false
+      },
+      "llama-cpp": {
+        "enabled": true
+      },
+      "memory-core": {
+        "enabled": true,
+        "subagent": {
+          "allowModelOverride": true,
+          "allowedModels": [
+            "jarvis-opencode-memory/space-bunny-free"
+          ]
+        },
+        "config": {
+          "memoryPolicy": {
+            "excludeSessions": {
+              "chatTypes": [
+                "direct",
+                "group",
+                "channel"
+              ]
+            }
+          },
+          "dreaming": {
+            "enabled": true,
+            "frequency": "0 */6 * * *",
+            "timezone": "Europe/Istanbul",
+            "model": "jarvis-opencode-memory/space-bunny-free",
+            "storage": {
+              "mode": "separate",
+              "separateReports": false
+            },
+            "phases": {
+              "light": {
+                "enabled": false
+              },
+              "rem": {
+                "enabled": false
+              },
+              "deep": {
+                "enabled": true,
+                "maxPromotedSnippetTokens": 160,
+                "maxPriorEntryLossFraction": 0,
+                "limit": 6,
+                "minScore": 0.1,
+                "minRecallCount": 1,
+                "minUniqueQueries": 1
+              }
+            }
+          }
+        }
       }
     },
     "allow": [
@@ -98,8 +168,12 @@
       "tavily",
       "opencode",
       "google",
-      "memory-core"
-    ]
+      "memory-core",
+      "llama-cpp"
+    ],
+    "slots": {
+      "memory": "memory-core"
+    }
   },
   "tools": {
     "allow": [
@@ -107,7 +181,11 @@
       "write",
       "edit",
       "tavily_search",
-      "web_fetch"
+      "web_fetch",
+      "jarvis_memory_search",
+      "jarvis_memory_get",
+      "jarvis_note_read",
+      "jarvis_note_write"
     ],
     "deny": [
       "exec",
@@ -162,5 +240,40 @@
         }
       }
     }
+  },
+  "memory": {
+    "citations": "on",
+    "search": {
+      "enabled": true,
+      "provider": "local",
+      "fallback": "none",
+      "sources": [
+        "memory"
+      ],
+      "rememberAcrossConversations": false,
+      "experimental": {
+        "sessionMemory": false
+      },
+      "extraPaths": [],
+      "local": {
+        "modelPath": "hf:ggml-org/embeddinggemma-300m-qat-q8_0-GGUF/embeddinggemma-300m-qat-Q8_0.gguf"
+      },
+      "query": {
+        "maxResults": 6,
+        "minScore": 0.35
+      }
+    }
+  },
+  "hooks": {
+    "internal": {
+      "entries": {
+        "session-memory": {
+          "enabled": false
+        }
+      }
+    }
+  },
+  "cron": {
+    "enabled": true
   }
 }

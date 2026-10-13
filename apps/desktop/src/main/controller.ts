@@ -133,7 +133,9 @@ export class DesktopController {
     this.snapshot.submissions = [...this.snapshot.submissions.slice(-49), submission]; this.sending.add(key); this.emit();
     let sent = false;
     try {
-      if (root) await this.rpc.request('jarvis.scope.bind', { sessionKey: key, agentId: this.agentId, runId: id, taskId: id, projectId: key, role: 'project', root }, true);
+      const shortInput = message.trim().replace(/\s+/gu, ' ');
+      const userInput = message.length <= 4096 && shortInput.length <= 1800 && !/[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(message) ? { userInput: message } : {};
+      await this.rpc.request('jarvis.scope.bind', { sessionKey: key, agentId: this.agentId, runId: id, taskId: id, projectId: key, ...(root ? { role: 'project', root } : { role: 'memory' }), ...userInput }, true);
       sent = true;
       await this.rpc.request('chat.send', { sessionKey: key, agentId: this.agentId, sessionId: session.sessionId, message, idempotencyKey: id, deliver: false }, true);
       submission.status = 'accepted'; submission.detail = 'Gateway iletinin kabulünü doğruladı; çalışma durumu host kayıtlarından okunur.';

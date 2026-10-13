@@ -4,6 +4,7 @@ Windows 11'de doğrudan çalışan, OpenClaw merkezli kişisel asistan projesi.
 Tek merkez **OpenClaw Gateway**, konuşma tarafı **Gemini Live**, ağır görev
 modeli **Space Bunny Free**'dir. Mevcut durum: **04. aşama yazılı istemci tamamlandı**
 (Gateway, görev izinleri, salt okunur araştırma ve sade Electron/Vite/Lit arayüzü).
+05 ile tek yerel hafıza, kontrollü kısa not araçları ve yetkili ortak erişim eklendi.
 Başarılı ağır görev/yanıt entegrasyonu OpenCode işçisiyle 10'da, canlı ses 11'de,
 sesli onay 13'te; tam kurulabilir dağıtım 16'dadır.
 
@@ -136,6 +137,7 @@ profil varsa korunur; başka bilgisayarın state, kimlik veya anahtarını kopya
 node scripts/init-jarvis-profile.mjs
 .\node_modules\.bin\openclaw.cmd --profile jarvis plugins install clawhub:@openclaw/opencode-provider
 .\node_modules\.bin\openclaw.cmd --profile jarvis plugins install @openclaw/tavily-plugin@2026.10.2 --pin
+node scripts/initialize-jarvis-notes.mjs
 node scripts/jarvis-policy-config.mjs
 node scripts/jarvis-policy-config.mjs --check "$env:USERPROFILE\.openclaw-jarvis\openclaw.json"
 ```
@@ -147,10 +149,31 @@ kullanır; ayrı arama sunucusu kurulmaz. Kurulum veya erişim hatasında durun,
 başka paket/sürüm/ücretli sağlayıcıya sessiz geçmeyin.
 
 Politika betiği ilk değişiklik öncesindeki profili repo dışında
-`openclaw.before-stage03.json` olarak yedekler. Model/Talk/auth ayarlarını korur;
-03'ün araç, rol ve hook sınırlarını uygular. Profil önceki aşamadan geliyorsa
+`openclaw.before-stage05.json` olarak yedekler. Model/Talk/auth ayarlarını korur;
+03 ve 05'in araç, rol, hafıza ve hook sınırlarını uygular. Profil önceki aşamadan geliyorsa
 yine eklentileri kurup bu politika komutlarını çalıştırın. Projeyi başka klasöre
 taşıdığınızda politika betiğini yeniden çalıştırın; plugin yolu yeni konuma bağlanır.
+
+### 4a) Yerel hafıza modelini kurun
+
+Aynı ayrı `jarvis` profilinde resmî managed llama.cpp eklentisini kurun:
+
+```powershell
+.\node_modules\.bin\openclaw.cmd --profile jarvis plugins install clawhub:@openclaw/llama-cpp-provider --pin
+.\node_modules\.bin\openclaw.cmd --profile jarvis models auth login --agent main --provider llama-cpp --method local
+node scripts/jarvis-policy-config.mjs --check "$env:USERPROFILE\.openclaw-jarvis\openclaw.json"
+```
+
+Kurulumda **yalnız embedding-only** yolunu ve EmbeddingGemma'yı kabul edin;
+chat modeli teklifi varsa reddedin. Resmî eklenti sürümü `2026.10.2` olmalıdır;
+farklı sürüm gelirse sözleşmeyi incelemeden devam etmeyin. Kurulum Windows
+llama.cpp runtime'ını ve `embeddinggemma-300m-qat-Q8_0.gguf` modelini indirir;
+internet ve disk alanı gerekir. Yaklaşık **313,4 MiB model dosyasıdır**;
+Windows runtime, RAM/VRAM ve indeks tüketimi buna eklenir. İkinci hafıza
+veritabanı/servisi kurmayın. Kaynaklar `%USERPROFILE%\.openclaw-jarvis\workspace`
+altında `MEMORY.md`, `USER.md`, `memory/` olur; başlangıç betiği mevcut
+notları ezmez. Ham sohbet kopyalama ve sessionMemory kapalı kalır.
+Yerel arama başarısızsa buluta veya başka embedding sağlayıcısına geçilmez.
 
 ### 5) Gateway'i başlatın
 
@@ -174,6 +197,19 @@ port görülmesi, doğru JARVIS Gateway'ine bağlandığınız anlamına gelmez.
 .\node_modules\.bin\openclaw.cmd --profile jarvis models list --provider opencode --refresh
 ```
 
+Gateway hazır olduktan sonra aynı kullanıcıya ait ikinci terminalde yerel
+embedding ve indeksi doğrulayın:
+
+```powershell
+.\scripts\jarvis-memory-status.ps1 -Deep
+.\node_modules\.bin\openclaw.cmd --profile jarvis memory index --force --agent main
+```
+
+Deep durumda `embeddingProbe.ok: true`, sağlayıcı `local`, FTS ve vektör
+indeksinin kullanılabilir olması beklenir. Eksik model/kurulum görünür kalır.
+Model kimlikleri ve yerel servis ayarlarını kurulum üretir; başka bilgisayarın
+model yollarını veya kimlik/state dosyalarını kopyalamayın.
+
 ### 6) Araştırma erişimini ve izin temelini doğrulayın
 
 Tavily anahtarını tanımladığınız yeni terminalde:
@@ -191,7 +227,7 @@ anahtar veya ham sağlayıcı yanıtını yazdırmaz. Başarıda `ok: true`,
 kanıtlamaz. Hata durumunda eksik anahtar, erişim, kota ya da ağ kategorisi
 bildirilir; otomatik tekrar veya alternatif sağlayıcı yoktur.
 
-`npm test` 16 sınır testini çalıştırır; gerçek Tavily hesabına çağrı yapmaz.
+`npm test` 25 sınır testini çalıştırır; gerçek Tavily hesabına çağrı yapmaz.
 Gateway testi ayrı geçici profilde gerçek onay kayıtlarını ve dosya etkisini
 kontrol eder: deny/allow-always yazmaz, allow-once sabit parametrelerle yazar.
 Test kendi Gateway sürecini ve başarılı profilini kapatıp temizler; ana
@@ -254,7 +290,8 @@ bu istemciden çalıştırılmaz.
 Dosya görevi için önce **Görev klasörü seç** ile o sohbetin somut hedefini
 native diyalogdan seçin. Bu izin, sonraki gönderimde aynı run/task kimliğiyle
 mevcut 03 host politikasına bağlanır; korunan dosyalara genel erişim açmaz.
-Klasör seçilmezse dosya araçlarının kapsamı bağlı değildir. Klasör seçimi
+Klasör seçilmezse yalnız dar hafıza araçları için memory kapsamı bağlanır;
+genel dosya/web/exec yetkisi verilmez. Klasör seçimi
 uygulama ömründe tutulur; yeniden açılışta gerektiğinde tekrar seçin.
 Görev ve bekleyen onaylar sağ panelde native OpenClaw kayıtlarından okunur.
 04'te onay **görüntülenir**; karar mevcut yetkili OpenClaw onay istemcisindedir.
@@ -269,7 +306,8 @@ göndermeyin.
 Bu sürüm gerçek Gateway bağlantısı ve iletinin kabulünü doğrular; başarılı
 Space Bunny yanıtı henüz hazır değildir. Aşağıdaki bilinen `403` davranışı ve
 10. adımdaki OpenCode işçisi kararı geçerlidir. Canlı ses, mikrofon/oynatma,
-sesli onay ve ortak hafıza bağlantısı bu aşamada kurulmaz.
+sesli onay sonraki aşamalardadır. Ortak hafıza araçları aynı workspace içindeki
+yetkili sohbetlerde kullanılabilir; Gemini araç köprüsü 12'ye aittir.
 
 ### 8) Windows çalıştırılabilir klasörünü oluşturun ve kontrolleri çalıştırın
 
@@ -296,8 +334,8 @@ npm run test:desktop
 ```
 
 Masaüstü testi 14 IPC/session/stream/pairing/reconnect sınır kontrolüdür;
-gerçek modele çağrı yapmaz. Önceden geçen 16 policy/reader/Tavily testiyle
-birlikte 30 sınır testi vardır. Çalışan JARVIS Gateway'ine karşı Electron
+gerçek modele çağrı yapmaz. 25 policy/reader/Tavily/hafıza testiyle
+birlikte 39 sınır testi vardır. Çalışan JARVIS Gateway'ine karşı Electron
 kontrolleri için masaüstünden **Uygulamadan çık** seçin, sonra:
 
 ```powershell
@@ -359,6 +397,8 @@ sessiz geçiş olmaz):
 ## Günlük kullanım
 
 - Durum: `.\scripts\jarvis-status.ps1`
+- Hafıza durumu: `.\scripts\jarvis-memory-status.ps1 -Deep`. Kısa notlar `memory/records/<UUID>/r<revizyon>.md` altında kaynak ve tarih bilgisiyle tutulur; proje çıktıları ayrı dosyalarda referanslanır. Düzeltme güncel revizyonu ister; çakışmada eski kayıt ezilmez.
+- Hafıza araçları: `jarvis_memory_search/get` okur/arar, `jarvis_note_read/write` kısa kayıt okur/yazar. Kullanıcı tercihi/kararı/düzeltmesi hemen kaydedilir; model/web bulgusu ayrı kaynakla tutulur. Araştırma profili kişisel notları başlangıç bağlamı olarak almaz.
 - Başlat: `.\scripts\jarvis-gateway.ps1` · Durdur: `Ctrl+C`
 - Masaüstü geliştirme: `npm run desktop:dev`
 - Derle/çalıştır: `npm run desktop:build`, ardından `npm run desktop:start`
@@ -388,7 +428,7 @@ gösterilir; belirsiz yazma reconnect'te tekrar edilmez. Ayrıntılar ve test s�
 
 ## Proje yapısı
 
-03 izin eklentisi ve profiller uygulanmıştır. Sınırlar, gerçek test kanıtı ve kapalı bağlantılar: [03 yetki sınırları](docs/03_YETKI_SINIRLARI.md). Kontroller: `npm run check`, `npm test`, `npm run test:gateway`. Resmî Tavily Advanced + web_fetch yapılandırıldı; gerçek Advanced API erişimi doğrulandı ([güvenli kurulum](docs/TAVILY_KURULUM.md)). Genel web_search kapalıdır; sesli onay 13'e aittir.
+03 izin eklentisi, 05 yerel hafıza araçları ve profiller uygulanmıştır. Sınırlar, gerçek test kanıtı ve kapalı bağlantılar: [03 yetki sınırları](docs/03_YETKI_SINIRLARI.md). Kontroller: `npm run check`, `npm test`, `npm run test:gateway`. Resmî Tavily Advanced + web_fetch yapılandırıldı; gerçek Advanced API erişimi doğrulandı ([güvenli kurulum](docs/TAVILY_KURULUM.md)). Genel web_search kapalıdır; sesli onay 13'e aittir.
 
 ```
 apps/desktop/ Electron main/preload, Vite + Lit renderer, seçili lisanslı upstream dosyaları

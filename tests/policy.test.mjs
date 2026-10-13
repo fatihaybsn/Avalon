@@ -74,8 +74,9 @@ test('actual SDK dispatch freezes selected parameters and blocks unscoped calls'
 });
 test('plugin registration and host grants reject model identity; reader cannot inherit private bootstrap', async () => {
   const hooks = {}, methods = {}, store = new Map(); let factory;
-  plugin.register({ config: {}, logger: { warn() {} }, on: (name, fn) => { hooks[name] = fn; }, registerTool: fn => { factory = fn; }, registerGatewayMethod: (name, fn) => { methods[name] = fn; }, runContext: { setRunContext: p => (store.set(p.runId, p.value), true), getRunContext: p => store.get(p.runId), clearRunContext: p => store.delete(p.runId) }, agent: { events: { emitAgentEvent: () => ({ emitted: true }) } } });
-  assert.equal(factory, undefined); // JARVIS registers no duplicate search/fetch engine
+  plugin.register({ registerCliBackend() {}, config: {}, logger: { warn() {} }, on: (name, fn) => { hooks[name] = fn; }, registerTool: fn => { factory = fn; }, registerGatewayMethod: (name, fn) => { methods[name] = fn; }, runContext: { setRunContext: p => (store.set(p.runId, p.value), true), getRunContext: p => store.get(p.runId), clearRunContext: p => store.delete(p.runId) }, agent: { events: { emitAgentEvent: () => ({ emitted: true }) } } });
+  assert.equal(factory.contextVersion, 2); // Only host-guarded memory tools added in 05
+  assert.equal(factory.create({ agentId: 'research' }), null);
   assert.equal((await hooks.before_tool_call(write, ctx)).block, true);
   let response;
   await methods['jarvis.scope.bind']({ params: { ...input, userId: 'forged' }, client: null, respond: (...r) => response = r }); assert.equal(response[0], false);
@@ -97,7 +98,7 @@ test('applied profiles preserve provider choices and isolate researcher', () => 
   assert.deepEqual(c.agents.entries.research.tools.allow, ['tavily_search', 'web_fetch']); assert.equal(c.tools.elevated.enabled, false);
   assert.equal(c.tools.web.search.provider, 'tavily'); assert.equal(c.tools.web.search.enabled, false);
   assert.equal(c.tools.web.fetch.maxRedirects, 0); assert.equal(c.plugins.entries.firecrawl.enabled, false);
-  assert.deepEqual(c.plugins.allow, ['jarvis', 'tavily', 'opencode', 'google', 'memory-core']);
+  assert.deepEqual(c.plugins.allow, ['jarvis', 'tavily', 'opencode', 'google', 'memory-core', 'llama-cpp']);
   assert.equal(c.gateway.auth.token, '${JARVIS_GATEWAY_TOKEN}'); assert.deepEqual(c.agents.defaults.model.fallbacks, []);
   assertPolicy(c, scratch);
   const tampered = structuredClone(c); tampered.agents.entries.research.contextInjection = 'always'; assert.throws(() => assertPolicy(tampered, scratch));
