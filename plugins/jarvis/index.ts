@@ -1,5 +1,5 @@
 import { definePluginEntry } from 'openclaw/plugin-sdk/plugin-entry';
-import { makeScope, evaluate, READER_PROMPT, publicUrl, fingerprint, type Scope } from './policy.ts';
+import { makeScope, evaluate, READER_PROMPT, publicUrl, fingerprint, WORK_TOOLS, workNoteParams, type Scope } from './policy.ts';
 import { isBlockedHostnameOrIp, resolvePinnedHostnameWithPolicy } from 'openclaw/plugin-sdk/ssrf-runtime';
 import { getMemoryCapabilityRegistration } from 'openclaw/plugin-sdk/memory-host-core';
 import { MEMORY_TOOLS, memoryParams, originFor, readNote, writeNote, currentDerivedText } from './notes.ts';
@@ -8,6 +8,7 @@ import { buildDreamProvider, DREAM_ROUTE, DREAM_MODELS } from './gemini-dreaming
 import { admitDreamingNotes, admitNativeRecallCall, readNativeDreaming, DREAMING_TOKEN } from './dreaming.ts';
 import fs from 'node:fs';
 import path from 'node:path';
+import { installWork } from './work.ts';
 
 export default definePluginEntry({
   id: 'jarvis', name: 'JARVIS permissions', description: 'Scoped host policy; no model-owned grants or resolver',
@@ -58,7 +59,7 @@ export default definePluginEntry({
     // transcripts and durable approvals; this is not a second registry/DB.
     const authorities = new Map<string, { scope: Scope; assertCurrent: () => void; release: () => void; signal: AbortSignal }>();
     const hasTavilyKey = () => /^tvly-\S+$/.test(process.env.TAVILY_API_KEY ?? '');
-    const drop = (runId: string) => { const old = authorities.get(runId); authorities.delete(runId); api.runContext.clearRunContext({ runId }); old?.release(); };
+    const drop = (runId: string) => { const old = authorities.get(runId); authorities.delete(runId); api.runContext.clearRunContext({ runId }); old?.release(); work?.release(runId); };
     const live = (runId?: string) => {
       if (!runId) return undefined;
       const binding = authorities.get(runId);
@@ -69,6 +70,8 @@ export default definePluginEntry({
       } catch { drop(runId); return undefined; }
     };
     const workspace = () => api.runtime.agent.resolveAgentWorkspaceDir(api.config, 'main');
+    const work = typeof api.runtime?.state?.openKeyedStore === 'function' && typeof api.agent?.events?.registerAgentEventSubscription === 'function' ? installWork(api, live) : undefined;
+    if (!work) api.logger?.warn?.('JARVIS stage 06 unavailable: native retained state/events required');
     const indexCommittedNote = async () => {
       try {
         const memory = getMemoryCapabilityRegistration();
@@ -108,6 +111,28 @@ export default definePluginEntry({
       if (ctx.agentId !== 'main' || matches.length !== 1) throw new Error('Current authorized main task required');
       return matches[0]!;
     };
+    api.registerTool({ contextVersion: 2, create(ctx) {
+      if (ctx.agentId !== 'main' || !work) return null;
+      return [{ name: 'jarvis_work_read', label: 'Çalışma kaydı', description: 'Read only the current task revision, host state and concise model contributions. No memory index, hidden reasoning, entire transcript, credentials or tool output.', parameters: { type: 'object' as const, properties: {}, additionalProperties: false }, async execute(_callId: string, args: Record<string, unknown>) {
+        if (Object.keys(args).length) throw new Error('No parameters accepted');
+        const b = toolScope(ctx), r = await work.ledger.get(b.scope.userId, b.scope.taskId); ctx.assertInvocationCurrent(); b.assertCurrent();
+        const details = { taskId: r.taskId, projectId: r.projectId, revision: r.revision, state: r.state, operation: r.operation, result: r.result, blocker: r.blocker, model: r.model, updatedAt: r.updatedAt };
+        return { content: [{ type: 'text' as const, text: JSON.stringify(details) }], details };
+      } }, { name: 'jarvis_work_note', label: 'Çalışma notu', description: 'Add only a concise proposed plan, finding/source, rationale, pending decision or next step to the current host task revision. Read jarvis_work_read for current revision. This cannot change observed execution state, grant authority, verify effects, accept a plan, or prove a steer applied. progressClaim is explicitly an unverified model statement.', parameters: { type: 'object' as const, properties: { expectedRevision: { type: 'integer', minimum: 1 }, ...Object.fromEntries(['plan', 'finding', 'rationale', 'nextStep', 'pendingDecision', 'progressClaim'].map(k => [k, { type: 'string', maxLength: 1800 }])), inputId: { type: 'string', maxLength: 128 }, sources: { type: 'array', items: { type: 'string', maxLength: 512 }, maxItems: 8 } }, required: ['expectedRevision'], additionalProperties: false }, async execute(callId: string, args: Record<string, unknown>) {
+        const b = toolScope(ctx), p = workNoteParams(args);
+        const current = () => { ctx.assertInvocationCurrent(); b.assertCurrent(); if (!live(b.scope.runId)) throw new Error('Task ended'); ctx.assertInputCommitAllowed?.(); };
+        const result = await work.ledger.change(b.scope.userId, b.scope.taskId, `model-note:${callId}`, 'model-contribution', p, r => {
+          if (r.revision !== p.expectedRevision) throw new Error('Task revision changed; read current record');
+          r.model = { ...r.model, ...Object.fromEntries(Object.entries(p).filter(([k]) => !['expectedRevision', 'inputId', 'progressClaim'].includes(k))) };
+          if (p.inputId !== undefined || p.progressClaim !== undefined) {
+            const steer = r.steering[String(p.inputId)]; if (!steer) throw new Error('No matching user steering input');
+            if (p.progressClaim !== undefined) steer.modelClaim = String(p.progressClaim);
+          }
+        }, current);
+        const details = { recorded: true, revision: result.record.revision, hostState: result.record.state, modelStatement: true };
+        return { content: [{ type: 'text' as const, text: JSON.stringify(details) }], details };
+      } }];
+    } }, { names: WORK_TOOLS });
     api.registerTool({ contextVersion: 2, create(ctx) {
       if (ctx.agentId !== 'main') return null;
       const schemas: Record<string, Record<string, unknown>> = {
@@ -232,6 +257,10 @@ export default definePluginEntry({
       if (native) return native;
       const binding = live(ctx.runId);
       const decision = await evaluate(event, ctx, binding?.scope);
+      if (binding && !('block' in decision)) {
+        try { await work?.beforeTool({ ...event, params: 'params' in decision ? decision.params ?? event.params : event.params }, ctx); }
+        catch (e) { return { block: true, blockReason: e instanceof Error ? e.message : 'Work resource unavailable' }; }
+      }
       if (binding?.scope.role === 'research' && !('block' in decision)) {
         if (event.toolName === 'tavily_search' && !hasTavilyKey()) return { block: true, blockReason: 'TAVILY_API_KEY missing; search unavailable, no fallback' };
         if (event.toolName === 'web_fetch') {

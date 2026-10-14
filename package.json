@@ -12,7 +12,8 @@
   },
   "scripts": {
     "check": "tsc --noEmit && npm --prefix apps/desktop run check",
-    "test": "node --test tests/policy.test.mjs tests/reader.test.mjs tests/tavily.test.mjs tests/memory.test.mjs tests/dreaming.test.mjs",
+    "test": "node --max-semi-space-size=4 --test --test-concurrency=1 tests/policy.test.mjs tests/reader.test.mjs tests/tavily.test.mjs tests/memory.test.mjs tests/dreaming.test.mjs tests/work.test.mjs",
+    "test:work:gateway": "pwsh -NoProfile -File scripts/test-jarvis-policy.ps1 -WorkOnly",
     "test:gateway": "pwsh -NoProfile -File scripts/test-jarvis-policy.ps1",
     "desktop:dev": "npm --prefix apps/desktop run dev",
     "desktop:build": "npm --prefix apps/desktop run build",

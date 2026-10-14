@@ -21,9 +21,10 @@ config.plugins.load.paths.push(path.resolve('tests/fixtures/approval-plugin'));
 config.plugins.load.paths.push(resolveInstalledTavily());
 config.plugins.load.paths.push(path.join(os.homedir(), '.openclaw-jarvis/extensions/llama-cpp'));
 config.plugins.allow.push('jarvis-policy-test');
-config.plugins.entries['jarvis-policy-test'] = { enabled: true };
+config.plugins.entries['jarvis-policy-test'] = { enabled: true, hooks: { allowConversationAccess: true, allowPromptInjection: true } };
 await fs.writeFile(configPath, JSON.stringify(config));
 const env = { ...process.env, OPENCLAW_CONFIG_PATH: configPath, OPENCLAW_STATE_DIR: scratch, OPENCLAW_GATEWAY_TOKEN: token };
+env.NODE_OPTIONS = `${env.NODE_OPTIONS ?? ''} --max-semi-space-size=4`.trim();
 delete env.OPENCODE_API_KEY; delete env.GEMINI_API_KEY;
 delete env.TAVILY_API_KEY;
 process.env.OPENCLAW_CONFIG_PATH = configPath; process.env.OPENCLAW_STATE_DIR = scratch; process.env.OPENCLAW_GATEWAY_TOKEN = token;
@@ -32,7 +33,7 @@ let logs = ''; child.stdout.on('data', b => { logs = (logs + b.toString()).slice
 let reviewer, requester, limited;
 try {
   // Do not let client identity initialization compete with Gateway state bootstrap.
-  const startDeadline = Date.now() + 180000;
+  const startDeadline = Date.now() + 300000;
   while (true) {
     // The listener binds before slow plugin/auth sidecars settle. Wait for the
     // public native readiness surface, not an open TCP port or longer WS timer.
@@ -64,6 +65,7 @@ try {
     const bound = await reviewer.request('jarvis.scope.bind', { sessionKey: key, agentId: 'main', runId: 'integration-run', projectId: 'integration-project', taskId: 'integration-task', role: 'project', root: target, confirmationPaths: [path.join(scratch, 'separate.txt')] });
     assert.equal(bound.bound, true); console.log('PASS actual paired-client/session scope binding');
   } catch (error) { console.log('SCOPE_BIND_BLOCKED', error.message); throw error; }
+  if (!process.argv.includes('--work-only')) {
   const saved = await reviewer.request('jarvis.memory.write', { sessionKey: key, agentId: 'main', runId: 'integration-run', expectedRevision: 0, category: 'preference', content: 'Isolated stage05 fixture preference' });
   assert.equal(saved.note.origin.kind, 'user'); assert.equal(saved.note.revision, 1);
   const otherSession = await reviewer.request('sessions.create', { agentId: 'main', label: 'stage05-memory-other' });
@@ -103,6 +105,46 @@ try {
     else await assert.rejects(fs.access(separate));
     console.log(`PASS requireApproval -> native registry -> ${decision}: ${result.blocked ? 'no write' : 'fixed write executed'}`);
   }
+  }
+  const workSession = await reviewer.request('sessions.create', { agentId: 'main', label: 'stage06-native-work' });
+  const workKey = workSession.key ?? workSession.sessionKey, runId = 'stage06-native-run', taskId = 'stage06-native-task';
+  await reviewer.request('jarvis.scope.bind', { sessionKey: workKey, agentId: 'main', runId, taskId, projectId: 'stage06-project', role: 'project', root: target });
+  await reviewer.request('jarvis_test.arm', { sessionKey: workKey, agentId: 'main', runId });
+  const started = await reviewer.request('jarvis.work.start', { sessionKey: workKey, agentId: 'main', runId, message: `STAGE06_HOST_TEST_ONLY:${runId}` });
+  assert.equal(started.dispatched, true); assert.equal(started.record.runId, runId);
+  const waitHeld = async id => {
+    const deadline = Date.now() + 90000;
+    while (!(await reviewer.request('jarvis_test.hold-status', { runId: id })).held) { assert.ok(Date.now() < deadline, 'Provider-free fixture did not capture native run'); await new Promise(r => setTimeout(r, 100)); }
+  };
+  await waitHeld(runId);
+  const file = path.join(target, 'stage06.txt');
+  const effect = await reviewer.request('jarvis_test.work-effect', { sessionKey: workKey, agentId: 'main', runId, toolCallId: 'stage06-write', path: file, content: 'Stage06 actual native host effect' });
+  assert.equal(effect.written, true);
+  const read = await requester.request('jarvis.work.read', { sessionKey: workKey, agentId: 'main', taskId });
+  assert.equal(read.record.operation.effect, 'verified'); assert.equal(read.record.operation.phase, 'result');
+  assert.equal(read.record.model, undefined); assert.equal(read.pauseSupported, false);
+  await reviewer.request('jarvis_test.work-effect', { sessionKey: workKey, agentId: 'main', runId, toolCallId: 'stage06-write', path: file, content: 'Stage06 actual native host effect', replayResult: true });
+  const duplicate = await requester.request('jarvis.work.read', { sessionKey: workKey, agentId: 'main', taskId });
+  assert.equal(duplicate.record.recordVersion, read.record.recordVersion);
+  await assert.rejects(reviewer.request('jarvis.work.steer', { sessionKey: workKey, agentId: 'main', taskId, expectedRevision: 99, inputId: 'stale', message: 'stale revision' }));
+  const childKey = 'agent:main:subagent:jarvis:stage06-independent';
+  await reviewer.request('sessions.create', { key: childKey, agentId: 'main', displayName: 'Stage06 native independent child' });
+  await reviewer.request('jarvis.scope.bind', { sessionKey: childKey, agentId: 'main', runId: 'stage06-child-run', taskId: 'stage06-child-task', projectId: 'stage06-project', role: 'project', root: target });
+  const childStarted = await reviewer.request('jarvis.work.start', { sessionKey: childKey, agentId: 'main', runId: 'stage06-child-run', message: 'STAGE06_HOST_TEST_ONLY', independent: true });
+  assert.equal(childStarted.dispatched, true); assert.equal(childStarted.record.runId, 'stage06-child-run');
+  assert.equal((await reviewer.request('jarvis_test.hold-status', { runId })).held, true, 'Independent child cancelled its parent');
+  const childWait = await reviewer.request('agent.wait', { runId: 'stage06-child-run', timeoutMs: 30000 });
+  assert.equal(childWait.status, 'error'); // Catalog/provider intentionally unavailable in the disposable child profile.
+  const childRead = await reviewer.request('jarvis.work.read', { sessionKey: childKey, agentId: 'main', taskId: 'stage06-child-task' });
+  assert.equal(childRead.record.result, 'native-error');
+  await reviewer.request('jarvis_test.release', { runId });
+  await reviewer.request('agent.wait', { runId, timeoutMs: 30000 });
+  const beforeReload = await reviewer.request('jarvis.work.read', { sessionKey: workKey, agentId: 'main', taskId });
+  await reviewer.request('plugins.reload', { plugins: [{ pluginId: 'jarvis' }] });
+  const retained = await reviewer.request('jarvis.work.read', { sessionKey: workKey, agentId: 'main', taskId });
+  assert.equal(retained.record.taskId, taskId); assert.equal(retained.record.operation.effect, 'verified');
+  assert.notEqual(retained.record.result, 'success'); assert.equal(retained.record.request, beforeReload.record.request);
+  console.log('PASS stage06 real native dispatch, retained metadata/project revision, host hook/actual effect, duplicate identity, independent subagent/parent isolation, explicit child failure, stale steer and reload without replay; parent provider gated, no successful model claimed');
 } catch (error) {
   // No credential, raw config or auth output in failure diagnostics.
   console.error('INTEGRATION_FAILED', error.message.replaceAll(token, '[redacted]'));

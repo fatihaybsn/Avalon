@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import { applyMemory, assertMemory } from './jarvis-memory-config.mjs';
+import { applyWork, assertWork } from './jarvis-work-config.mjs';
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export function applyPolicy(config, profileDir, pluginPath = path.join(repo, 'plugins', 'jarvis')) {
@@ -23,7 +24,8 @@ export function applyPolicy(config, profileDir, pluginPath = path.join(repo, 'pl
   config.agents.entries.research = { workspace: path.join(profileDir, 'research-empty'), contextInjection: 'never', skills: [], tools: { allow: ['tavily_search', 'web_fetch'] }, subagents: { allowAgents: [] } };
   config.tools = { ...config.tools, allow: ['read', 'write', 'edit', 'tavily_search', 'web_fetch'], deny: ['exec', 'process', 'apply_patch', 'code_execution', 'browser', 'computer', 'nodes', 'message', 'sessions_spawn', 'sessions_send', 'subagents', 'gateway', 'plugins', 'openclaw', 'cron', 'automations', 'web_search', 'tavily_extract', 'jarvis_web_fetch', 'memory_search', 'memory_get'], elevated: { enabled: false }, exec: { security: 'deny', ask: 'always' }, web: { search: { enabled: false, provider: 'tavily', cacheTtlMinutes: 0 }, fetch: { enabled: true, readability: true, maxChars: 20000, maxCharsCap: 20000, maxResponseBytes: 262144, timeoutSeconds: 10, cacheTtlMinutes: 0, maxRedirects: 0, useTrustedEnvProxy: false, ssrfPolicy: { dangerouslyAllowPrivateNetwork: false, allowRfc2544BenchmarkRange: false, allowIpv6UniqueLocalRange: false } } } };
   delete config.tools.alsoAllow;
-  return applyMemory(config);
+  applyMemory(config);
+  return applyWork(config);
 }
 export function assertPolicy(config, profileDir) {
   const expected = applyPolicy(structuredClone(config), profileDir);
@@ -36,6 +38,7 @@ export function assertPolicy(config, profileDir) {
   assert.deepEqual(config.tools, expected.tools, 'Host tool policy differs from stage 03');
   assert.equal(config.agents?.defaults?.skipBootstrap, true);
   assert.equal(config.agents?.ownership, 'explicit');
+  assertWork(config);
   assertMemory(config);
   assert.ok(config.plugins?.load?.paths?.some(p => path.resolve(p) === path.join(repo, 'plugins', 'jarvis')), 'JARVIS plugin load path unavailable');
   const version = JSON.parse(fs.readFileSync(path.join(repo, 'node_modules/openclaw/package.json'))).version;
@@ -47,7 +50,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const profileDir = path.dirname(filename);
   const before = fs.readFileSync(filename, 'utf8');
   if (checking) {
-    try { assertPolicy(JSON.parse(before), profileDir); console.log('JARVIS stage 03 + 05 host policy OK'); }
+    try { assertPolicy(JSON.parse(before), profileDir); console.log('JARVIS stage 03 + 05 + 06 host policy OK'); }
     catch { console.error('JARVIS stage 03/05 policy missing/changed; Gateway startup refused. Apply reviewed policy before starting.'); process.exitCode = 1; }
   } else {
   const after = JSON.stringify(applyPolicy(JSON.parse(before), profileDir), null, 2) + '\n';

@@ -31,7 +31,11 @@
         }
       },
       "userTimezone": "Europe/Istanbul",
-      "contextInjection": "never"
+      "contextInjection": "never",
+      "maxConcurrent": 3,
+      "subagents": {
+        "maxConcurrent": 3
+      }
     },
     "entries": {
       "main": {
@@ -44,7 +48,9 @@
             "jarvis_memory_search",
             "jarvis_memory_get",
             "jarvis_note_read",
-            "jarvis_note_write"
+            "jarvis_note_write",
+            "jarvis_work_note",
+            "jarvis_work_read"
           ]
         }
       },
@@ -185,7 +191,9 @@
       "jarvis_memory_search",
       "jarvis_memory_get",
       "jarvis_note_read",
-      "jarvis_note_write"
+      "jarvis_note_write",
+      "jarvis_work_note",
+      "jarvis_work_read"
     ],
     "deny": [
       "exec",

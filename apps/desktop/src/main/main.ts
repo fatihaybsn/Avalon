@@ -81,6 +81,11 @@ async function initialize() {
         case 'select': await controller.select(action.key); break;
         case 'create': await controller.create(action.title, action.kind); break;
         case 'send': await controller.send(action.key, action.message); break;
+        case 'independent': await controller.independent(action.key, action.message); break;
+        case 'steer': await controller.workAction('steer', action.taskId, action.message); break;
+        case 'cancel': await controller.workAction('cancel', action.taskId); break;
+        case 'workRead': await controller.workAction('workRead', action.taskId); break;
+        case 'acceptPlan': await controller.workAction('acceptPlan', action.taskId); break;
         case 'chooseScope': {
           const key = controller.snapshot.selected;
           if (!key || !window) throw new Error('No selected session');

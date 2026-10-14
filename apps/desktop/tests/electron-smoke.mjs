@@ -14,8 +14,12 @@ try {
   const page = await application.firstWindow();
   await page.waitForFunction(() => !!window.jarvis);
   await page.waitForFunction(() => ['connected', 'pairing', 'auth', 'blocked'].includes(document.querySelector('jarvis-app')?.data?.connection?.phase), undefined, { timeout: 60000 });
+  // Authentication is published before the asynchronous native record read.
+  // Await that read before asserting its result.
+  await page.evaluate(() => window.jarvis.action({ type: 'refresh' }));
   const snapshot = await page.evaluate(async () => (await window.jarvis.action({ type: 'snapshot' })).snapshot);
   console.log('REAL_CONNECTION', snapshot.connection.phase, snapshot.connection.version ?? '', snapshot.connection.deviceId ?? '', snapshot.connection.requestId ?? '', snapshot.connection.detail);
+  if (snapshot.connection.phase === 'connected') assert.equal(snapshot.workAvailable, true, 'Signed Electron operator could not read current stage06 host records');
   assert.equal(await page.evaluate(() => typeof window.require), 'undefined');
   assert.equal(await page.evaluate(() => typeof window.process), 'undefined');
   const prefs = await application.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.getLastWebPreferences());

@@ -26,7 +26,10 @@ nav { display: grid; gap: 8px; margin: 16px 0; }
 .message div { white-space: pre-wrap; margin-top: 8px; }
 .composer { margin-top: 16px; }
 textarea { display: block; width: 100%; box-sizing: border-box; resize: vertical; margin: 8px 0; }
-.composer-actions { display: flex; gap: 8px; }
+.composer-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+aside label { display: block; margin-top: 12px; }
+aside pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.approval details p { white-space: pre-wrap; }
 .muted, small { color: var(--muted); font-size: 12px; line-height: 1.5; }
 small { display: block; overflow-wrap: anywhere; }
 .error { color: var(--accent); margin: 8px 16px; }

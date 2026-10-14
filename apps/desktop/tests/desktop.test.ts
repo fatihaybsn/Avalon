@@ -18,7 +18,7 @@ class Fake implements Rpc {
     if (method === 'chat.history') return this.historyGate ? this.historyGate(params) : { messages: [], sessionInfo: this.rows.find(s => s.key === params.sessionKey) };
     if (method.endsWith('.approval.list')) return [];
     if (method === 'sessions.create') { this.rows.push({ key: params.key, sessionId: 'new', displayName: params.displayName }); return { key: params.key }; }
-    if (method === 'chat.send' && this.failSend) throw new RpcError('WRITE_OUTCOME_UNKNOWN');
+    if (method === 'jarvis.work.start' && this.failSend) throw new RpcError('WRITE_OUTCOME_UNKNOWN');
     return {};
   }
 }
@@ -55,8 +55,8 @@ test('create uses same agent and a new isolated key without copying raw history 
 });
 test('human-selected scope and chat send use one run/idempotency identity; UI cannot bind identity fields', async () => {
   const { rpc, controller } = setup(); await controller.refresh(); controller.setRoot(first, 'C:\\projects\\example'); await controller.send(first, 'write this');
-  const bind = rpc.calls.find(c => c.method === 'jarvis.scope.bind')!.params, send = rpc.calls.find(c => c.method === 'chat.send')!.params;
-  assert.equal(bind.runId, send.idempotencyKey); assert.equal(bind.taskId, send.idempotencyKey); assert.equal(send.sessionId, 'one');
+  const bind = rpc.calls.find(c => c.method === 'jarvis.scope.bind')!.params, send = rpc.calls.find(c => c.method === 'jarvis.work.start')!.params;
+  assert.equal(bind.runId, send.runId); assert.equal(bind.taskId, send.runId); assert.equal(send.sessionId, undefined);
   assert.equal(bind.sessionKey, first); assert.equal(bind.root, 'C:\\projects\\example'); assert.equal(bind.userId, undefined); assert.equal(bind.deviceId, undefined);
   assert.equal(bind.userInput, send.message);
   assert.equal(rpc.calls.some(c => c.method === 'approval.resolve'), false);
@@ -77,7 +77,7 @@ test('a failed scope bind never sends chat and active sessions reject sends', as
   await controller.select(first);
   controller.setRoot(first, 'C:\\example'); const original = rpc.request.bind(rpc);
   rpc.request = async (method, params, mutation) => { if (method === 'jarvis.scope.bind') throw new RpcError('WRITE_OUTCOME_UNKNOWN'); return original(method, params, mutation); };
-  await assert.rejects(controller.send(first, 'do it')); assert.equal(rpc.calls.some(c => c.method === 'chat.send'), false);
+  await assert.rejects(controller.send(first, 'do it')); assert.equal(rpc.calls.some(c => c.method === 'jarvis.work.start'), false);
 });
 test('a replaced session incarnation loses its previous human folder grant', async () => {
   const { rpc, controller } = setup(); await controller.refresh(); controller.setRoot(first, 'C:\\example');
@@ -91,7 +91,7 @@ test('chat does not request admin-only provenance fields or permit Gateway slash
   const { rpc, controller } = setup(); await controller.refresh();
   await assert.rejects(controller.send(first, '/reset'), e => e instanceof RpcError && e.code === 'CONTROL_COMMAND_DISABLED');
   await controller.send(first, 'ordinary chat');
-  assert.equal(rpc.calls.find(c => c.method === 'chat.send')!.params.suppressCommandInterpretation, undefined);
+  assert.equal(rpc.calls.find(c => c.method === 'jarvis.work.start')!.params.suppressCommandInterpretation, undefined);
 });
 test('wire v4 snapshot+delta is not double-counted; duplicates and background output are isolated', async () => {
   const { controller } = setup(); await controller.refresh();
@@ -120,4 +120,38 @@ test('native approval array replay reads canonical sanitized get and never expos
   assert.equal(controller.snapshot.approvalsAvailable, true); assert.equal(controller.snapshot.approvals.length, 1);
   assert.equal(controller.snapshot.approvals[0].runId, 'bound-run'); assert.match(controller.snapshot.approvals[0].details, /SHA256 preview/);
   assert.equal(JSON.stringify(controller.snapshot).includes('hidden'), false);
+});
+
+test('independent heavy work uses a fresh native subagent session without writing or superseding its active parent', async () => {
+  const { rpc, controller } = setup(); await controller.refresh(); await controller.select(second);
+  controller.setRoot(second, 'C:\\separate-project');
+  await controller.independent(second, 'independent work');
+  const created = rpc.calls.find(c => c.method === 'sessions.create')!.params;
+  assert.match(created.key, /^agent:main:subagent:jarvis:/);
+  assert.equal(created.parentSessionKey, undefined); assert.equal(created.message, undefined);
+  const bind = rpc.calls.find(c => c.method === 'jarvis.scope.bind')!.params;
+  assert.equal(bind.projectId, second); assert.equal(bind.sessionKey, created.key);
+  assert.equal(bind.root, 'C:\\separate-project');
+  assert.equal(rpc.calls.find(c => c.method === 'jarvis.work.start')!.params.independent, true);
+  assert.equal(rpc.calls.some(c => /abort|steer|reset/.test(c.method)), false);
+  assert.equal(controller.snapshot.sessions.find(s => s.key === second)?.active, true);
+});
+
+test('steer/cancel IPC selects an exact retained task/revision; status and current output never trigger a model', async () => {
+  const { rpc, controller } = setup(), original = rpc.request.bind(rpc);
+  const work = { taskId: 'retained-task', projectId: 'p', projectRevision: 1, revision: 4, recordVersion: 12, agentId: 'main', sessionKey: second, sessionId: 'two', runId: 'exact-run', request: 'source', state: 'running', result: 'unverified', steering: {}, updatedAt: new Date().toISOString() };
+  rpc.request = async (method, params, mutation) => {
+    if (method === 'jarvis.work.status') { rpc.calls.push({ method, params, mutation: false }); return { records: [work], resources: [] }; }
+    if (method === 'jarvis.work.read') { rpc.calls.push({ method, params, mutation: false }); return { output: { content: [{ type: 'text', text: 'actual native output' }] } }; }
+    return original(method, params, mutation);
+  };
+  await controller.refresh(); await controller.workAction('workRead', 'retained-task');
+  assert.equal(controller.snapshot.workOutput, 'actual native output');
+  assert.equal(rpc.calls.some(c => c.mutation), false);
+  await controller.workAction('steer', 'retained-task', 'new direction');
+  const steer = rpc.calls.find(c => c.method === 'jarvis.work.steer')!.params;
+  assert.equal(steer.taskId, work.taskId); assert.equal(steer.sessionKey, second); assert.equal(steer.expectedRevision, 4);
+  await controller.workAction('cancel', 'retained-task');
+  assert.equal(rpc.calls.find(c => c.method === 'jarvis.work.cancel')!.params.expectedRevision, 4);
+  assert.equal(rpc.calls.some(c => ['agent', 'chat.send', 'jarvis.work.start'].includes(c.method)), false);
 });

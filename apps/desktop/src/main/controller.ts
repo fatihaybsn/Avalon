@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { Snapshot, Session } from '../shared/contracts.ts';
+import type { Snapshot, Session, Work } from '../shared/contracts.ts';
 import { RpcError, type Rpc } from './gateway.ts';
 import { projectMessages, projectSession, projectApproval, record, text, messageText } from './projection.ts';
 const EMPTY: Snapshot = { connection: { phase: 'offline', detail: 'Gateway henüz bağlı değil.' }, sessions: [], messages: [], streaming: '', approvals: [], approvalsAvailable: false, submissions: [], historyReady: false };
@@ -9,6 +9,7 @@ export class DesktopController {
   private refreshJob?: Promise<void>;
   private refreshAgain = false;
   private roots = new Map<string, { sessionId: string; root: string }>();
+  private projectIds = new Map<string, string>();
   private streams = new Map<string, { key: string; text: string; seq: number }>();
   private timer?: ReturnType<typeof setInterval>;
   private sending = new Set<string>();
@@ -17,7 +18,7 @@ export class DesktopController {
   emit() { this.publish(structuredClone(this.snapshot)); }
   connection(s: Snapshot['connection']) {
     this.snapshot.connection = s;
-    if (s.phase !== 'connected') { this.snapshot.historyReady = false; this.snapshot.approvalsAvailable = false; }
+    if (s.phase !== 'connected') { this.snapshot.historyReady = false; this.snapshot.approvalsAvailable = false; this.snapshot.workAvailable = false; }
     this.emit();
   }
   stop() { if (this.timer) clearInterval(this.timer); }
@@ -45,7 +46,7 @@ export class DesktopController {
     do {
       this.refreshAgain = false;
       const revision = this.listRevision;
-      const roster = await this.rpc.request('sessions.list', { agentId: this.agentId, limit: 200, excludeSubagents: true, excludeCron: true, excludeSystem: true, includeGlobal: false, includeUnknown: false });
+      const roster = await this.rpc.request('sessions.list', { agentId: this.agentId, limit: 200, excludeSubagents: false, excludeCron: true, excludeSystem: true, includeGlobal: false, includeUnknown: false });
       if (!this.rpc.connected) return;
       // Session events racing a read require a trailing authoritative read.
       if (revision !== this.listRevision) { this.refreshAgain = true; continue; }
@@ -77,6 +78,7 @@ export class DesktopController {
       }
       if (this.snapshot.approvalsAvailable) this.snapshot.approvals = observed;
       if (this.snapshot.selected) await this.history(this.snapshot.selected);
+      await this.refreshWork();
       if (this.snapshot.connection.phase === 'busy') this.snapshot.connection = { ...this.snapshot.connection, phase: 'connected', detail: 'Yetkili JARVIS Gateway bağlantısı açık.' };
       this.emit();
     } while (this.refreshAgain && this.rpc.connected);
@@ -135,9 +137,10 @@ export class DesktopController {
     try {
       const shortInput = message.trim().replace(/\s+/gu, ' ');
       const userInput = message.length <= 4096 && shortInput.length <= 1800 && !/[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(message) ? { userInput: message } : {};
-      await this.rpc.request('jarvis.scope.bind', { sessionKey: key, agentId: this.agentId, runId: id, taskId: id, projectId: key, ...(root ? { role: 'project', root } : { role: 'memory' }), ...userInput }, true);
+      const projectId = this.projectIds.get(key) ?? this.snapshot.work?.find(r => r.sessionKey === key && r.sessionId === session.sessionId)?.projectId ?? key;
+      await this.rpc.request('jarvis.scope.bind', { sessionKey: key, agentId: this.agentId, runId: id, taskId: id, projectId, ...(root ? { role: 'project', root } : { role: 'memory' }), ...userInput }, true);
       sent = true;
-      await this.rpc.request('chat.send', { sessionKey: key, agentId: this.agentId, sessionId: session.sessionId, message, idempotencyKey: id, deliver: false }, true);
+      await this.rpc.request('jarvis.work.start', { sessionKey: key, agentId: this.agentId, runId: id, message, ...(key.startsWith(`agent:${this.agentId}:subagent:`) ? { independent: true } : {}) }, true);
       submission.status = 'accepted'; submission.detail = 'Gateway iletinin kabulünü doğruladı; çalışma durumu host kayıtlarından okunur.';
     } catch (e) {
       const unknown = e instanceof RpcError && e.code === 'WRITE_OUTCOME_UNKNOWN';
@@ -147,6 +150,48 @@ export class DesktopController {
       throw e;
     } finally { this.sending.delete(key); this.emit(); }
     await this.refresh().catch(e => this.showError(e));
+  }
+  private async refreshWork() {
+    if (!this.snapshot.selected) return;
+    try {
+      const works: Work[] = [], resources: NonNullable<Snapshot['resources']> = []; let cursor: string | undefined;
+      do {
+        const result = await this.rpc.request('jarvis.work.status', { sessionKey: this.snapshot.selected, agentId: this.agentId, ...(cursor ? { cursor } : {}) });
+        if (!Array.isArray(result.records) || result.observationError) throw new RpcError('WORK_RECORDS_UNAVAILABLE');
+        works.push(...result.records); cursor = result.cursor;
+        if (Array.isArray(result.resources)) resources.push(...result.resources);
+      } while (cursor && works.length < 500);
+      if (cursor) throw new RpcError('WORK_PAGE_LIMIT');
+      this.snapshot.work = works.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)); this.snapshot.workAvailable = true;
+      this.snapshot.resources = resources;
+    } catch { this.snapshot.workAvailable = false; }
+  }
+  async independent(key: string, message: string) {
+    const source = this.session(key), id = randomUUID(), child = `agent:${this.agentId}:subagent:jarvis:${id}`;
+    const root = this.roots.get(key)?.root;
+    // Native parent-linked creation requires the parent writer to be idle.
+    // A fresh subagent key leaves that live writer untouched; stable project
+    // metadata relates the two without copying conversation or authority.
+    const result = await this.rpc.request('sessions.create', { key: child, agentId: this.agentId, displayName: `Proje · Bağımsız iş ${id.slice(0, 8)}`, idempotencyKey: id }, true);
+    if ((result.key ?? result.sessionKey) !== child) throw new RpcError('SESSION_TARGET_MISMATCH');
+    this.projectIds.set(child, this.projectIds.get(key) ?? this.snapshot.work?.find(r => r.sessionKey === key && r.sessionId === source.sessionId)?.projectId ?? key);
+    await this.refresh(); await this.select(child);
+    // Rebind a new host grant to this new incarnation; no grant inheritance.
+    if (root) this.setRoot(child, root);
+    await this.send(child, message);
+  }
+  async workAction(kind: 'steer' | 'cancel' | 'workRead' | 'acceptPlan', taskId: string, message?: string) {
+    const task = this.snapshot.work?.find(t => t.taskId === taskId);
+    if (!task || !this.snapshot.workAvailable) throw new RpcError('WORK_NOT_CURRENT');
+    const common = { sessionKey: task.sessionKey, agentId: task.agentId, taskId };
+    if (kind === 'workRead') {
+      const result = await this.rpc.request('jarvis.work.read', { ...common, ...(task.operation ? { callId: task.operation.callId } : {}) });
+      this.snapshot.workOutput = result.output ? messageText(result.output) : 'Bu native run için istenen asıl çıktı henüz mevcut değil; kayıt başarı kanıtı değildir.'; this.emit(); return;
+    }
+    if (kind === 'acceptPlan' && !task.model?.plan) throw new RpcError('PLAN_UNAVAILABLE');
+    const steer = kind === 'steer' || kind === 'acceptPlan';
+    await this.rpc.request(`jarvis.work.${steer ? 'steer' : 'cancel'}`, { ...common, expectedRevision: task.revision, ...(steer ? { inputId: randomUUID(), message: kind === 'acceptPlan' ? task.model!.plan : message, ...(kind === 'acceptPlan' ? { acceptPlan: task.model!.plan } : {}) } : {}) }, true);
+    await this.refresh();
   }
   event(event: string, payload: any) {
     if (event === 'desktop.disconnected') {
@@ -158,6 +203,7 @@ export class DesktopController {
       void this.refresh().catch(e => this.showError(e)); return;
     }
     const p = record(payload);
+    if (event === 'agent' && ['lifecycle', 'tool', 'error', 'approval'].includes(p.stream)) { void this.refresh().catch(e => this.showError(e)); }
     if (event === 'chat' && typeof p.runId === 'string' && typeof p.sessionKey === 'string') {
       const key = p.sessionKey;
       if (!this.snapshot.sessions.some(s => s.key === key)) return;

@@ -6,9 +6,10 @@ import '../../vendor/openclaw/ui/src/styles/base.css';
 import './desktop.css';
 declare global { interface Window { jarvis: DesktopBridge } }
 class JarvisApp extends LitElement {
-  static properties = { data: { state: true }, draft: { state: true }, title: { state: true }, kind: { state: true }, waiting: { state: true }, localError: { state: true }, creating: { state: true } };
+  static properties = { data: { state: true }, draft: { state: true }, title: { state: true }, kind: { state: true }, waiting: { state: true }, localError: { state: true }, creating: { state: true }, guidance: { state: true } };
   data?: Snapshot;
   draft = ''; title = ''; kind: 'daily' | 'project' = 'project'; waiting = false; localError = ''; creating = false;
+  guidance = '';
   private drafts = new Map<string, string>();
   private unsubscribe?: () => void;
   override createRenderRoot() { return this; }
@@ -58,10 +59,28 @@ class JarvisApp extends LitElement {
         ${!d?.messages.length && !d?.streaming ? renderPanelEmptyState({ icon: html``, heading: selected ? 'Sohbet' : 'JARVIS sohbetleri', description: selected ? d?.historyReady ? 'Bu sohbette henüz görünür ileti yok.' : 'Geçmiş Gateway’den bekleniyor.' : 'Bağlantı kurulduğunda günlük veya proje sohbeti oluşturabilirsiniz.' }) : d?.messages.map(m => html`<article class="message"><strong>${m.role === 'user' ? 'Siz' : 'JARVIS'}</strong><div dir=${detectTextDirection(m.text)}>${m.text}</div></article>`)}
         ${d?.streaming ? html`<article class="message"><strong>JARVIS · Yanıt sürüyor</strong><div dir=${detectTextDirection(d.streaming)}>${d.streaming}</div></article>` : nothing}</div>
         <div class="composer"><label for="draft">İleti</label><textarea id="draft" maxlength="16000" rows="3" .value=${this.draft} @input=${(e: Event) => this.draft = (e.target as HTMLTextAreaElement).value} @keydown=${(e: KeyboardEvent) => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); void this.send(); } }}></textarea>
-        <div class="composer-actions"><button ?disabled=${!connected || !selected || !d?.historyReady || selected.active || selected.queued || this.waiting || !this.draft.trim()} @click=${() => this.send()}>Gönder</button><button ?disabled=${!connected || !selected} @click=${() => this.action({ type: 'chooseScope' })}>Görev klasörü seç</button></div>
+        <div class="composer-actions"><button ?disabled=${!connected || !selected || !d?.historyReady || selected.active || selected.queued || this.waiting || !this.draft.trim()} @click=${() => this.send()}>Gönder</button><button ?disabled=${!connected || !selected || this.waiting || !this.draft.trim()} @click=${async () => { if (!selected) return; this.waiting = true; await this.action({ type: 'independent', key: selected.key, message: this.draft.trim() }); this.waiting = false; }}>Bağımsız iş başlat</button><button ?disabled=${!connected || !selected} @click=${() => this.action({ type: 'chooseScope' })}>Görev klasörü seç</button></div>
         <p class="muted">${selected?.scopeRoot ? `Dosya görevlerinin izin kökü: ${selected.scopeRoot}` : 'Görev klasörü seçilmezse dosya araçlarının yetki kapsamı bağlı değildir.'}</p>
         <p class="muted">Enter: gönder · Shift+Enter: yeni satır</p></div></main>
       <aside aria-label="Görevler ve onaylar"><h2>Mevcut görevler</h2><button ?disabled=${!connected} @click=${() => this.action({ type: 'refresh' })}>Kayıtları yenile</button>
+        <label>Göreve yönlendirme<textarea rows="2" maxlength="1800" .value=${this.guidance} @input=${(e: Event) => this.guidance = (e.target as HTMLTextAreaElement).value}></textarea></label>
+        ${!d?.workAvailable ? html`<p>Güncel çalışma kaydı okunamıyor. Önceki gözlem güncel sayılmaz.</p>` : nothing}
+        ${d?.work?.map(t => html`<section class="approval"><strong>${t.request.slice(0, 160)}</strong><p>${t.state} · revizyon ${t.revision}</p><small>Proje: ${t.projectId} · r${t.projectRevision}<br>Görev: ${t.taskId}<br>Session: ${t.sessionId}<br>Run: ${t.runId}<br>${t.updatedAt}</small>
+          ${t.acceptedPlan ? html`<details><summary>Kabul edilmiş plan / istek</summary><p>${t.acceptedPlan}</p></details>` : nothing}
+          ${t.operation ? html`<p>Gözlenen: ${t.operation.tool} · ${t.operation.phase} · r${t.operation.revision ?? 'bilinmiyor'}<br>Gerçek etki: ${t.operation.effect === 'verified' ? 'Doğrulandı' : 'Doğrulanmadı'}</p>` : nothing}
+          <p>Sonuç: ${t.result === 'native-ended' ? 'Native çalışma bitti; hedefin karşılandığı ayrıca değerlendirilir' : t.result}</p>
+          ${t.blocker ? html`<p class="error">${t.blocker}</p>` : nothing}
+          ${t.model ? html`<details><summary>Modelin açıklaması</summary><p>${t.model.plan}</p><p>${t.model.finding}</p><p>${t.model.rationale}</p><p>Sıradaki adım: ${t.model.nextStep}</p><p>Bekleyen karar: ${t.model.pendingDecision}</p>${t.model.sources?.map(s => html`<small>${s}</small>`)}</details>` : nothing}
+          ${Object.values(t.steering).map(s => html`<p>Yönlendirme: ${s.stage}<small>${s.text}${s.modelClaim ? html`<br>Doğrulanmamış model açıklaması: ${s.modelClaim}` : nothing}</small></p>`)}
+          <button ?disabled=${!connected || !d.workAvailable} @click=${() => this.action({ type: 'workRead', taskId: t.taskId })}>Güncel çıktı</button>
+          <button ?disabled=${!connected || !d.workAvailable || !['running', 'delivered'].includes(t.state) || !this.guidance.trim()} @click=${() => this.action({ type: 'steer', taskId: t.taskId, message: this.guidance.trim() })}>Bu göreve ilet</button>
+          ${t.model?.plan ? html`<button ?disabled=${!connected || !d.workAvailable || !['running', 'delivered'].includes(t.state)} @click=${() => this.action({ type: 'acceptPlan', taskId: t.taskId })}>Bu planı kabul et</button>` : nothing}
+          <button ?disabled=${!connected || !d.workAvailable || !['running', 'delivered'].includes(t.state)} @click=${() => this.action({ type: 'cancel', taskId: t.taskId })}>Bu görevi iptal et</button>
+        </section>`)}
+        ${d?.workOutput ? html`<details open><summary>İstenen asıl çıktı</summary><pre>${d.workOutput}</pre></details>` : nothing}
+        <h2>Paylaşılan kaynaklar</h2>
+        ${d?.workAvailable ? d.resources?.length ? d.resources.map(r => html`<p>${r.resource}<small>Sahip run: ${r.runId}<br>Çağrı: ${r.callId}</small></p>`) : html`<p class="muted">Host gözleminde tutulan kaynak yok.</p>` : html`<p>Kaynak sahipliği için güncel host kaydı gerekli.</p>`}
+        <p class="muted">Pause bu native yolda desteklenmiyor. Ayrı sohbet açmak mevcut görevi iptal etmez.</p>
         ${!connected ? html`<p>Son gözlem güncel olmayabilir; Gateway bağlantısı gerekli.</p>` : nothing}
         ${d?.sessions.filter(s => s.active || s.queued).map(s => html`<p>${s.title}: ${s.active ? 'Host çalışıyor bildiriyor' : 'Host kuyruk bildiriyor'}${s.runIds.map(id => html`<small>${id}</small>`)}</p>`)}
         ${connected && !d?.sessions.some(s => s.active || s.queued) ? html`<p class="muted">Host listesinde etkin görev yok.</p>` : nothing}

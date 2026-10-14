@@ -2,10 +2,12 @@
 
 Windows 11'de doğrudan çalışan, OpenClaw merkezli kişisel asistan projesi.
 Tek merkez **OpenClaw Gateway**, konuşma tarafı **Gemini Live**, ağır görev
-modeli **Space Bunny Free**'dir. Mevcut durum: **05. aşama yerel hafıza tamamlandı**
+modeli **Space Bunny Free**'dir. Mevcut durum: **06. aşama host görev kaydı tamamlandı**
 (Gateway, görev izinleri, salt okunur araştırma ve sade Electron/Vite/Lit arayüzü).
 05 ile tek yerel hafıza, kontrollü kısa not araçları, yetkili ortak erişim ve
 Gemini ile altı saatlik native Dreaming düzenlemesi eklendi.
+06 ile mevcut OpenClaw kayıtlarında kalıcı proje/görev eşlemesi, gerçek host
+olaylarından durum, bağımsız iş yönlendirmesi ve kaynak sahipliği eklendi.
 Başarılı ağır görev/yanıt entegrasyonu OpenCode işçisiyle 10'da, canlı ses 11'de,
 sesli onay 13'te; tam kurulabilir dağıtım 16'dadır.
 
@@ -159,12 +161,21 @@ başka paket/sürüm/ücretli sağlayıcıya sessiz geçmeyin.
 
 Politika betiği ilk değişiklik öncesindeki profili repo dışında
 `openclaw.before-stage05.json` olarak yedekler. Model/Talk/auth ayarlarını korur;
-03 ve 05'in araç, rol, hafıza ve hook sınırlarını uygular. Yalnız Dreaming'e
+03, 05 ve 06'nın araç, rol, hafıza ve hook sınırlarını uygular. Yalnız Dreaming'e
 ayrılan `jarvis-dream-google` sağlayıcısı ve ayrı env SecretRef'ini de kurar;
 bu sağlayıcının model listesi aşağıdaki beşli sıraya güncellenir.
 Profil önceki aşamadan geliyorsa
 yine eklentileri kurup bu politika komutlarını çalıştırın. Projeyi başka klasöre
 taşıdığınızda politika betiğini yeniden çalıştırın; plugin yolu yeni konuma bağlanır.
+
+06 için ayrıca servis veya veritabanı kurmayın: aynı politika betiği native
+ana ajan ve alt ajan eşzamanlılık sınırını 3 yapar, iki dar çalışma kaydı
+aracını açar. Proje/görev geçmişi gerçek profilin mevcut plugin state'inde
+`retained` tutulur; geçici test klasörleriyle aynı yerde değildir. Yalnız
+06 ayarlarını önceki kurulumunuza eklemek için
+`node scripts/jarvis-work-config.mjs` kullanabilirsiniz; ilk profili hazırlayan
+bir kurulum betiği değildir. Ayar değişikliğinden sonra Gateway'i kendi
+terminalinde `Ctrl+C` ile durdurup 5. adımdan yeniden başlatın.
 
 ### 4a) Yerel hafıza modelini kurun
 
@@ -285,7 +296,7 @@ anahtar veya ham sağlayıcı yanıtını yazdırmaz. Başarıda `ok: true`,
 kanıtlamaz. Hata durumunda eksik anahtar, erişim, kota ya da ağ kategorisi
 bildirilir; otomatik tekrar veya alternatif sağlayıcı yoktur.
 
-`npm test` 28 sınır testini çalıştırır; gerçek Tavily/Gemini hesabına çağrı yapmaz.
+`npm test` 40 sınır testini çalıştırır; gerçek Tavily/Gemini hesabına çağrı yapmaz.
 Gateway testi ayrı geçici profilde gerçek onay kayıtlarını ve dosya etkisini
 kontrol eder: deny/allow-always yazmaz, allow-once sabit parametrelerle yazar.
 Test kendi Gateway sürecini ve başarılı profilini kapatıp temizler. Bellek
@@ -356,6 +367,22 @@ uygulama ömründe tutulur; yeniden açılışta gerektiğinde tekrar seçin.
 Görev ve bekleyen onaylar sağ panelde native OpenClaw kayıtlarından okunur.
 04'te onay **görüntülenir**; karar mevcut yetkili OpenClaw onay istemcisindedir.
 
+06 çalışma görünümü aynı sağ paneldedir. İstek normal gönderildiğinde native
+run ve kalıcı görev kaydı birlikte ilişkilendirilir. Devam eden işe yön vermek
+için panelde o görevi seçip **Bu göreve ilet** kullanın; ayrı uzun iş için
+**Bağımsız iş başlat** yeni native alt ajan oturumu açar. Yeni iş eski işi
+iptal etmez; her iş kendi klasör/yetki kapsamıyla çalışır. Modelin önerdiği
+planı **Bu planı kabul et**, asıl sonucu **Güncel çıktı** ile alın. İptal
+yalnız seçili görevin native run'ına gider. Desteklenmeyen pause gösterilmez.
+
+İletildi/kabul edildi/uygulanıyor/uygulandı farklı durumlardır; araç sonucu ile
+gerçek dosya etkisi ayrıca gösterilir. Model açıklaması host kanıtı değildir.
+Görev görünümü imzalı/eşleşmiş Electron cihazını gerektirir; yalnız token ile
+genel CLI çağrısının reddedilmesi bu kimlik sınırının parçasıdır. Restart
+sonrasında eski yetki veya shell devam etmiş sayılmaz; belirsiz iş yeniden
+gönderilmez. Kaynak kaydı ve native durum uzlaştırılır. Ayrıntılar:
+[06 çalışma kaydı](docs/06_CALISMA_KAYDI.md).
+
 X pencereyi **tepsiye gizler**; uygulamayı veya Gateway'i kapatmaz. Tepside
 **JARVIS’i göster** yeniden açar; **Uygulamadan çık** istemciyi kapatır.
 Gateway ayrı terminalde çalışmaya devam eder. Bağlantı kesilince son gözlem
@@ -393,9 +420,9 @@ npm test
 npm run test:desktop
 ```
 
-Masaüstü testi 14 IPC/session/stream/pairing/reconnect sınır kontrolüdür;
-gerçek modele çağrı yapmaz. 28 policy/reader/Tavily/hafıza/Dreaming testiyle
-birlikte 42 sınır testi vardır. Çalışan JARVIS Gateway'ine karşı Electron
+Masaüstü testi 16 IPC/session/stream/pairing/reconnect/görev sınır kontrolüdür;
+gerçek modele çağrı yapmaz. 40 policy/reader/Tavily/hafıza/Dreaming/görev testiyle
+birlikte 56 sınır testi vardır. Çalışan JARVIS Gateway'ine karşı Electron
 kontrolleri için masaüstünden **Uygulamadan çık** seçin, sonra:
 
 ```powershell
@@ -408,6 +435,16 @@ npm --prefix apps/desktop run test:packaged
 önceden çalışmış olmalıdır. Bu testler sırayla pencere açar; sandbox, dar IPC,
 navigation/popup engeli, X ile gizlenme ve renderer reload davranışını kontrol
 edip kendi istemcisini kapatır. Testler ana Gateway'i kapatmaz.
+
+06'nın gerçek native kayıt/yönlendirme kontrolü için önce ana Gateway'i kendi
+terminalinde durdurun, ardından `npm run test:work:gateway` çalıştırın.
+Test ayrı geçici profilde kayıt kalıcılığı, gerçek dosya etkisi, tekrar olay,
+stale yönlendirme, bağımsız alt ajan kabulü ve reload sonrası tekrar dispatch
+olmamasını denetler. Test profili başarılı ağır model cevabı üretmez; açık
+native hata başarı sayılmaz. Sonra ana Gateway'i 5. adımdan tekrar başlatın.
+Başarılı test kendi profilini temizler; başarısız denemelerin geçici dosyaları
+repo kökündeki ignored `tmp` altında kalabilir. Bu klasör kullanıcı profilinin
+yerine geçmez; test çıktıları Git'e alınmaz.
 
 `npm --prefix apps/desktop run test:live` isteğe bağlı gerçek profil testidir:
 iki adlandırılmış test sohbetini oluşturur/korur ve seçili ücretsiz ana modele
@@ -460,6 +497,7 @@ sessiz geçiş olmaz):
 - Hafıza durumu: `.\scripts\jarvis-memory-status.ps1 -Deep`. Kısa notlar `memory/records/<UUID>/r<revizyon>.md` altında kaynak ve tarih bilgisiyle tutulur; proje çıktıları ayrı dosyalarda referanslanır. Düzeltme güncel revizyonu ister; çakışmada eski kayıt ezilmez.
 - Hafıza araçları: `jarvis_memory_search/get` okur/arar, `jarvis_note_read/write` kısa kayıt okur/yazar. Kullanıcı tercihi/kararı/düzeltmesi hemen kaydedilir; model/web bulgusu ayrı kaynakla tutulur. Araştırma profili kişisel notları başlangıç bağlamı olarak almaz.
 - Dreaming: yukarıdaki `gateway call jarvis.memory.dreaming.status --json` ile durumunu görün. Gateway açıkken altı saatte bir seçilmiş güncel notları Gemini ile düzenler; yeni önemli notları kaydetmek için bu saati beklemeyin. Ham sohbeti hafızaya kopyalamayın; seçici fiziksel unutma ve ham kayıt ömrü 14. adımdadır.
+- Çalışma kaydı (06): Electron sağ paneli mevcut native run/session ile retained proje/görev kaydını gösterir. **Bağımsız iş başlat**, fresh native subagent session açar; **Bu göreve ilet**, **Bu planı kabul et**, **Güncel çıktı** ve exact iptal seçili göreve gider. Normal sohbet veya başka sohbet seçimi mevcut işi iptal etmez. Ayrıntılar: [06 çalışma kaydı](docs/06_CALISMA_KAYDI.md). Mevcut profile yalnız 06 ayarlarını eklemek için `node scripts/jarvis-work-config.mjs`; native entegrasyon testi `npm run test:work:gateway`. Pause bu native yolda desteklenmez.
 - Başlat: `.\scripts\jarvis-gateway.ps1` · Durdur: `Ctrl+C`
 - Masaüstü geliştirme: `npm run desktop:dev`
 - Derle/çalıştır: `npm run desktop:build`, ardından `npm run desktop:start`
@@ -489,7 +527,7 @@ gösterilir; belirsiz yazma reconnect'te tekrar edilmez. Ayrıntılar ve test s�
 
 ## Proje yapısı
 
-03 izin eklentisi, 05 yerel hafıza araçları ve profiller uygulanmıştır. Sınırlar, gerçek test kanıtı ve kapalı bağlantılar: [03 yetki sınırları](docs/03_YETKI_SINIRLARI.md). Kontroller: `npm run check`, `npm test`, `npm run test:gateway`. Resmî Tavily Advanced + web_fetch yapılandırıldı; gerçek Advanced API erişimi doğrulandı ([güvenli kurulum](docs/TAVILY_KURULUM.md)). Genel web_search kapalıdır; sesli onay 13'e aittir.
+03 izin eklentisi, 05 yerel hafıza ve 06 retained çalışma kaydı/host gözlemi uygulanmıştır. Sınırlar ve gerçek test kanıtı: [03 yetki sınırları](docs/03_YETKI_SINIRLARI.md), [06 çalışma kaydı](docs/06_CALISMA_KAYDI.md). Kontroller: `npm run check`, `npm test`, `npm run test:gateway`, `npm run test:work:gateway`. Resmî Tavily Advanced + web_fetch yapılandırıldı; gerçek Advanced API erişimi doğrulandı ([güvenli kurulum](docs/TAVILY_KURULUM.md)). Genel web_search kapalıdır; sesli onay 13'e aittir.
 
 ```
 apps/desktop/ Electron main/preload, Vite + Lit renderer, seçili lisanslı upstream dosyaları
