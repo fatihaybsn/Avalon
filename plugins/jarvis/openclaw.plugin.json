@@ -6,7 +6,8 @@
     "onStartup": true
   },
   "cliBackends": [
-    "jarvis-opencode-memory"
+    "jarvis-opencode-memory",
+    "jarvis-opencode-gui"
   ],
   "providers": [
     "jarvis-dream-google"
@@ -33,6 +34,9 @@
     "additionalProperties": false,
     "properties": {
       "nativeRoot": {
+        "type": "string"
+      },
+      "guiNode": {
         "type": "string"
       }
     }

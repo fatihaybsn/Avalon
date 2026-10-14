@@ -1,5 +1,6 @@
 import { exactKeys, text, safePath, within, publicUrl, fingerprint, type Scope } from './policy.ts';
 import path from 'node:path';
+import {isGuiTool,guiParams,configuredGuiNode} from './gui-policy.ts';
 
 export const QUICK_TOOLS = ['jarvis_windows', 'jarvis_recycle', 'jarvis_document', 'jarvis_draft'];
 export const APPS = ['notepad', 'calculator', 'paint'];
@@ -11,6 +12,7 @@ function sortJson(p: unknown): unknown {
   return p;
 }
 export function quickParams(tool: string, p: Record<string, unknown>): Record<string, unknown> {
+  if(isGuiTool(tool))return guiParams(tool,p);
   if (tool === 'jarvis_windows') {
     exactKeys(p, ['action', 'app', 'window', 'value']);
     const actions = ['resolve', 'open', 'status', 'focus', 'minimize', 'restore', 'close', 'audio_status', 'volume', 'mute', 'media', 'power_status', 'power'];
@@ -46,8 +48,10 @@ export function quickParams(tool: string, p: Record<string, unknown>): Record<st
       focus: ['targetId'], close: ['targetId'], act: ['targetId', 'request']
     };
     if (!(action in keys)) throw new Error('Unsupported browser action');
-    exactKeys(p, ['action', 'profile', 'target', ...keys[action]]);
-    if (!['jarvis-visible', 'jarvis-background'].includes(String(p.profile)) || p.target !== 'host') throw new Error('Explicit managed host profile required');
+    exactKeys(p, ['action', 'profile', 'target', 'node', ...keys[action]]);
+    if (!['jarvis-visible', 'jarvis-background'].includes(String(p.profile)) || !['host','node'].includes(String(p.target))) throw new Error('Explicit managed profile/target required');
+    if(p.target==='node'&&!/^[a-f0-9]{64}$/.test(String(p.node)))throw new Error('Exact native browser node ID required');
+    if(p.target==='host'&&p.node!==undefined)throw new Error('Host browser cannot carry a node selector');
     if (['open', 'navigate'].includes(action) && !(action==='open' && p.url==='about:blank')) publicUrl(p.url);
     if (!['status', 'start', 'tabs', 'open'].includes(action) && !/^[a-fA-F0-9]{32}$/.test(text(p.targetId, 'exact observed CDP tab ID', 128))) throw new Error('Observed CDP target ID required; aliases/labels are not resource identities');
     if (p.maxChars !== undefined && (!Number.isSafeInteger(p.maxChars) || Number(p.maxChars) < 1 || Number(p.maxChars) > 20000)) throw new Error('Bounded snapshot required');
@@ -73,6 +77,7 @@ export function quickGrants(value: unknown): QuickGrant[] {
 }
 export async function quickDecision(tool: string, input: Record<string, unknown>, scope: Scope) {
   const p = quickParams(tool, input);
+  if(tool==='browser'&&configuredGuiNode()&&(p.target!=='node'||p.node!==configuredGuiNode()))throw new Error('Stage08 browser is pinned to the interactive native node; no silent host fallback');
   if (!scope.quick?.some(g => g.tool === tool && operationHash(g.params) === operationHash(p))) throw new Error('Exact authenticated operator operation required');
   if(tool==='browser' && p.profile==='jarvis-background' && /görerek|görünür|ekranda göster/i.test(scope.userStatement ?? '')) throw new Error('Visible request cannot become headless');
   if (p.path) {

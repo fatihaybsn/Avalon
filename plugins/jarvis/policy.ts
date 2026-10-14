@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { MEMORY_TOOLS, memoryParams } from './notes.ts';
 import { QUICK_TOOLS, quickDecision, quickGrants, type QuickGrant } from './quick-policy.ts';
+import {isGuiTool,guiDecision} from './gui-policy.ts';
 
 export type Scope = {
   runId: string; sessionKey: string; sessionId: string; agentId: string;
@@ -145,6 +146,7 @@ export async function evaluate(event: {toolName: string; params: Record<string, 
       return { params: workNoteParams(event.params) };
     }
     if (!event.toolKind && [...QUICK_TOOLS, 'browser'].includes(event.toolName)) return await quickDecision(event.toolName, event.params, scope);
+    if (!event.toolKind && isGuiTool(event.toolName)) return await guiDecision(event.toolName,event.params,scope);
     if (scope.role === 'memory') return block('Memory-only scope has no general file, web or execution authority');
     // Free-form executable text, Code Mode, workers and unknown connectors cannot
     // prove executable/argv/cwd/access bounds here. No blacklist-only admission.

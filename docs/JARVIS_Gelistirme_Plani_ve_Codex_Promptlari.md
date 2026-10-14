@@ -69,7 +69,7 @@ Aktarım kararı klasör adına değil, kodun yeni hedefe katkısına dayanır. 
 - Windows 11 üzerinde doğrudan çalış. WSL/Linux, ikinci görev koordinatörü, ikinci hafıza motoru, ayrı karar modeli veya yeni ajan framework'ü ekleme.
 - Yalnız verilen aşamayı uygula. Gelecek promptları otomatik görev sayma; tamamlanmış aşamayı sebepsiz yeniden tasarlama.
 - OpenClaw; görev, izin, sohbet ve Memory Core'un tek sahibi. Electron istemci; Gemini bağımsız konuşma; Space Bunny görev beyni; Codex/OpenCode dış işçi.
-- Gemini `gemini-3.8-live`, görev modeli HTTP üzerinden Space Bunny Free. Model/sağlayıcı değiştirme desteklenir; sessiz ücretli/model/işçi geçişi yapılmaz.
+- Gemini `gemini-3.8-live`; Space Bunny Free görev isteklerinin tamamı OpenCode istemci/işçisinden geçer, OpenClaw doğrudan HTTP/provider isteği göndermez. Sessiz ücretli/model/işçi geçişi yapılmaz.
 - Serbest web yetkisi Gemini'ye açılmaz. Kısa kontrol ve derin araştırma aynı dar okuyucu sınırından geçer; özel bağlam sorguya/URL'ye sızdırılmaz.
 - Yeni entegrasyon gerçek kurulu sürümün resmî sözleşmesine bağlanır. Hayalî endpoint, yanıltıcı stub, sabit başarı veya doğrudan hash adlı `dist` dosyası yaması kullanılmaz.
 - Yeni profil ve state eski FURY'den ayrılır. Kişisel hesapları, mevcut tarayıcıyı, eski görevleri veya başka süreci değiştirme. Port çakışması yabancı süreci kapatma gerekçesi değildir.
@@ -110,7 +110,7 @@ Yalnız 01'i tamamla. Sonunda hazırladığın temel dosyaları ve bir sonraki a
 
 **Kısaca:** FURY'den bağımsız bir OpenClaw profili oluşturur. Space Bunny model bağlantısını ve Google Live yapılandırmasını hazırlar; sesin kendisi daha sonra bağlanır.
 
-**13 Ekim 2026 güncel kullanıcı kararı:** OpenClaw üzerinden doğrudan ücretsiz model API çağrısı `403 FreeTierError` ile reddedildiği için Space Bunny Free bağlantısında OpenCode istemcisi/işçisi yolu bilinçli olarak seçilmiştir. Bu karar, aşağıdaki başlangıç promptunun doğrudan Zen HTTP erişimi ve ana modele başka harness atamama şartını bu bağlantı bakımından günceller. 403'ü kurulum hatası veya mimari ihlali sayarak modeli değiştirmeyin, ücretli yedek açmayın veya çalışan işçi yolunu yeniden yazmayın. OpenClaw tek görev/izin/hafıza merkezi olarak kalır. Aşama kapsamı ve gerçek entegrasyon durumu için `GELISTIRME_DURUMU.md` esas alınır; bu not sonraki aşamaları tamamlanmış saymaz.
+**13–14 Ekim 2026 güncel kullanıcı kararı:** Space Bunny Free'ye gönderilen tüm model istekleri OpenCode'un normal istemci/işçisi üzerinden yapılır; OpenClaw doğrudan ücretsiz model API/provider çağrısı yapmaz. OpenCode araçları topluca kapatılmaz; OpenClaw görev, izin ve hafıza merkezi kalır. Bu kural aşağıdaki ilk doğrudan Zen HTTP talimatını günceller. `403 FreeTierError` bilinen ücretsiz katman kısıtıdır; bu nedenle modeli değiştirmeyin, ücretli yedek açmayın veya doğrudan API'ye geri dönmeyin. Karar, genel worker entegrasyonunun canlıda hazır olduğu anlamına gelmez; gerçek durum `GELISTIRME_DURUMU.md` içinde tutulur ve 10. aşama ayrıca başlatılmalıdır.
 
 ```text
 AGENTS.md, kısa kesin mimari ve geliştirme durumunu esas alarak yalnız 02'yi uygula: yeni OpenClaw Gateway ve model temeli.
@@ -119,7 +119,7 @@ Native Windows 11 üzerinde desteklenen OpenClaw sürümünü ve onun Node/Power
 
 Yeni jarvis profili, ayrı çalışma alanı/state, yerel token ve yalnız loopback Gateway oluştur. Port doluysa kimliğini doğrulayamadığın sürece dokunma; çakışmayı bildir. Normal başlangıç ayrı profil parametrelerini açık taşımış olsun. Sırlar repo/prompt/log dışında, kullanıcıya ait güvenli saklama yolunda bulunsun; gerçek anahtarları bana yazdırma. Mevcut FURY state'ini, auth dosyalarını ve sohbetleri otomatik import etme.
 
-Ana görev modeli OpenCode Zen HTTP erişimiyle Space Bunny Free olsun. OpenCode model API'si ile ilerideki yerel OpenCode kodlama sunucusunu karıştırma. Gerçek sağlayıcı kataloğunu/API biçimini kullan; model kimliği, araç/görsel desteği ve hata davranışı kurulu sürümle eşleşsin. Model yolu değiştirilebilir kalsın; ana modele başka bir agent harness atama. Sessiz fallback ve ücretli geçiş açma.
+Bu başlangıç promptundaki doğrudan OpenCode Zen HTTP modeli talimatı 14 Ekim 2026 kararıyla geçersizdir. Space Bunny Free isteğini OpenCode istemci/işçisine gönder; OpenClaw'dan doğrudan provider/HTTP isteği yapma. OpenCode işçisinin normal araç davranışını topluca kapatma; OpenClaw'ın mevcut görev/izin/araç sınırlarını koru. Sessiz fallback ve ücretli geçiş açma.
 
 Google Talk ayarları: google, realtime, provider-websocket, agent-consult, provider-direct ve açıkça gemini-3.8-live. Normal konuşmaları force-agent-consult'a zorlama. Standart 3.8'e thinking_config, eski affective-dialog veya proactive_audio=false parametreleri gönderme. Bu aşamada mikrofon/ses motoru yazma ve kullanıcı adına hesabı değiştirme.
 
@@ -290,6 +290,8 @@ Native permission, requestUserInput veya seçenek sorusunda model cevap vermesin
 
 ```text
 Yalnız 10'u uygula: OpenCode dış işçisi ve Space Bunny'nin seçilen işçiyi yönetmesi.
+
+08 sırasında, benim onayımla, mevcut OpenCode bağlantısının yalnız Windows GUI için gereken Space Bunny görüntü girişi ve guarded araç/sonuç aktarımı bölümü erkene alındı. Önce docs/GELISTIRME_DURUMU.md üzerinden gerçekte nelerin uygulandığını ve doğrulandığını kontrol et; tamamlanan bağlantıyı yeniden kurma. Bu, 10'un genel işçi entegrasyonunun tamamlandığı anlamına gelmez. Yalnız 10'un kalan kapsamını uygula; OpenClaw tek görev/izin/hafıza merkezi kalsın, model veya sağlayıcı değişmesin.
 
 OpenCode model sağlayıcısı ile OpenCode agent server farklıdır. Yerel server/SDK yolunu dış işçi olarak bağla; JARVIS görev/hafıza sahibi olmasın. Kurulu sürümün OpenAPI ve SDK typelarını esas al; eski V1 session/prompt şemasını V2 ile karıştırma. Server loopback'te, kimlik doğrulamalı ve JARVIS'e özel config/data/cache profiliyle çalışsın. Provider anahtarı sadece gereken model erişimi için kullanılsın; işçinin shell çocuklarına JARVIS anahtarları geçmesin.
 

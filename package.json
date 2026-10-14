@@ -12,7 +12,7 @@
   },
   "scripts": {
     "check": "tsc --noEmit && npm --prefix apps/desktop run check",
-    "test": "node --max-semi-space-size=4 --test --test-concurrency=1 tests/policy.test.mjs tests/reader.test.mjs tests/tavily.test.mjs tests/memory.test.mjs tests/dreaming.test.mjs tests/work.test.mjs tests/quick.test.mjs",
+    "test": "node --max-semi-space-size=4 --test --test-concurrency=1 tests/policy.test.mjs tests/reader.test.mjs tests/tavily.test.mjs tests/memory.test.mjs tests/dreaming.test.mjs tests/work.test.mjs tests/quick.test.mjs tests/gui-policy.test.mjs",
     "test:quick:gateway": "pwsh -NoProfile -File scripts/test-jarvis-policy.ps1 -QuickOnly",
     "test:quick:windows": "pwsh -NoProfile -File tests/windows-window.ps1",
     "test:work:gateway": "pwsh -NoProfile -File scripts/test-jarvis-policy.ps1 -WorkOnly",

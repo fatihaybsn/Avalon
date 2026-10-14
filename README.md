@@ -2,8 +2,8 @@
 
 Windows 11'de doğrudan çalışan, OpenClaw merkezli kişisel asistan projesi.
 Tek merkez **OpenClaw Gateway**, konuşma tarafı **Gemini Live**, ağır görev
-modeli **Space Bunny Free**'dir. Mevcut durum: **07 dar işlemler uygulandı; browser düzeltmesi kullanıcı kararıyla sonraya bırakıldı**
-(Gateway, görev izinleri, salt okunur araştırma ve sade Electron/Vite/Lit arayüzü).
+modeli **Space Bunny Free**'dir. Mevcut durum: **08 Windows GUI yolu uygulandı; browser düzeltmesi kullanıcı kararıyla sonraya bırakıldı**
+(Gateway, görev izinleri, salt okunur araştırma, yerel GUI node'u ve sade Electron/Vite/Lit arayüzü).
 05 ile tek yerel hafıza, kontrollü kısa not araçları, yetkili ortak erişim ve
 Gemini ile altı saatlik native Dreaming düzenlemesi eklendi.
 06 ile mevcut OpenClaw kayıtlarında kalıcı proje/görev eşlemesi, gerçek host
@@ -11,6 +11,10 @@ olaylarından durum, bağımsız iş yönlendirmesi ve kaynak sahipliği eklendi
 07 ile model çağrısı gerektirmeyen Windows menüsü, kimlik doğrulamalı WM_CLOSE,
 geri alma kopyası/Çöp Kutusu, yerel belge okuyucuları ve iki ayrı managed browser
 profili eklendi. Genel web/login, strict native DNS sınırı nedeniyle hazır değildir.
+08 ile hazır OpenClaw Windows node'u, görev kapsamlı CUA ve katalogdan seçilmiş
+Windows-MCP okuma/bekleme araçları eklendi. CUA yazması yalnız taze gözlenen
+hedefe ve açık background isteğine bağlıdır; SDK teslimi `unknown` raporlayabildiği
+için test fixture'ı dışındaki uygulamalarda arka plan garantisi verilmez.
 Başarılı ağır görev/yanıt entegrasyonu OpenCode işçisiyle 10'da, canlı ses 11'de,
 sesli onay 13'te; tam kurulabilir dağıtım 16'dadır.
 
@@ -21,6 +25,7 @@ Ayrıntılı mimari: `docs/KESIN_MIMARI.md` · Aşama durumu: `docs/GELISTIRME_D
 - Windows 11, PowerShell 7
 - Node.js `>=24.16.0 <25 || >=26.1.0` (doğrulanan: `v24.20.0`; 22/23/25 ve 26.0 desteklenmez)
 - npm `11.19.0`, Git
+- 08 Windows-MCP yolu için Astral `uv`/`uvx`; kurulum ve paket önbelleği 4d'de.
 - Hesaplar: OpenCode (görev modeli), Tavily ücretsiz hesap (araştırma), Google AI Studio (05 Dreaming için gerekli; canlı konuşma 11'de)
 - Yerel belge okuma için Python 3.12 ve 4c'deki kütüphaneler; Windows işlemleri ve görsel OCR Python gerektirmez.
 - Browser için kurulu Chromium tabanlı Edge/Chrome; Playwright Core mevcut OpenClaw paketinden kullanılır.
@@ -302,8 +307,41 @@ içerir. Genel site/login/form işleri henüz kullanılamaz. Güvenlik sınırı
 kapatmayın, `allowedHostnames` istisnasıyla veya URL'yi IP'ye çevirerek aşmayın.
 Native DNS/yönlendirme/ağ çıkışı güvenliği sonraki ayrı düzeltmede doğrulanacak;
 bu çözüm tamamlanmadan browser'a bağlı görevler hazır sayılmaz. Dosya/Windows,
-OCR ve mevcut salt okunur araştırma yolu bu engelden bağımsızdır. Genel GUI
-08'de kalır; tam dağıtım 16'da yapılacaktır.
+OCR ve mevcut salt okunur araştırma yolu bu engelden bağımsızdır. GUI kurulumu
+ve kullanım sınırları aşağıdaki 4d ve 5. adımlardadır; tam dağıtım 16'da yapılır.
+
+### 4d) Native Windows GUI node'unu ve sınırlı Windows-MCP'yi hazırlayın
+
+GUI, kullanıcının **etkileşimli Windows oturumunda çalışan hazır OpenClaw
+node'u** üzerinden kullanılır. Gateway servisinin tek başına masaüstü erişimi
+yoktur. Bu kurulum WSL, Windows Hub, ayrı GUI uygulaması veya ikinci driver
+daemon'ı eklemez. Pairing ve OpenClaw araç izinleri açık kalır.
+
+Windows-MCP için Astral `uvx` gerekir. Kurulu değilse resmi WinGet komutunu
+çalıştırın; yeni PowerShell açıp sürümü ve paketin ilk indirilmesini doğrulayın:
+
+```powershell
+winget install --id=astral-sh.uv -e
+uvx --version
+uvx --from windows-mcp==0.8.8 windows-mcp --help
+```
+
+İlk `uvx` çağrısı internet üzerinden Windows-MCP `0.8.8` paketini önbelleğe
+alır; bu komut yalnız yardım ekranını açar, MCP sunucusunu başlatmaz. Gateway
+çalışırken ayarlı çağrılar `--offline` kullanır; her araç çağrısı paket
+indirmez. `windows-mcp install` komutunu kullanmayın; bu proje servis/zamanlanmış
+görev kurmaz. [Astral uv kurulum yönergesi](https://docs.astral.sh/uv/getting-started/installation/).
+
+İlk kurulumda, 4. adım profil ve OpenClaw eklentilerini hazırladıktan sonra,
+ayrı native node profilini bir kez oluşturun:
+
+```powershell
+node scripts/jarvis-gui-config.mjs --prepare-node
+```
+
+Bu `%USERPROFILE%\.openclaw-jarvis-desktop\openclaw.json` oluşturur; tokenı
+dosyaya kopyalamaz ve Windows servisi kurmaz. Dosya zaten varsa betik üzerine
+yazmayı reddeder; mevcut node ayarını incelemeden silmeyin veya ezmeyin.
 
 ### 5) Gateway'i başlatın
 
@@ -355,6 +393,49 @@ sonrası `native-published` ve `published: true` yalnız o Gateway çalışması
 gözlenen turu doğrular; yeniden başlatmada önceki başarı canlı kanıt diye
 üretilmez. Kalıcı kaynaklar ve native raporlar workspace'te kalır.
 
+İlk GUI pairing'i için 4d'de hazırlanan node'u **yeni, etkileşimli PowerShell
+penceresinde** başlatın; bu pencere native node çalıştığı sürece açık kalır:
+
+```powershell
+cd C:\yol\Avalon
+.\scripts\jarvis-desktop-node.ps1
+```
+
+Ayrı bir terminalde yalnız bekleyen gerçek `JARVIS Windows Desktop` isteğini
+inceleyip onun gerçek `requestId` değeriyle onaylayın. Ardından bağlı node
+durumundan 64 karakterli gerçek `nodeId` değerini alın:
+
+```powershell
+.\node_modules\.bin\openclaw.cmd --profile jarvis nodes pending --json
+.\node_modules\.bin\openclaw.cmd --profile jarvis nodes approve <requestId>
+.\node_modules\.bin\openclaw.cmd --profile jarvis nodes status --connected --json
+```
+
+`<requestId>` ve `<nodeId>` yer tutucudur; yalnız inceleyip doğruladığınız
+değerleri kullanın. Pairing'i atlamayın. Ana Gateway'i kendi penceresinde
+`Ctrl+C` ile durdurun; ana profile değişiklik uygulamadan önce bir kere yedek
+alın, sonra GUI ayarını ve profil politikasını doğrulayın:
+
+```powershell
+$profileConfig = Join-Path $env:USERPROFILE '.openclaw-jarvis\openclaw.json'
+$backup = "$profileConfig.before-stage08-$(Get-Date -Format yyyyMMdd-HHmmss)"
+if (Test-Path -LiteralPath $backup) { throw 'Yedek zaten var; üzerine yazmayın.' }
+Copy-Item -LiteralPath $profileConfig -Destination $backup
+node scripts/jarvis-gui-config.mjs --apply <nodeId>
+node scripts/jarvis-policy-config.mjs --check $profileConfig
+```
+
+Sonra 5. adımdaki `jarvis-gateway.ps1` ile Gateway'i yeniden başlatın. Native
+node penceresini kapatmayın; Gateway'e yeniden bağlanır. Genel GUI varsayılanı
+OpenClaw CUA'dır: her yazma güncel pencere/öğe gözlemi ve açık background
+isteği ister. Belirsiz sonuçta aynı pencere yeniden okunur, eylem körlemesine
+tekrarlanmaz ve foreground'a sessiz geçiş yapılmaz. Kontrollü fixture yazma ve
+readback doğrulandı; SDK `deliveryMode: unknown` bildirebildiğinden başka
+uygulamalarda background teslim garantisi yoktur. Windows-MCP aynı Gateway'e
+stdio ve sabit `0.8.8` paketiyle bağlanır; seçilmiş gerçek katalogdan yalnız
+gözlem/bekleme kullanılır, MCP'nin tıklama/yazma araçları kapalıdır. İkinci
+browser, genel dosya/PowerShell/Registry ve process araçları açılmaz.
+
 ### 6) Araştırma erişimini ve izin temelini doğrulayın
 
 Tavily anahtarını tanımladığınız yeni terminalde:
@@ -372,7 +453,7 @@ anahtar veya ham sağlayıcı yanıtını yazdırmaz. Başarıda `ok: true`,
 kanıtlamaz. Hata durumunda eksik anahtar, erişim, kota ya da ağ kategorisi
 bildirilir; otomatik tekrar veya alternatif sağlayıcı yoktur.
 
-`npm test` 50 testi çalıştırır; gerçek Tavily/Gemini hesabına çağrı yapmaz.
+`npm test` 57 testi çalıştırır; gerçek Tavily/Gemini hesabına çağrı yapmaz.
 07 testleri yerel Windows cihazını ve test dosyaları üzerindeki native recycle/OCR
 yolunu kullanır. Belge fixture üretimi için ayrıca `reportlab` gerekir; ayrıntı 8'dedir.
 Gateway testi ayrı geçici profilde gerçek onay kayıtlarını ve dosya etkisini
@@ -520,7 +601,7 @@ Belge fixture'larını çalıştıracak geliştirici, 4c'de oluşturduğu ortam 
 `.\.venv\Scripts\python.exe -m pip install reportlab==4.4.9` kullanmalıdır;
 bu yalnız test PDF üretimi içindir. Mevcut Codex runtime'ında zaten bulunuyorsa
 yeniden kurmayın. Masaüstü testi 18 IPC/session/stream/pairing/reconnect/görev
-sınır kontrolüdür; gerçek modele çağrı yapmaz. 50 host testiyle birlikte 68
+sınır kontrolüdür; gerçek modele çağrı yapmaz. 57 host testiyle birlikte 75
 test vardır. Çalışan JARVIS Gateway'ine karşı Electron
 kontrolleri için masaüstünden **Uygulamadan çık** seçin, sonra:
 
@@ -612,6 +693,7 @@ sessiz geçiş olmaz):
 - Dreaming: yukarıdaki `gateway call jarvis.memory.dreaming.status --json` ile durumunu görün. Gateway açıkken altı saatte bir seçilmiş güncel notları Gemini ile düzenler; yeni önemli notları kaydetmek için bu saati beklemeyin. Ham sohbeti hafızaya kopyalamayın; seçici fiziksel unutma ve ham kayıt ömrü 14. adımdadır.
 - Çalışma kaydı (06): Electron sağ paneli mevcut native run/session ile retained proje/görev kaydını gösterir. **Bağımsız iş başlat**, fresh native subagent session açar; **Bu göreve ilet**, **Bu planı kabul et**, **Güncel çıktı** ve exact iptal seçili göreve gider. Normal sohbet veya başka sohbet seçimi mevcut işi iptal etmez. Ayrıntılar: [06 çalışma kaydı](docs/06_CALISMA_KAYDI.md). Mevcut profile yalnız 06 ayarlarını eklemek için `node scripts/jarvis-work-config.mjs`; native entegrasyon testi `npm run test:work:gateway`. Pause bu native yolda desteklenmez.
 - Dar işlemler (07): sağ panelde **Hızlı Windows işlemi**; belge/OCR, kontrollü not ve recycle için [07 sözleşmesi](docs/07_DAR_ISLEMLER.md). Browser'ın alan adı/login engeli kullanıcı kararıyla ileride çözülecek; hazır kabul etmeyin.
+- GUI (08): Gateway'e ek olarak etkileşimli Windows node penceresi açık olmalıdır; `.\scripts\jarvis-desktop-node.ps1` komutunu 5. adımda anlatıldığı gibi çalıştırın. Tarayıcı sayfa işlemlerinde managed Playwright, genel Windows arayüzünde CUA varsayılandır. CUA görev ve taze hedef gözlemiyle sınırlıdır; Windows-MCP yalnız gözlem/bekleme sağlar. SDK teslimi `unknown` raporlayabildiğinden başka uygulamalarda background yazma garantisi yoktur.
 - Başlat: `.\scripts\jarvis-gateway.ps1` · Durdur: `Ctrl+C`
 - Masaüstü geliştirme: `npm run desktop:dev`
 - Derle/çalıştır: `npm run desktop:build`, ardından `npm run desktop:start`
@@ -641,12 +723,14 @@ gösterilir; belirsiz yazma reconnect'te tekrar edilmez. Ayrıntılar ve test s�
 
 ## Proje yapısı
 
-03 izin eklentisi, 05 yerel hafıza ve 06 retained çalışma kaydı/host gözlemi uygulanmıştır. Sınırlar ve gerçek test kanıtı: [03 yetki sınırları](docs/03_YETKI_SINIRLARI.md), [06 çalışma kaydı](docs/06_CALISMA_KAYDI.md). Kontroller: `npm run check`, `npm test`, `npm run test:gateway`, `npm run test:work:gateway`. Resmî Tavily Advanced + web_fetch yapılandırıldı; gerçek Advanced API erişimi doğrulandı ([güvenli kurulum](docs/TAVILY_KURULUM.md)). Genel web_search kapalıdır; sesli onay 13'e aittir.
+03 izin eklentisi, 05 yerel hafıza, 06 retained çalışma kaydı ve 08 sınırlı Windows GUI yolu uygulanmıştır. Sınırlar ve gerçek test kanıtı: [03 yetki sınırları](docs/03_YETKI_SINIRLARI.md), [06 çalışma kaydı](docs/06_CALISMA_KAYDI.md), [geliştirme durumu](docs/GELISTIRME_DURUMU.md). Kontroller: `npm run check`, `npm test`, `npm run test:gateway`, `npm run test:work:gateway`. Resmî Tavily Advanced + web_fetch yapılandırıldı; gerçek Advanced API erişimi doğrulandı ([güvenli kurulum](docs/TAVILY_KURULUM.md)). Genel web_search kapalıdır; sesli onay 13'e aittir.
 
 ```
 apps/desktop/ Electron main/preload, Vite + Lit renderer, seçili lisanslı upstream dosyaları
-config/    jarvis.openclaw.json (Gateway+model+Talk şablonu), jarvis.env.example
+config/    jarvis.openclaw.json, jarvis.env.example, windows-mcp-tools.json (Windows-MCP kataloğu)
 scripts/   profil hazırlama, politika uygulama, maskeli Tavily anahtarı, erişim kontrolü, başlatma/durum
+plugins/jarvis/gui-policy.ts CUA hedef/eylem sınırı ve Windows-MCP katalog guard'ı
+scripts/jarvis-gui-config.mjs, jarvis-desktop-node.ps1 GUI profili, pairing sonrası yapılandırma ve başlatma
 native/windows/ sabit Windows API/recycle/OCR yardımcıları ve yerel belge okuyucusu
 plugins/   jarvis (public SDK görev kapsamı/hook, native araştırma ve onay sınırı)
 tests/     politika/okuyucu ve yalnız geçici Gateway'e yüklenen onay fixture

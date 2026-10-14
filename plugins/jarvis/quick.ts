@@ -21,7 +21,7 @@ function resolveDocumentPython() {
 let python = resolveDocumentPython();
 export const documentPythonPath = () => python;
 const windowsPowerShell = path.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32/WindowsPowerShell/v1.0/powershell.exe');
-export async function localCall(helper: 'actions' | 'recycle' | 'document', params: Record<string, unknown>, signal?: AbortSignal) {
+export async function localCall(helper: 'actions' | 'recycle' | 'document' | 'activity', params: Record<string, unknown>, signal?: AbortSignal) {
   const ocr = helper === 'document' && params.kind === 'ocr';
   const exe = ocr ? windowsPowerShell : helper === 'document' ? python : pwsh;
   await fs.access(exe);

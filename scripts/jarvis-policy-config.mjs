@@ -5,9 +5,11 @@ import assert from 'node:assert/strict';
 import { applyMemory, assertMemory } from './jarvis-memory-config.mjs';
 import { applyWork, assertWork } from './jarvis-work-config.mjs';
 import { applyQuick, assertQuick } from './jarvis-quick-config.mjs';
+import {applyGui} from './jarvis-gui-config.mjs';
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export function applyPolicy(config, profileDir, pluginPath = path.join(repo, 'plugins', 'jarvis')) {
+  const guiNode=config.plugins?.entries?.jarvis?.config?.guiNode;
   config.plugins ??= {};
   config.plugins.load ??= {};
   config.plugins.load.paths = [...new Set([...(config.plugins.load.paths ?? []).filter(p => !p.endsWith('plugins/jarvis') && !p.endsWith('plugins\\jarvis')), pluginPath])];
@@ -26,7 +28,7 @@ export function applyPolicy(config, profileDir, pluginPath = path.join(repo, 'pl
   config.tools = { ...config.tools, allow: ['read', 'write', 'edit', 'tavily_search', 'web_fetch'], deny: ['exec', 'process', 'apply_patch', 'code_execution', 'browser', 'computer', 'nodes', 'message', 'sessions_spawn', 'sessions_send', 'subagents', 'gateway', 'plugins', 'openclaw', 'cron', 'automations', 'web_search', 'tavily_extract', 'jarvis_web_fetch', 'memory_search', 'memory_get'], elevated: { enabled: false }, exec: { security: 'deny', ask: 'always' }, web: { search: { enabled: false, provider: 'tavily', cacheTtlMinutes: 0 }, fetch: { enabled: true, readability: true, maxChars: 20000, maxCharsCap: 20000, maxResponseBytes: 262144, timeoutSeconds: 10, cacheTtlMinutes: 0, maxRedirects: 0, useTrustedEnvProxy: false, ssrfPolicy: { dangerouslyAllowPrivateNetwork: false, allowRfc2544BenchmarkRange: false, allowIpv6UniqueLocalRange: false } } } };
   delete config.tools.alsoAllow;
   applyMemory(config);
-  return applyQuick(applyWork(config));
+  return applyGui(applyQuick(applyWork(config)),guiNode);
 }
 export function assertPolicy(config, profileDir) {
   const expected = applyPolicy(structuredClone(config), profileDir);

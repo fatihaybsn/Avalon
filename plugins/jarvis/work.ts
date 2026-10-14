@@ -4,6 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID, createHash } from 'node:crypto';
 import { exactKeys, text, workText, safePath, fingerprint, type Scope } from './policy.ts';
+import {isGuiTool} from './gui-policy.ts';
 
 export type WorkRecord = {
   taskId: string; projectId: string; projectRevision: number; revision: number; recordVersion: number;
@@ -402,6 +403,12 @@ export function installWork(api: OpenClawPluginApi, live: (runId?: string) => { 
       if (!call) throw new Error('Host tool call identity required');
       binding.assertCurrent();
       const resources: string[] = [];
+      if(isGuiTool(event.toolName)) {
+        // Same owner across both paths; conservative shared desktop exclusion.
+        // No second session/queue and no driver-specific input lease.
+        resources.push('input:mouse-keyboard');
+        if(event.params.windowRef)resources.push(`window:${String(event.params.node)}:${String(event.params.windowRef)}`);
+      }
       if (['write', 'edit'].includes(event.toolName)) {
         const target = await safePath(event.params.path ?? event.params.file_path);
         resources.push(`file:${path.win32.normalize(target).toLowerCase()}`);

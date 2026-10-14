@@ -4,12 +4,14 @@ import { isBlockedHostnameOrIp, resolvePinnedHostnameWithPolicy } from 'openclaw
 import { getMemoryCapabilityRegistration } from 'openclaw/plugin-sdk/memory-host-core';
 import { MEMORY_TOOLS, memoryParams, originFor, readNote, writeNote, currentDerivedText } from './notes.ts';
 import { buildMemoryBackend } from './opencode-memory.ts';
+import { buildGuiBackend } from './opencode-gui.ts';
+import {configureGuiPolicy,isGuiTool,GuiObservations,GUI_ROLE,GUI_MCP_NAMES} from './gui-policy.ts';
 import { buildDreamProvider, DREAM_ROUTE, DREAM_MODELS } from './gemini-dreaming.ts';
 import { admitDreamingNotes, admitNativeRecallCall, readNativeDreaming, DREAMING_TOKEN } from './dreaming.ts';
 import fs from 'node:fs';
 import path from 'node:path';
 import { installWork } from './work.ts';
-import { createQuickTools, preserveFile, configureNativeRoot } from './quick.ts';
+import { createQuickTools, preserveFile, configureNativeRoot, localCall } from './quick.ts';
 import { QUICK_TOOLS, operationHash } from './quick-policy.ts';
 import { runBeforeToolCallHook, runAgentHarnessAfterToolCallHook } from 'openclaw/plugin-sdk/agent-harness-runtime';
 import { dispatchGatewayMethod } from 'openclaw/plugin-sdk/gateway-method-runtime';
@@ -19,6 +21,8 @@ export default definePluginEntry({
   id: 'jarvis', name: 'JARVIS permissions', description: 'Scoped host policy; no model-owned grants or resolver',
   register(api) {
     if(api.pluginConfig?.nativeRoot) { configureNativeRoot(api.pluginConfig.nativeRoot); protectHostRepo(path.resolve(String(api.pluginConfig.nativeRoot),'../..')); }
+    if(api.pluginConfig?.guiNode)configureGuiPolicy(api.pluginConfig.guiNode,api.pluginConfig.nativeRoot);
+    const guiObservations=new GuiObservations();
     let dreamingActive = false;
     let stopped = false;
     // Only completed availability failures may resume at the next native cron.
@@ -27,6 +31,7 @@ export default definePluginEntry({
     let modelEvidence: Parameters<NonNullable<Parameters<typeof buildMemoryBackend>[0]>['onDecision']>[0] | undefined;
     let dreamingStatus: { phase: string; error?: string; admitted?: number; at?: string; evidence?: unknown } = { phase: 'idle' };
     api.registerCliBackend(buildMemoryBackend({ workspace: () => api.runtime.agent.resolveAgentWorkspaceDir(api.config, 'main'), onDecision: evidence => { modelEvidence = evidence; dreamingStatus = { ...dreamingStatus, phase: 'structured-decision', at: new Date().toISOString() }; } }));
+    api.registerCliBackend(buildGuiBackend());
     api.registerProvider(buildDreamProvider(() => api.runtime.agent.resolveAgentWorkspaceDir(api.config, 'main'), evidence => {
       modelEvidence = evidence; dreamingStatus = { phase: 'structured-decision', evidence, at: new Date().toISOString() };
       api.logger.info(`JARVIS Dreaming host-validated decision: ${JSON.stringify(evidence)}`);
@@ -67,7 +72,7 @@ export default definePluginEntry({
     const localAttempts=new Set<string>();
     const localScopes=new Set<string>();
     const hasTavilyKey = () => /^tvly-\S+$/.test(process.env.TAVILY_API_KEY ?? '');
-    const drop = (runId: string) => { const old = authorities.get(runId); authorities.delete(runId); api.runContext.clearRunContext({ runId }); old?.release(); work?.release(runId); for(const key of localAttempts)if(key.startsWith(runId+':'))localAttempts.delete(key); };
+    const drop = (runId: string) => { const old = authorities.get(runId); authorities.delete(runId); api.runContext.clearRunContext({ runId }); old?.release(); work?.release(runId); guiObservations.release(runId); for(const key of localAttempts)if(key.startsWith(runId+':'))localAttempts.delete(key); };
     const live = (runId?: string) => {
       if (!runId) return undefined;
       const binding = authorities.get(runId);
@@ -307,16 +312,27 @@ export default definePluginEntry({
       if(error)options.respond(false,undefined,{code:'INVALID_REQUEST',message:error});else options.respond(true,outcome);
     }, {scope:'operator.write',profileAccess:'required',sessionAccess:{mode:'write'}});
     api.registerGatewayMethod('jarvis.policy.status', ({ respond }) => respond(true, { version: '2026.10.2', tools: hasTavilyKey() ? ['tavily_search', 'web_fetch'] : ['web_fetch'], quickTools:QUICK_TOOLS, quickMethod:'jarvis.quick.execute', search: { provider: 'tavily', depth: 'advanced', key: hasTavilyKey() ? 'present; account access must be tested' : 'missing', genericWebSearch: 'disabled', fallback: 'disabled' }, rawExec: 'closed', payment: 'manual exact browser action approval only; voice binding remains stage 13', scopes: authorities.size }), { scope: 'operator.read' });
+    api.registerGatewayMethod('jarvis.gui.status',async({respond})=>{
+      try {
+          const activity=await localCall('activity',{});
+        const nodeId=api.pluginConfig?.guiNode;
+        const described=nodeId?await dispatchGatewayMethod('node.describe',{nodeId}):undefined;
+        const rawNode=described?.ok?described.payload as Record<string,unknown>:undefined;
+        const node=rawNode?{nodeId:rawNode.nodeId,displayName:rawNode.displayName,platform:rawNode.platform,version:rawNode.version,clientId:rawNode.clientId,clientMode:rawNode.clientMode,deviceFamily:rawNode.deviceFamily,caps:rawNode.caps,commands:rawNode.commands,computerUse:rawNode.computerUse,sessionHost:rawNode.sessionHost,approvalState:rawNode.approvalState,paired:rawNode.paired,connected:rawNode.connected}:null;
+          respond(true,{version:'2026.10.2',node,desktop:{interactive:activity.interactive===true,physicalInputDistinguished:activity.physicalInputDistinguished===true},selectedMcp:{package:'windows-mcp',version:'0.8.8',transport:'stdio',offline:true,tools:GUI_MCP_NAMES,sessionLifetime:'native OpenClaw'},input:'CUA background input is limited to the current user task and fresh exact window/element observations; uncertain results require same-window readback and cannot be replayed. Windows-MCP input effects remain closed.',workerBridge:'jarvis-opencode-gui is registered for Space Bunny image and guarded OpenClaw MCP calls; it does not change the default model route',defaultPolicy:GUI_ROLE});
+      }catch(e){respond(false,undefined,{code:'UNAVAILABLE',message:e instanceof Error?e.message:'GUI status unavailable'});}
+    },{scope:'operator.read'});
     api.on('before_tool_call', async (event, ctx) => {
       const native = admitNativeRecallCall(event, ctx);
       if (native) return native;
       const binding = live(ctx.runId);
       const decision = await evaluate(event, ctx, binding?.scope);
       if (binding && !('block' in decision)) {
-        if([...QUICK_TOOLS,'browser'].includes(event.toolName)) {
+        if([...QUICK_TOOLS,'browser'].includes(event.toolName)||isGuiTool(event.toolName)) {
           if(!work)return {block:true,blockReason:'Native work/resource ledger unavailable'};
           await work.ensureLocal(binding.scope);
         }
+        if(isGuiTool(event.toolName))try{guiObservations.before(binding.scope.runId,event.toolName,event.params);}catch(e){return {block:true,blockReason:e instanceof Error?e.message:'GUI observation unavailable'};}
         try { await work?.beforeTool({ ...event, params: 'params' in decision ? decision.params ?? event.params : event.params }, ctx); }
         catch (e) { return { block: true, blockReason: e instanceof Error ? e.message : 'Work resource unavailable' }; }
         if (['write', 'edit'].includes(event.toolName) && !('requireApproval' in decision)) {
@@ -339,7 +355,7 @@ export default definePluginEntry({
       }
       return decision;
     }, { priority: 10000 });
-    api.on('before_prompt_build', (_event, ctx) => ctx.agentId === 'research' ? { systemPrompt: READER_PROMPT, toolsAllow: hasTavilyKey() ? ['tavily_search', 'web_fetch'] : ['web_fetch'] } : undefined, { priority: 10000 });
+    api.on('before_prompt_build', (_event, ctx) => ctx.agentId === 'research' ? { systemPrompt: READER_PROMPT, toolsAllow: hasTavilyKey() ? ['tavily_search', 'web_fetch'] : ['web_fetch'] } : ctx.agentId==='main'&&api.pluginConfig?.guiNode?{appendSystemContext:GUI_ROLE}:undefined, { priority: 10000 });
     api.on('before_agent_run', (event, ctx) => {
       if (ctx.agentId !== 'research') return;
       const scope = live(ctx.runId)?.scope;
@@ -353,6 +369,7 @@ export default definePluginEntry({
     // Both tools are OpenClaw/native official tools. JARVIS only gates and labels
     // them; it does not implement another search transport or expose Extract.
     api.on('after_tool_call', (event, ctx) => {
+      if(isGuiTool(event.toolName)&&ctx.runId)guiObservations.after(ctx.runId,event.toolName,event.params,event.result,event.error);
       if(event.toolName==='browser' && ['open','navigate','act','close','focus','start'].includes(String(event.params.action))) {
         const binding=live(ctx.runId);
         if(binding) binding.scope.quick=binding.scope.quick?.filter(g=>g.tool!=='browser' || operationHash(g.params)!==operationHash(event.params));

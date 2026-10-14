@@ -10,6 +10,27 @@
     },
     "controlUi": {
       "enabled": true
+    },
+    "nodes": {
+      "pairing": {
+        "autoApproveLocal": false,
+        "sshVerify": false
+      },
+      "commands": {
+        "deny": [
+          "system.run",
+          "system.run.prepare",
+          "system.which",
+          "system.execApprovals.get",
+          "system.execApprovals.set",
+          "codex.exec-server.stdio.v1",
+          "fs.listDir",
+          "terminal.upload",
+          "browser.proxy.upload.v1",
+          "mcp.tools.call.v1",
+          "desktop.stream"
+        ]
+      }
     }
   },
   "agents": {
@@ -55,7 +76,19 @@
             "jarvis_recycle",
             "jarvis_document",
             "jarvis_draft",
-            "browser"
+            "browser",
+            "computer",
+            "windows_gui__ControlStatus",
+            "windows_gui__Snapshot",
+            "windows_gui__Screenshot",
+            "windows_gui__Click",
+            "windows_gui__Type",
+            "windows_gui__Scroll",
+            "windows_gui__Move",
+            "windows_gui__Shortcut",
+            "windows_gui__WaitFor",
+            "windows_gui__MultiEdit",
+            "windows_gui__MultiSelect"
           ]
         }
       },
@@ -187,7 +220,8 @@
       "google",
       "memory-core",
       "llama-cpp",
-      "browser"
+      "browser",
+      "cua-computer"
     ],
     "slots": {
       "memory": "memory-core"
@@ -210,14 +244,25 @@
       "jarvis_recycle",
       "jarvis_document",
       "jarvis_draft",
-      "browser"
+      "browser",
+      "computer",
+      "windows_gui__ControlStatus",
+      "windows_gui__Snapshot",
+      "windows_gui__Screenshot",
+      "windows_gui__Click",
+      "windows_gui__Type",
+      "windows_gui__Scroll",
+      "windows_gui__Move",
+      "windows_gui__Shortcut",
+      "windows_gui__WaitFor",
+      "windows_gui__MultiEdit",
+      "windows_gui__MultiSelect"
     ],
     "deny": [
       "exec",
       "process",
       "apply_patch",
       "code_execution",
-      "computer",
       "nodes",
       "message",
       "sessions_spawn",
@@ -426,6 +471,46 @@
       "jarvis-background": {
         "cdpPort": 18811,
         "headless": true
+      }
+    }
+  },
+  "mcp": {
+    "sessionIdleTtlMs": 0,
+    "servers": {
+      "windows_gui": {
+        "command": "C:\\Users\\Fatih\\.local\\bin\\uvx.exe",
+        "args": [
+          "--offline",
+          "--from",
+          "windows-mcp==0.8.8",
+          "windows-mcp",
+          "serve",
+          "--transport",
+          "stdio",
+          "--tools",
+          "ControlStatus,Snapshot,Screenshot,Click,Type,Scroll,Move,Shortcut,WaitFor,MultiEdit,MultiSelect"
+        ],
+        "env": {
+          "ANONYMIZED_TELEMETRY": "false"
+        },
+        "toolFilter": {
+          "include": [
+            "ControlStatus",
+            "Snapshot",
+            "Screenshot",
+            "Click",
+            "Type",
+            "Scroll",
+            "Move",
+            "Shortcut",
+            "WaitFor",
+            "MultiEdit",
+            "MultiSelect"
+          ]
+        },
+        "supportsParallelToolCalls": false,
+        "connectionTimeoutMs": 15000,
+        "requestTimeoutMs": 20000
       }
     }
   }
