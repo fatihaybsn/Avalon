@@ -1,5 +1,5 @@
 import { definePluginEntry } from 'openclaw/plugin-sdk/plugin-entry';
-import { makeScope, evaluate, READER_PROMPT, publicUrl, fingerprint, WORK_TOOLS, workNoteParams, type Scope } from './policy.ts';
+import { makeScope, evaluate, READER_PROMPT, publicUrl, fingerprint, WORK_TOOLS, workNoteParams, protectHostRepo, type Scope } from './policy.ts';
 import { isBlockedHostnameOrIp, resolvePinnedHostnameWithPolicy } from 'openclaw/plugin-sdk/ssrf-runtime';
 import { getMemoryCapabilityRegistration } from 'openclaw/plugin-sdk/memory-host-core';
 import { MEMORY_TOOLS, memoryParams, originFor, readNote, writeNote, currentDerivedText } from './notes.ts';
@@ -9,10 +9,16 @@ import { admitDreamingNotes, admitNativeRecallCall, readNativeDreaming, DREAMING
 import fs from 'node:fs';
 import path from 'node:path';
 import { installWork } from './work.ts';
+import { createQuickTools, preserveFile, configureNativeRoot } from './quick.ts';
+import { QUICK_TOOLS, operationHash } from './quick-policy.ts';
+import { runBeforeToolCallHook, runAgentHarnessAfterToolCallHook } from 'openclaw/plugin-sdk/agent-harness-runtime';
+import { dispatchGatewayMethod } from 'openclaw/plugin-sdk/gateway-method-runtime';
+const scopeMetadata = (scope: Scope) => { const {quick: _quick, ...metadata}=scope; return metadata; };
 
 export default definePluginEntry({
   id: 'jarvis', name: 'JARVIS permissions', description: 'Scoped host policy; no model-owned grants or resolver',
   register(api) {
+    if(api.pluginConfig?.nativeRoot) { configureNativeRoot(api.pluginConfig.nativeRoot); protectHostRepo(path.resolve(String(api.pluginConfig.nativeRoot),'../..')); }
     let dreamingActive = false;
     let stopped = false;
     // Only completed availability failures may resume at the next native cron.
@@ -58,8 +64,10 @@ export default definePluginEntry({
     // Ephemeral retained host authority only. OpenClaw owns run metadata,
     // transcripts and durable approvals; this is not a second registry/DB.
     const authorities = new Map<string, { scope: Scope; assertCurrent: () => void; release: () => void; signal: AbortSignal }>();
+    const localAttempts=new Set<string>();
+    const localScopes=new Set<string>();
     const hasTavilyKey = () => /^tvly-\S+$/.test(process.env.TAVILY_API_KEY ?? '');
-    const drop = (runId: string) => { const old = authorities.get(runId); authorities.delete(runId); api.runContext.clearRunContext({ runId }); old?.release(); work?.release(runId); };
+    const drop = (runId: string) => { const old = authorities.get(runId); authorities.delete(runId); api.runContext.clearRunContext({ runId }); old?.release(); work?.release(runId); for(const key of localAttempts)if(key.startsWith(runId+':'))localAttempts.delete(key); };
     const live = (runId?: string) => {
       if (!runId) return undefined;
       const binding = authorities.get(runId);
@@ -111,6 +119,10 @@ export default definePluginEntry({
       if (ctx.agentId !== 'main' || matches.length !== 1) throw new Error('Current authorized main task required');
       return matches[0]!;
     };
+    api.registerTool({ contextVersion: 2, create(ctx) {
+      if (ctx.agentId !== 'main') return null;
+      return createQuickTools(() => toolScope(ctx), () => { ctx.assertInvocationCurrent(); ctx.assertInputCommitAllowed?.(); });
+    } }, { names: QUICK_TOOLS });
     api.registerTool({ contextVersion: 2, create(ctx) {
       if (ctx.agentId !== 'main' || !work) return null;
       return [{ name: 'jarvis_work_read', label: 'Çalışma kaydı', description: 'Read only the current task revision, host state and concise model contributions. No memory index, hidden reasoning, entire transcript, credentials or tool output.', parameters: { type: 'object' as const, properties: {}, additionalProperties: false }, async execute(_callId: string, args: Record<string, unknown>) {
@@ -235,13 +247,21 @@ export default definePluginEntry({
         sessionAccessAuthority.assertCurrent();
         const target = sessionAccessAuthority.target;
         const scope = await makeScope(params, { ...target, userId, deviceId });
+        // A fresh operator turn releases completed direct local grants in this
+        // same incarnation; it does not cancel another native or pending job.
+        for(const id of localScopes) {
+          const old=live(id)?.scope;
+          if(!old || old.userId!==userId || old.deviceId!==deviceId || old.sessionId!==target.sessionId || id===scope.runId)continue;
+          const record=await work?.ledger.get(userId,old.taskId).catch(()=>undefined);
+          if(record && ['ended','failed','unknown'].includes(record.state)){drop(id);localScopes.delete(id);}
+        }
         sessionAccessAuthority.assertCurrent();
         const existing = authorities.get(scope.runId)?.scope;
         if (existing && (existing.userId !== userId || existing.deviceId !== deviceId || existing.sessionId !== scope.sessionId)) throw new Error('Run already bound to another principal/session');
         if (authorities.size >= 100 && !authorities.has(scope.runId)) throw new Error('Too many retained scopes');
         retained = sessionAccessAuthority.retain();
         drop(scope.runId);
-        if (!api.runContext.setRunContext({ runId: scope.runId, namespace: 'scope', value: { ...scope } })) throw new Error('Host run metadata unavailable');
+        if (!api.runContext.setRunContext({ runId: scope.runId, namespace: 'scope', value: scopeMetadata(scope) })) throw new Error('Host run metadata unavailable');
         const access = retained;
         const timer = setTimeout(() => drop(scope.runId), scope.expiresAt - Date.now()); timer.unref();
         const onAbort = () => drop(scope.runId);
@@ -251,15 +271,62 @@ export default definePluginEntry({
         respond(true, { bound: true, runId: scope.runId, sessionId: scope.sessionId, taskId: scope.taskId, expiresAt: scope.expiresAt });
       } catch (error) { retained?.release(); api.logger.warn(`JARVIS scope refused: ${error instanceof Error ? error.message : 'unavailable'}`); options.respond(false, undefined, { code: 'INVALID_REQUEST', message: 'JARVIS scope not bound: verified identity, session or parameters unavailable' }); }
     }, { scope: 'operator.write', profileAccess: 'required', sessionAccess: { mode: 'write' } });
-    api.registerGatewayMethod('jarvis.policy.status', ({ respond }) => respond(true, { version: '2026.10.2', tools: hasTavilyKey() ? ['tavily_search', 'web_fetch'] : ['web_fetch'], search: { provider: 'tavily', depth: 'advanced', key: hasTavilyKey() ? 'present; account access must be tested' : 'missing', genericWebSearch: 'disabled', fallback: 'disabled' }, rawExec: 'closed', payment: 'closed until manual client binding in stage 13', scopes: authorities.size }), { scope: 'operator.read' });
+    api.registerGatewayMethod('jarvis.quick.execute', async options => {
+      const {params,client,sessionAccessAuthority:access}=options;
+      let started=false; let admitted=false; let singleGrant=false; let outcome: unknown; let error: string | undefined;
+      const runId=String(params.runId), callId=String(params.callId), name=String(params.tool);
+      try {
+        if(Object.keys(params).some(k=>!['sessionKey','agentId','runId','callId','tool','params'].includes(k)) || !/^[a-zA-Z0-9-]{1,128}$/.test(callId) || !QUICK_TOOLS.includes(name)) throw new Error('Narrow local call required');
+        const b=live(runId);
+        if(!b || !work || !access || client?.invalidated || client?.connect.role!=='operator' || !client.connect.scopes?.includes('operator.write') || b.scope.userId!==(client.authenticatedUserProfile?.profileId ?? client.authenticatedUserId) || b.scope.deviceId!==client.connect.device?.id || b.scope.sessionId!==access.target.sessionId || b.scope.sessionKey!==access.target.sessionKey) throw new Error('Exact operator/device/session required');
+        const current=()=>{access.assertCurrent();b.assertCurrent();if(!live(runId)||client.invalidated)throw new Error('Local authority expired');}; current();
+        const attempt=`${runId}:${callId}`; if(localAttempts.has(attempt))throw new Error('Local call already attempted'); localAttempts.add(attempt);
+        await work.prepareLocal(b.scope,callId);
+        localScopes.add(runId);singleGrant=b.scope.quick?.length===1;
+        admitted=true;
+        const args=params.params as Record<string,unknown>;
+        const ctx={...access.target,runId};
+        const gate=await runBeforeToolCallHook({toolName:name,toolCallId:callId,params:args,ctx,approvalMode:'defer'});
+        if(gate.blocked) throw new Error(gate.reason);
+        let frozen=structuredClone(args);
+        if(gate.deferredApproval) {
+          const {approval,overrideParams}=gate.deferredApproval; frozen=structuredClone(overrideParams) as Record<string,unknown>;
+          const verdict=await dispatchGatewayMethod('plugin.approval.request',{pluginId:approval.pluginId,title:approval.title,description:approval.description,allowedDecisions:approval.allowedDecisions,severity:approval.severity,toolName:name,toolCallId:callId,agentId:access.target.agentId,sessionKey:access.target.sessionKey,timeoutMs:60000,twoPhase:false},{expectFinal:true,timeoutMs:65000});
+          if(!verdict.ok || (verdict.payload as {decision?:string})?.decision!=='allow-once')throw new Error('Exact manual allow-once not received');
+        }
+        current(); started=true;
+        const tool=createQuickTools(()=>b,current).find(t=>t.name===name)!;
+        outcome=await tool.execute(callId,frozen);
+      } catch(e) {error=e instanceof Error?e.message:'Local operation failed';}
+      finally {
+        if(access && admitted) await runAgentHarnessAfterToolCallHook({...access.target,runId,toolName:name,toolCallId:callId,startArgs:params.params as Record<string,unknown>,...(outcome!==undefined?{result:outcome}:{}),...(error?{error}: {})});
+        if(admitted) {try{const b=live(runId);if(!b||!work)throw new Error('Local authority ended before result publication; effect unknown');await work.assertLocalResult(b.scope,callId);}catch(e){error=e instanceof Error?e.message:'Local result record unavailable';}}
+        if(error && started) api.logger.warn('JARVIS local operation failed/unknown; automatic replay unavailable');
+        if(admitted && singleGrant){drop(runId);localScopes.delete(runId);}
+      }
+      if(error)options.respond(false,undefined,{code:'INVALID_REQUEST',message:error});else options.respond(true,outcome);
+    }, {scope:'operator.write',profileAccess:'required',sessionAccess:{mode:'write'}});
+    api.registerGatewayMethod('jarvis.policy.status', ({ respond }) => respond(true, { version: '2026.10.2', tools: hasTavilyKey() ? ['tavily_search', 'web_fetch'] : ['web_fetch'], quickTools:QUICK_TOOLS, quickMethod:'jarvis.quick.execute', search: { provider: 'tavily', depth: 'advanced', key: hasTavilyKey() ? 'present; account access must be tested' : 'missing', genericWebSearch: 'disabled', fallback: 'disabled' }, rawExec: 'closed', payment: 'manual exact browser action approval only; voice binding remains stage 13', scopes: authorities.size }), { scope: 'operator.read' });
     api.on('before_tool_call', async (event, ctx) => {
       const native = admitNativeRecallCall(event, ctx);
       if (native) return native;
       const binding = live(ctx.runId);
       const decision = await evaluate(event, ctx, binding?.scope);
       if (binding && !('block' in decision)) {
+        if([...QUICK_TOOLS,'browser'].includes(event.toolName)) {
+          if(!work)return {block:true,blockReason:'Native work/resource ledger unavailable'};
+          await work.ensureLocal(binding.scope);
+        }
         try { await work?.beforeTool({ ...event, params: 'params' in decision ? decision.params ?? event.params : event.params }, ctx); }
         catch (e) { return { block: true, blockReason: e instanceof Error ? e.message : 'Work resource unavailable' }; }
+        if (['write', 'edit'].includes(event.toolName) && !('requireApproval' in decision)) {
+          try { binding.assertCurrent(); await preserveFile(String(decision.params?.path ?? event.params.path), binding.scope); }
+          catch (e) { return { block: true, blockReason: e instanceof Error ? e.message : 'Undo unavailable; write refused' }; }
+        }
+        if (event.toolName === 'browser' && ['open', 'navigate'].includes(String(event.params.action)) && event.params.url!=='about:blank') {
+          try { await resolvePinnedHostnameWithPolicy(new URL(String(event.params.url)).hostname, { policy: { allowPrivateNetwork: false }, signal: ctx.abortSignal }); binding.assertCurrent(); }
+          catch { return { block: true, blockReason: 'Browser public destination unavailable/denied' }; }
+        }
       }
       if (binding?.scope.role === 'research' && !('block' in decision)) {
         if (event.toolName === 'tavily_search' && !hasTavilyKey()) return { block: true, blockReason: 'TAVILY_API_KEY missing; search unavailable, no fallback' };
@@ -286,13 +353,17 @@ export default definePluginEntry({
     // Both tools are OpenClaw/native official tools. JARVIS only gates and labels
     // them; it does not implement another search transport or expose Extract.
     api.on('after_tool_call', (event, ctx) => {
+      if(event.toolName==='browser' && ['open','navigate','act','close','focus','start'].includes(String(event.params.action))) {
+        const binding=live(ctx.runId);
+        if(binding) binding.scope.quick=binding.scope.quick?.filter(g=>g.tool!=='browser' || operationHash(g.params)!==operationHash(event.params));
+      }
       if (ctx.agentId !== 'research' || !['tavily_search', 'web_fetch'].includes(event.toolName)) return;
       const binding = live(ctx.runId); if (!binding) return;
       const details = (event.result as { details?: Record<string, unknown> } | undefined)?.details;
       const error = event.error ?? (typeof details?.error === 'string' ? details.error : undefined);
       if (error) {
         binding.scope.searchFailed = true;
-        api.runContext.setRunContext({ runId: binding.scope.runId, namespace: 'scope', value: { ...binding.scope } });
+        api.runContext.setRunContext({ runId: binding.scope.runId, namespace: 'scope', value: scopeMetadata(binding.scope) });
         const category = /432|429|quota|credit|limit/i.test(error) ? 'quota/rate-limit' : /401|403|api.key|auth/i.test(error) ? 'access' : 'network/response';
         api.agent.events.emitAgentEvent({ runId: binding.scope.runId, stream: 'tool', data: { kind: 'jarvis.research-stopped', taskId: binding.scope.taskId, category, fallback: false } });
         return;
@@ -303,7 +374,7 @@ export default definePluginEntry({
         try { const url = publicUrl(candidate); if (!isBlockedHostnameOrIp(new URL(url).hostname)) urls.push(url); } catch { /* unusable source grants no URL access */ }
       }
       if (event.toolName === 'tavily_search') binding.scope.urls = [...new Set([...binding.scope.urls, ...urls])].slice(0, 20);
-      api.runContext.setRunContext({ runId: binding.scope.runId, namespace: 'scope', value: { ...binding.scope } });
+      api.runContext.setRunContext({ runId: binding.scope.runId, namespace: 'scope', value: scopeMetadata(binding.scope) });
       api.agent.events.emitAgentEvent({ runId: binding.scope.runId, stream: 'tool', data: { kind: 'jarvis.external-source', taskId: binding.scope.taskId, tool: event.toolName, provider: event.toolName === 'tavily_search' ? 'tavily' : 'local', depth: event.toolName === 'tavily_search' ? 'advanced' : 'local', urls, recordedAt: new Date().toISOString(), sha256: fingerprint(details ?? {}), trust: 'untrusted', authority: 'none' } });
     });
     api.on('tool_result_persist', (event, ctx) => {

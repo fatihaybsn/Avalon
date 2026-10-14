@@ -10,6 +10,8 @@ export type Snapshot = {
   streaming: string; approvals: Approval[]; approvalsAvailable: boolean;
   submissions: Submission[]; error?: string; historyReady: boolean;
   work?: Work[]; workAvailable?: boolean; workOutput?: string;
+  quickOutput?: string;
+  quickWindows?: {id:string;app:string;title:string;pid:number}[];
   resources?: { resource: string; runId: string; callId: string }[];
 };
 export type Action =
@@ -17,6 +19,7 @@ export type Action =
   | { type: 'select'; key: string }
   | { type: 'create'; title: string; kind: 'daily' | 'project' }
   | { type: 'send' | 'independent'; key: string; message: string }
+  | { type: 'quick'; key:string; command:string; app:string; value:string; windowId:string }
   | { type: 'steer'; taskId: string; message: string }
   | { type: 'cancel' | 'workRead' | 'acceptPlan'; taskId: string };
 export type Result = { ok: true; snapshot: Snapshot } | { ok: false; error: string; snapshot: Snapshot };

@@ -6,10 +6,17 @@ import '../../vendor/openclaw/ui/src/styles/base.css';
 import './desktop.css';
 declare global { interface Window { jarvis: DesktopBridge } }
 class JarvisApp extends LitElement {
-  static properties = { data: { state: true }, draft: { state: true }, title: { state: true }, kind: { state: true }, waiting: { state: true }, localError: { state: true }, creating: { state: true }, guidance: { state: true } };
+  static properties = { data: { state: true }, draft: { state: true }, title: { state: true }, kind: { state: true }, waiting: { state: true }, localError: { state: true }, creating: { state: true }, guidance: { state: true },quickCommand:{state:true},quickApp:{state:true},quickValue:{state:true},quickWindow:{state:true} };
   data?: Snapshot;
   draft = ''; title = ''; kind: 'daily' | 'project' = 'project'; waiting = false; localError = ''; creating = false;
   guidance = '';
+  quickCommand='status';quickApp='notepad';quickValue='50';quickWindow='none';
+  private async quick() {
+    const key=this.data?.selected;if(!key||this.waiting)return;
+    this.waiting=true;
+    await this.action({type:'quick',key,command:this.quickCommand,app:this.quickApp,value:this.quickValue,windowId:this.quickWindow});
+    this.waiting=false;
+  }
   private drafts = new Map<string, string>();
   private unsubscribe?: () => void;
   override createRenderRoot() { return this; }
@@ -63,6 +70,17 @@ class JarvisApp extends LitElement {
         <p class="muted">${selected?.scopeRoot ? `Dosya görevlerinin izin kökü: ${selected.scopeRoot}` : 'Görev klasörü seçilmezse dosya araçlarının yetki kapsamı bağlı değildir.'}</p>
         <p class="muted">Enter: gönder · Shift+Enter: yeni satır</p></div></main>
       <aside aria-label="Görevler ve onaylar"><h2>Mevcut görevler</h2><button ?disabled=${!connected} @click=${() => this.action({ type: 'refresh' })}>Kayıtları yenile</button>
+        <details><summary>Hızlı Windows işlemi</summary>
+          <label>Uygulama<select .value=${this.quickApp} @change=${(e:Event)=>{this.quickApp=(e.target as HTMLSelectElement).value;this.quickWindow='none';}}><option value="notepad" .selected=${this.quickApp==='notepad'}>Not Defteri</option><option value="calculator" .selected=${this.quickApp==='calculator'}>Hesap Makinesi</option><option value="paint" .selected=${this.quickApp==='paint'}>Paint</option></select></label>
+          <label>İşlem<select .value=${this.quickCommand} @change=${(e:Event)=>{this.quickCommand=(e.target as HTMLSelectElement).value;this.quickValue=({mute:'true',media:'play_pause',power:'balanced'} as Record<string,string>)[this.quickCommand] ?? '50';}}>
+          ${Object.entries({resolve:'Kurulumu kontrol et',status:'Pencereleri oku',open:'Uygulamayı aç',focus:'Pencereyi odakla',minimize:'Pencereyi küçült',restore:'Pencereyi geri getir',close:'Normal kapatma iste',audio_status:'Ses durumunu oku',volume:'Ses seviyesini ayarla',mute:'Mute ayarla',media:'Medya kontrolü',power_status:'Güç planını oku',power:'Güç modunu ayarla'}).map(([value,label])=>html`<option value=${value} .selected=${this.quickCommand===value}>${label}</option>`)}</select></label>
+          ${['focus','minimize','restore','close'].includes(this.quickCommand)?html`<label>Güncel pencere<select .value=${this.quickWindow} @change=${(e:Event)=>this.quickWindow=(e.target as HTMLSelectElement).value}><option value="none" .selected=${this.quickWindow==='none'}>Önce pencereleri oku, sonra hedefi seç</option>${d?.quickWindows?.filter(w=>w.app===this.quickApp).map(w=>html`<option value=${w.id} .selected=${this.quickWindow===w.id}>${w.title || this.quickApp} · PID ${w.pid}</option>`)}</select></label>`:nothing}
+          ${this.quickCommand==='volume'?html`<label>Ses seviyesi (0–100)<input type="number" min="0" max="100" .value=${this.quickValue} @input=${(e:Event)=>this.quickValue=(e.target as HTMLInputElement).value}></label>`:nothing}
+          ${['mute','media','power'].includes(this.quickCommand)?html`<label>Değer<select .value=${this.quickValue} @change=${(e:Event)=>this.quickValue=(e.target as HTMLSelectElement).value}>${Object.entries(this.quickCommand==='mute'?{true:'Sessiz',false:'Sesi aç'}:this.quickCommand==='media'?{play_pause:'Oynat / duraklat',next:'Sonraki',previous:'Önceki',stop:'Durdur'}:{saver:'Tasarruf',balanced:'Dengeli',performance:'Performans'}).map(([value,label])=>html`<option value=${value} .selected=${this.quickValue===value}>${label}</option>`)}</select></label>`:nothing}
+          <button ?disabled=${!connected||!selected||selected.active||selected.queued||this.waiting} @click=${()=>this.quick()}>Seçilen işlemi uygula</button>
+          <p class="muted">Pencere gözlemi 60 saniye geçerlidir. Normal kapatma kaydetme/iptal seçimini cevaplamaz. Kapatma mevcut Gateway onayından geçer.</p>
+          ${d?.quickOutput?html`<details open><summary>Yerel sonuç</summary><pre>${d.quickOutput}</pre></details>`:nothing}
+        </details>
         <label>Göreve yönlendirme<textarea rows="2" maxlength="1800" .value=${this.guidance} @input=${(e: Event) => this.guidance = (e.target as HTMLTextAreaElement).value}></textarea></label>
         ${!d?.workAvailable ? html`<p>Güncel çalışma kaydı okunamıyor. Önceki gözlem güncel sayılmaz.</p>` : nothing}
         ${d?.work?.map(t => html`<section class="approval"><strong>${t.request.slice(0, 160)}</strong><p>${t.state} · revizyon ${t.revision}</p><small>Proje: ${t.projectId} · r${t.projectRevision}<br>Görev: ${t.taskId}<br>Session: ${t.sessionId}<br>Run: ${t.runId}<br>${t.updatedAt}</small>

@@ -2,12 +2,15 @@
 
 Windows 11'de doğrudan çalışan, OpenClaw merkezli kişisel asistan projesi.
 Tek merkez **OpenClaw Gateway**, konuşma tarafı **Gemini Live**, ağır görev
-modeli **Space Bunny Free**'dir. Mevcut durum: **06. aşama host görev kaydı tamamlandı**
+modeli **Space Bunny Free**'dir. Mevcut durum: **07 dar işlemler uygulandı; browser düzeltmesi kullanıcı kararıyla sonraya bırakıldı**
 (Gateway, görev izinleri, salt okunur araştırma ve sade Electron/Vite/Lit arayüzü).
 05 ile tek yerel hafıza, kontrollü kısa not araçları, yetkili ortak erişim ve
 Gemini ile altı saatlik native Dreaming düzenlemesi eklendi.
 06 ile mevcut OpenClaw kayıtlarında kalıcı proje/görev eşlemesi, gerçek host
 olaylarından durum, bağımsız iş yönlendirmesi ve kaynak sahipliği eklendi.
+07 ile model çağrısı gerektirmeyen Windows menüsü, kimlik doğrulamalı WM_CLOSE,
+geri alma kopyası/Çöp Kutusu, yerel belge okuyucuları ve iki ayrı managed browser
+profili eklendi. Genel web/login, strict native DNS sınırı nedeniyle hazır değildir.
 Başarılı ağır görev/yanıt entegrasyonu OpenCode işçisiyle 10'da, canlı ses 11'de,
 sesli onay 13'te; tam kurulabilir dağıtım 16'dadır.
 
@@ -19,6 +22,8 @@ Ayrıntılı mimari: `docs/KESIN_MIMARI.md` · Aşama durumu: `docs/GELISTIRME_D
 - Node.js `>=24.16.0 <25 || >=26.1.0` (doğrulanan: `v24.20.0`; 22/23/25 ve 26.0 desteklenmez)
 - npm `11.19.0`, Git
 - Hesaplar: OpenCode (görev modeli), Tavily ücretsiz hesap (araştırma), Google AI Studio (05 Dreaming için gerekli; canlı konuşma 11'de)
+- Yerel belge okuma için Python 3.12 ve 4c'deki kütüphaneler; Windows işlemleri ve görsel OCR Python gerektirmez.
+- Browser için kurulu Chromium tabanlı Edge/Chrome; Playwright Core mevcut OpenClaw paketinden kullanılır.
 
 ## Kurulum (sıfırdan)
 
@@ -161,7 +166,7 @@ başka paket/sürüm/ücretli sağlayıcıya sessiz geçmeyin.
 
 Politika betiği ilk değişiklik öncesindeki profili repo dışında
 `openclaw.before-stage05.json` olarak yedekler. Model/Talk/auth ayarlarını korur;
-03, 05 ve 06'nın araç, rol, hafıza ve hook sınırlarını uygular. Yalnız Dreaming'e
+03, 05, 06 ve 07'nin araç, rol, hafıza, browser ve hook sınırlarını uygular. Yalnız Dreaming'e
 ayrılan `jarvis-dream-google` sağlayıcısı ve ayrı env SecretRef'ini de kurar;
 bu sağlayıcının model listesi aşağıdaki beşli sıraya güncellenir.
 Profil önceki aşamadan geliyorsa
@@ -228,6 +233,77 @@ seçilmiş adaylar ve bunlarla ilgili sınırlı eski kayıtlar gönderilir; yer
 EmbeddingGemma araması bulut çağrısı değildir. Model kararı host tarafından
 denetlenir; görünmeyen kayıtlar veya eski revizyonlar üzerinden yazamaz.
 Kalıcı consolidation ve `DREAMS.md` raporunu aynı OpenClaw yazar.
+
+### 4c) Windows, belge/OCR ve browser yolunu hazırlayın
+
+07 için ikinci Windows/voice/MCP paketi kurmayın. Dar Windows araçları mevcut
+PowerShell 7 ve Windows API'sini kullanır; OCR, sistemdeki Windows PowerShell
+5.1 üzerinden `Windows.Media.Ocr` motoruna bağlanır. Notepad, Calculator ve
+Paint'i kullanacaksanız Windows'ta gerçekten kurulu olduklarını kontrol edin.
+Eksik uygulama otomatik kurulmaz; yalnız System32 launcher'ının varlığı yeterli
+değildir. Güç aracı yalnız cihazda kurulu standart planları seçer.
+
+PDF/DOCX/XLSX/PPTX ve görsel metadata okuyucusu önce bu depodaki `.venv`'i,
+yoksa mevcut Codex belge runtime'ını kullanır. Hazır runtime ve gerekli
+kütüphaneler varsa ikinci ortam kurmayın. Codex olmayan bilgisayarda
+[Python 3.12'nin Windows x64 kurulumunu](https://www.python.org/downloads/windows/)
+kendi kullanıcınıza kurup depo kökünde:
+
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r native/windows/document-requirements.txt
+.\.venv\Scripts\python.exe -I -c "import pdfplumber, docx, openpyxl, PIL, lxml; print('Belge okuyucuları hazır')"
+```
+
+Geliştirici testlerini de çalıştıracaksanız PDF fixture üretimi için
+`.\.venv\Scripts\python.exe -m pip install reportlab==4.4.9` komutunu bu aşamada
+çalıştırın; uygulamanın belge okuyucusu bu test paketini gerektirmez.
+
+Bu yeni ortam yalnız bu projenin belge kütüphaneleridir; FURY ortamını
+kopyalamayın. Activation gerekmez; host interpreter ve helper yolunu sabit
+seçer, model exe/shell/config seçemez. `.venv` Git'e alınmaz. Kaynak dosyaları
+başka klasöre taşırsanız ortamı orada yeniden oluşturun. Python/kütüphane
+eksikliği yalnız ilgili belge işini durdurur; cloud/ücretli fallback yoktur.
+
+OCR dili için Windows **Ayarlar → Zaman ve dil → Dil ve bölge** bölümünde
+kullanacağınız dilin seçeneklerindeki **Optik karakter tanıma** bileşenini
+kontrol edin; yoksa Windows'un kendi kurulum yoluyla ekleyin. Sistemde kurulu
+dilleri şu salt okunur komutla görün:
+
+```powershell
+powershell.exe -NoProfile -Command "[Windows.Media.Ocr.OcrEngine, Windows.Foundation, ContentType=WindowsRuntime]::AvailableRecognizerLanguages | Select-Object LanguageTag, DisplayName"
+```
+
+Bu makinede Türkçe ile gerçek görsel metni doğrulandı. PNG/JPEG/BMP/TIFF ilk
+kare OCR desteklenir; taranmış PDF için otomatik dönüştürücü yoktur.
+Office formülleri/makroları çalıştırılmaz; eski/makrolu formatlar reddedilir.
+
+İlk profil 4. adımda 07 ayarlarını da alır. Eski profile yalnız 07'yi eklemek
+veya helper yolunu yeni depo konumuna bağlamak için Gateway kapalıyken:
+
+```powershell
+node scripts/jarvis-quick-config.mjs
+node scripts/jarvis-quick-config.mjs --check
+node scripts/jarvis-policy-config.mjs --check "$env:USERPROFILE\.openclaw-jarvis\openclaw.json"
+```
+
+Önceki ayarlar profil içindeki `openclaw.before-stage07.json` yedeğinde korunur;
+başka bilgisayarın bu yedeğini, hesaplarını veya kişisel browser oturumunu
+taşımayın. Mevcut Playwright Core yeterlidir; ayrıca Playwright paketi veya
+ücretli browser sağlayıcısı kurmayın. `jarvis-visible` (18810, görünür) ve
+`jarvis-background` (18811, headless) ayrı yönetilen profillerdir. Port doluysa
+sahibini kontrol edin; başka süreci zorla kapatmayın. Görerek yapılacak görev
+görünür profilde kalır.
+
+**Browser düzeltmesi sonraya bırakıldı (14 Ekim 2026 kullanıcı kararı):**
+OpenClaw 2026.10.2, strict SSRF altında alan adlı gezinmeyi DNS rebinding
+koruması eksik olduğundan engeller; incelenen 2026.10.3 paketi de aynı engeli
+içerir. Genel site/login/form işleri henüz kullanılamaz. Güvenlik sınırını
+kapatmayın, `allowedHostnames` istisnasıyla veya URL'yi IP'ye çevirerek aşmayın.
+Native DNS/yönlendirme/ağ çıkışı güvenliği sonraki ayrı düzeltmede doğrulanacak;
+bu çözüm tamamlanmadan browser'a bağlı görevler hazır sayılmaz. Dosya/Windows,
+OCR ve mevcut salt okunur araştırma yolu bu engelden bağımsızdır. Genel GUI
+08'de kalır; tam dağıtım 16'da yapılacaktır.
 
 ### 5) Gateway'i başlatın
 
@@ -296,7 +372,9 @@ anahtar veya ham sağlayıcı yanıtını yazdırmaz. Başarıda `ok: true`,
 kanıtlamaz. Hata durumunda eksik anahtar, erişim, kota ya da ağ kategorisi
 bildirilir; otomatik tekrar veya alternatif sağlayıcı yoktur.
 
-`npm test` 40 sınır testini çalıştırır; gerçek Tavily/Gemini hesabına çağrı yapmaz.
+`npm test` 50 testi çalıştırır; gerçek Tavily/Gemini hesabına çağrı yapmaz.
+07 testleri yerel Windows cihazını ve test dosyaları üzerindeki native recycle/OCR
+yolunu kullanır. Belge fixture üretimi için ayrıca `reportlab` gerekir; ayrıntı 8'dedir.
 Gateway testi ayrı geçici profilde gerçek onay kayıtlarını ve dosya etkisini
 kontrol eder: deny/allow-always yazmaz, allow-once sabit parametrelerle yazar.
 Test kendi Gateway sürecini ve başarılı profilini kapatıp temizler. Bellek
@@ -383,6 +461,24 @@ sonrasında eski yetki veya shell devam etmiş sayılmaz; belirsiz iş yeniden
 gönderilmez. Kaynak kaydı ve native durum uzlaştırılır. Ayrıntılar:
 [06 çalışma kaydı](docs/06_CALISMA_KAYDI.md).
 
+07'nin **Hızlı Windows işlemi** menüsü aynı sağ paneldedir. Ses durumunu
+okuma, ses/mute/medya ve kurulu güç planı seçimi model çağrısı olmadan yapılır.
+Uygulama işlemi için Notepad/Calculator/Paint'i seçin; **Pencereleri oku**
+ile güncel hedefleri alın, birden fazla pencere varsa doğru pencereyi seçin.
+Host hedefi PID + başlangıç zamanı + exe + HWND ile yeniden doğrular; eski
+hedef token'ı 60 saniye sonra yenilenmelidir. Kapatma normal `WM_CLOSE` ister;
+"kapatma istendi" ile "kapandı" ayrıdır. Kaydetme penceresi çıkarsa karar sizindir.
+Kapatma onayı mevcut yetkili OpenClaw istemcisinde elle allow-once/deny ile
+verilir; bu Electron menüsüne 13'ün onay çözümleyicisi henüz eklenmedi.
+
+`jarvis_document`, `jarvis_draft` ve `jarvis_recycle` exact görev/klasör kapsamıyla
+mevcut Gateway araçlarıdır; bu aşamada masaüstünde ayrı belge/silme düğmesi
+yoktur. Draft `.txt` nota yazılır, yalnız `show:true` açık isteğinde Notepad'de
+gösterilir. Olağan proje düzenlemeleri `.jarvis-undo` içinde geri alma kopyasını
+korur. Silme native Çöp Kutusu ile ve tek işlem onayıyla yapılır; bilinmeyen
+kapasite/korunan hedefte kalıcı silmeye düşmez. Scope/RPC ve browser'ın boş sekme
+→ exact tab navigate sözleşmesi: [07 dar işlemler](docs/07_DAR_ISLEMLER.md).
+
 X pencereyi **tepsiye gizler**; uygulamayı veya Gateway'i kapatmaz. Tepside
 **JARVIS’i göster** yeniden açar; **Uygulamadan çık** istemciyi kapatır.
 Gateway ayrı terminalde çalışmaya devam eder. Bağlantı kesilince son gözlem
@@ -420,9 +516,12 @@ npm test
 npm run test:desktop
 ```
 
-Masaüstü testi 16 IPC/session/stream/pairing/reconnect/görev sınır kontrolüdür;
-gerçek modele çağrı yapmaz. 40 policy/reader/Tavily/hafıza/Dreaming/görev testiyle
-birlikte 56 sınır testi vardır. Çalışan JARVIS Gateway'ine karşı Electron
+Belge fixture'larını çalıştıracak geliştirici, 4c'de oluşturduğu ortam için
+`.\.venv\Scripts\python.exe -m pip install reportlab==4.4.9` kullanmalıdır;
+bu yalnız test PDF üretimi içindir. Mevcut Codex runtime'ında zaten bulunuyorsa
+yeniden kurmayın. Masaüstü testi 18 IPC/session/stream/pairing/reconnect/görev
+sınır kontrolüdür; gerçek modele çağrı yapmaz. 50 host testiyle birlikte 68
+test vardır. Çalışan JARVIS Gateway'ine karşı Electron
 kontrolleri için masaüstünden **Uygulamadan çık** seçin, sonra:
 
 ```powershell
@@ -445,6 +544,20 @@ native hata başarı sayılmaz. Sonra ana Gateway'i 5. adımdan tekrar başlatı
 Başarılı test kendi profilini temizler; başarısız denemelerin geçici dosyaları
 repo kökündeki ignored `tmp` altında kalabilir. Bu klasör kullanıcı profilinin
 yerine geçmez; test çıktıları Git'e alınmaz.
+
+07'nin ayrı kontrolleri:
+
+```powershell
+npm run test:quick:windows
+npm run test:quick:gateway
+```
+
+Windows testi yalnız kendi Win32 penceresinde minimize/restore/normal close ve
+kaydetme bekleme ayrımını kontrol eder. Gateway testi ayrı geçici profilde yerel
+araç/onay/kalıcı kayıt ve iki browser profilini doğrular; başlatmadan önce ana
+Gateway'i kendi terminalinde durdurun, sonra 5'ten yeniden başlatın. Görünür test
+browser penceresi açabilir; kendi küçük test dosyaları Çöp Kutusu'na gider.
+Alan adı engelinin beklendiği gibi reddedilmesi web/login başarısı sayılmaz.
 
 `npm --prefix apps/desktop run test:live` isteğe bağlı gerçek profil testidir:
 iki adlandırılmış test sohbetini oluşturur/korur ve seçili ücretsiz ana modele
@@ -498,6 +611,7 @@ sessiz geçiş olmaz):
 - Hafıza araçları: `jarvis_memory_search/get` okur/arar, `jarvis_note_read/write` kısa kayıt okur/yazar. Kullanıcı tercihi/kararı/düzeltmesi hemen kaydedilir; model/web bulgusu ayrı kaynakla tutulur. Araştırma profili kişisel notları başlangıç bağlamı olarak almaz.
 - Dreaming: yukarıdaki `gateway call jarvis.memory.dreaming.status --json` ile durumunu görün. Gateway açıkken altı saatte bir seçilmiş güncel notları Gemini ile düzenler; yeni önemli notları kaydetmek için bu saati beklemeyin. Ham sohbeti hafızaya kopyalamayın; seçici fiziksel unutma ve ham kayıt ömrü 14. adımdadır.
 - Çalışma kaydı (06): Electron sağ paneli mevcut native run/session ile retained proje/görev kaydını gösterir. **Bağımsız iş başlat**, fresh native subagent session açar; **Bu göreve ilet**, **Bu planı kabul et**, **Güncel çıktı** ve exact iptal seçili göreve gider. Normal sohbet veya başka sohbet seçimi mevcut işi iptal etmez. Ayrıntılar: [06 çalışma kaydı](docs/06_CALISMA_KAYDI.md). Mevcut profile yalnız 06 ayarlarını eklemek için `node scripts/jarvis-work-config.mjs`; native entegrasyon testi `npm run test:work:gateway`. Pause bu native yolda desteklenmez.
+- Dar işlemler (07): sağ panelde **Hızlı Windows işlemi**; belge/OCR, kontrollü not ve recycle için [07 sözleşmesi](docs/07_DAR_ISLEMLER.md). Browser'ın alan adı/login engeli kullanıcı kararıyla ileride çözülecek; hazır kabul etmeyin.
 - Başlat: `.\scripts\jarvis-gateway.ps1` · Durdur: `Ctrl+C`
 - Masaüstü geliştirme: `npm run desktop:dev`
 - Derle/çalıştır: `npm run desktop:build`, ardından `npm run desktop:start`
@@ -533,6 +647,7 @@ gösterilir; belirsiz yazma reconnect'te tekrar edilmez. Ayrıntılar ve test s�
 apps/desktop/ Electron main/preload, Vite + Lit renderer, seçili lisanslı upstream dosyaları
 config/    jarvis.openclaw.json (Gateway+model+Talk şablonu), jarvis.env.example
 scripts/   profil hazırlama, politika uygulama, maskeli Tavily anahtarı, erişim kontrolü, başlatma/durum
+native/windows/ sabit Windows API/recycle/OCR yardımcıları ve yerel belge okuyucusu
 plugins/   jarvis (public SDK görev kapsamı/hook, native araştırma ve onay sınırı)
 tests/     politika/okuyucu ve yalnız geçici Gateway'e yüklenen onay fixture
 docs/      KESIN_MIMARI.md, GELISTIRME_DURUMU.md, gelistirme plani, kaynak proje kaydi

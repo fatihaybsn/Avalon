@@ -32,6 +32,8 @@ Salt okunur araştırma için seçilen yol resmî Tavily `tavily_search` (daima 
 
 ## Ertelenen işler ve kurulum gerçeği
 
+- **14 Ekim 2026 kullanıcı kararı:** 07'nin native browser DNS rebinding/alan adı engeli sonraki ayrı düzeltmeye bırakıldı. Özel ağ sınırı korunur; genel site/login/form ve browser'a bağlı görevler düzeltme ve gerçek DNS/yönlendirme/ağ çıkışı doğrulaması yapılmadan hazır sayılmaz. Bu erteleme Windows/dosya/belge/OCR ve salt okunur araştırma yolunu kapatmaz; sonraki aşama bağımsız işleri kendi kapsamıyla ilerleyebilir. Native browser düzeltmesi bu aşamada başlatılmaz.
+
 - Telefonla arama en sona bırakılmıştır; 16 adımlık ilk sürüm kapsamında değildir. Telefonda Tailscale üzerinden aynı OpenClaw'a web erişimi daha sonraki 15. adımdadır.
 - Özgün görsel tasarım, zengin animasyon ve ayrıntılı süreç görselleştirmesi sonraya bırakılır. İzin/onarım bağlantıları, hesaplar, model uç noktaları ve cihaz ses akışı kurulup doğrulanana kadar hazır sayılmaz.
 - 01. aşama yalnız geliştirme temelini kurar. Güncel kurulum, sürüm ve bağlantı durumu için [GELISTIRME_DURUMU.md](GELISTIRME_DURUMU.md) okunur.

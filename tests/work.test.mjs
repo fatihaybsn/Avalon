@@ -16,6 +16,14 @@ function store() {
   };
 }
 const scope = { runId: 'native-run', taskId: 'task', projectId: 'project', userId: 'owner', deviceId: 'device', agentId: 'main', sessionId: 'sid', sessionKey: 'agent:main:jarvis:test', role: 'memory', expiresAt: Date.now() + 60000, urls: [], confirmationPaths: [] };
+test('scoped recycle subtree conflicts with descendant writes, while sibling paths and revoked leases stay independent',()=>{
+ const owners=new ResourceOwners();let valid=true;
+ owners.claim(['file:c:\\project\\folder'],'recycle','one',()=>{if(!valid)throw new Error('revoked');});
+ assert.throws(()=>owners.claim(['file:c:\\project\\folder\\a.txt'],'write','two',()=>{}),/subtree/);
+ owners.claim(['file:c:\\project\\folder-other\\b.txt'],'sibling','three',()=>{});
+ valid=false;owners.claim(['file:c:\\project\\folder\\a.txt'],'write','four',()=>{});
+ assert.ok(!owners.snapshot().some(r=>r.runId==='recycle'));
+});
 function setup(requestOverride) {
   const stores = new Map(), hooks = {}, methods = {}, subscriptions = [], abort = new AbortController(); let valid = true;
   const binding = { scope: { ...scope }, signal: abort.signal, assertCurrent() { if (!valid || abort.signal.aborted) throw new Error('revoked'); } };

@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([switch]$WorkOnly)
+param([switch]$WorkOnly,[switch]$QuickOnly)
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $scratchBase = [IO.Path]::GetFullPath((Join-Path $repoRoot 'tmp'))
@@ -7,6 +7,7 @@ Push-Location $repoRoot
 try {
   $testArgs = @('--max-semi-space-size=4', 'tests/gateway-policy.mjs')
   if ($WorkOnly) { $testArgs += '--work-only' }
+  if ($QuickOnly) { $testArgs += '--quick-only' }
   & node @testArgs | ForEach-Object {
     $line = "$_"
     if ($line.StartsWith('TEST_PROFILE_TO_REMOVE ')) {

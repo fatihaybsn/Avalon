@@ -20,6 +20,16 @@ try {
   const snapshot = await page.evaluate(async () => (await window.jarvis.action({ type: 'snapshot' })).snapshot);
   console.log('REAL_CONNECTION', snapshot.connection.phase, snapshot.connection.version ?? '', snapshot.connection.deviceId ?? '', snapshot.connection.requestId ?? '', snapshot.connection.detail);
   if (snapshot.connection.phase === 'connected') assert.equal(snapshot.workAvailable, true, 'Signed Electron operator could not read current stage06 host records');
+  if(process.argv.includes('--quick') && snapshot.connection.phase==='connected') {
+    const created=await page.evaluate(()=>window.jarvis.action({type:'create',title:'07 yerel ses doğrulaması',kind:'daily'}));assert.equal(created.ok,true);
+    const key=created.snapshot.selected;
+    const local=await page.evaluate(key=>window.jarvis.action({type:'quick',key,command:'audio_status',app:'notepad',value:'50',windowId:'none'}),key);
+    assert.equal(local.ok,true,local.error);assert.match(local.snapshot.quickOutput,/"confirmed": true/);
+    assert.ok(local.snapshot.work?.some(r=>r.operation?.tool==='jarvis_windows'));
+    await page.getByText('Hızlı Windows işlemi',{exact:true}).click();
+    await fs.mkdir('../../tmp/stage07',{recursive:true});await page.screenshot({path:'../../tmp/stage07/desktop.png'});
+    console.log('PASS real signed Electron local Windows action; no chat or model request');
+  }
   assert.equal(await page.evaluate(() => typeof window.require), 'undefined');
   assert.equal(await page.evaluate(() => typeof window.process), 'undefined');
   const prefs = await application.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.getLastWebPreferences());

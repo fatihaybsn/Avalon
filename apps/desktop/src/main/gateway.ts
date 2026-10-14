@@ -124,7 +124,7 @@ export class Gateway implements Rpc {
     if (this.pending.size >= 100) return Promise.reject(new RpcError('CLIENT_BUSY'));
     const id = randomUUID();
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => { this.pending.delete(id); reject(new RpcError(mutation ? 'WRITE_OUTCOME_UNKNOWN' : 'READ_TIMEOUT')); }, 20000);
+      const timer = setTimeout(() => { this.pending.delete(id); reject(new RpcError(mutation ? 'WRITE_OUTCOME_UNKNOWN' : 'READ_TIMEOUT')); }, method==='jarvis.quick.execute'?95000:20000);
       this.pending.set(id, { resolve, reject, timer, mutation });
       ws.send(JSON.stringify({ type: 'req', id, method, params }), error => {
         if (!error) return;

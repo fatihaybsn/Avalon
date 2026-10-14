@@ -124,6 +124,29 @@ export class DesktopController {
     const session = this.session(key); this.roots.set(key, { sessionId: session.sessionId, root });
     this.snapshot.sessions = this.snapshot.sessions.map(s => s.key === key ? { ...s, scopeRoot: root } : s); this.emit();
   }
+  private quickTargets=new Map<string,{key:string;sessionId:string;app:string;at:number;window:Record<string,unknown>}>();
+  async quick(action: {key:string;command:string;app:string;value:string;windowId:string}) {
+    const s=this.session(action.key); if(action.key!==this.snapshot.selected || s.active || s.queued)throw new RpcError('SESSION_BUSY');
+    const params:Record<string,unknown>={action:action.command};
+    if(['resolve','open','status','focus','minimize','restore','close'].includes(action.command))params.app=action.app;
+    if(['focus','minimize','restore','close'].includes(action.command)) {
+      const w=this.quickTargets.get(action.windowId);
+      if(!w || w.key!==action.key || w.sessionId!==s.sessionId || w.app!==action.app || Date.now()-w.at>60000)throw new RpcError('WINDOW_OBSERVATION_REQUIRED');
+      params.window=w.window;
+    }
+    if(action.command==='volume') {const n=Number(action.value);if(!Number.isFinite(n)||n<0||n>100)throw new RpcError('VOLUME_RANGE');params.value=n;}
+    if(action.command==='mute'){if(!['true','false'].includes(action.value))throw new RpcError('MUTE_BOOLEAN');params.value=action.value==='true';}
+    if(action.command==='media'){if(!['play_pause','next','previous','stop'].includes(action.value))throw new RpcError('MEDIA_ACTION');params.value=action.value;}
+    if(action.command==='power'){if(!['saver','balanced','performance'].includes(action.value))throw new RpcError('POWER_MODE');params.value=action.value;}
+    const id=randomUUID(),root=this.roots.get(action.key)?.root;
+    await this.rpc.request('jarvis.scope.bind',{sessionKey:action.key,agentId:this.agentId,runId:id,taskId:id,projectId:this.projectIds.get(action.key) ?? action.key,...(root?{role:'project',root}:{role:'memory'}),quick:[{tool:'jarvis_windows',params}],userInput:`Yerel Windows işlemi: ${action.command}; ${action.app}; ${action.value}`},true);
+    const result=await this.rpc.request('jarvis.quick.execute',{sessionKey:action.key,agentId:this.agentId,runId:id,callId:id,tool:'jarvis_windows',params},true);
+    this.snapshot.quickOutput=JSON.stringify(result.details,null,2);
+    if(Array.isArray(result.details?.windows)) {
+      this.quickTargets.clear();this.snapshot.quickWindows=result.details.windows.map((w:Record<string,unknown>)=>{const wid=randomUUID();const {pid,started,exe,hwnd}=w;this.quickTargets.set(wid,{key:action.key,sessionId:s.sessionId,app:action.app,at:Date.now(),window:{pid,started,exe,hwnd}});return {id:wid,app:action.app,title:String(w.title ?? ''),pid:Number(pid)};});
+    }
+    await this.refreshWork();this.emit();
+  }
   async send(key: string, message: string) {
     const session = this.session(key);
     if (key !== this.snapshot.selected || !this.snapshot.historyReady) throw new RpcError('HISTORY_NOT_READY');

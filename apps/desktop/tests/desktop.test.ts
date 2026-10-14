@@ -24,6 +24,30 @@ class Fake implements Rpc {
 }
 function setup() { const rpc = new Fake(); const controller = new DesktopController(rpc, 'main', () => {}); return { rpc, controller }; }
 
+test('quick Windows IPC binds exact operator params without a chat/model call; window identity comes from host observation',async()=>{
+ const {rpc,controller}=setup();await controller.connected();await controller.select(first);
+ const original=rpc.request.bind(rpc);
+ rpc.request=async(method,params,mutation=false)=>{
+  if(method==='jarvis.quick.execute'){rpc.calls.push({method,params,mutation});return {details:{confirmed:true,windows:[{pid:42,started:'12345',hwnd:'6789',exe:'C:\\Windows\\System32\\notepad.exe',title:'Test'}]}};}
+  return original(method,params,mutation);
+ };
+ const base={key:first,app:'notepad',value:'50',windowId:'none'};
+ await assert.rejects(controller.quick({...base,command:'close'}),/WINDOW_OBSERVATION_REQUIRED/);
+ rpc.calls=[];await controller.quick({...base,command:'status'});
+ const id=controller.snapshot.quickWindows![0].id;
+ await controller.quick({...base,command:'close',windowId:id});
+ const bound=rpc.calls.filter(c=>c.method==='jarvis.scope.bind').at(-1)!;
+ assert.deepEqual(bound.params.quick[0].params.window,{pid:42,started:'12345',hwnd:'6789',exe:'C:\\Windows\\System32\\notepad.exe'});
+ assert.ok(!rpc.calls.some(c=>['chat.send','jarvis.work.start'].includes(c.method)));
+ await assert.rejects(controller.quick({...base,command:'close',app:'paint',windowId:id}),/WINDOW_OBSERVATION_REQUIRED/);
+ controller.stop();
+});
+test('quick IPC cannot inject a shell, app path, arbitrary HWND or unrestricted media key',()=>{
+ const base={type:'quick',key:first,command:'status',app:'notepad',value:'50',windowId:'none'};
+ assert.deepEqual(validateAction(base),base);
+ for(const a of [{...base,command:'exec'},{...base,app:'C:\\cmd.exe'},{...base,window:{hwnd:10}},{...base,executable:'cmd'}])assert.throws(()=>validateAction(a));
+});
+
 test('IPC rejects arbitrary RPC, paths, extra fields and foreign frames/origins', () => {
   for (const action of [{ type: 'shell', command: 'calc' }, { type: 'snapshot', token: 'secret' }, { type: 'create', title: 'p', kind: 'project', cwd: 'C:\\' }, { type: 'send', key: first, message: 'x', method: 'approval.resolve' }, { type: 'send', key: first }, { type: 'create', title: 'x', kind: 'fork' }]) assert.throws(() => validateAction(action));
   assert.deepEqual(validateAction({ type: 'send', key: first, message: 'test' }), { type: 'send', key: first, message: 'test' });

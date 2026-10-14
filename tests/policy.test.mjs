@@ -98,7 +98,7 @@ test('applied profiles preserve provider choices and isolate researcher', () => 
   assert.deepEqual(c.agents.entries.research.tools.allow, ['tavily_search', 'web_fetch']); assert.equal(c.tools.elevated.enabled, false);
   assert.equal(c.tools.web.search.provider, 'tavily'); assert.equal(c.tools.web.search.enabled, false);
   assert.equal(c.tools.web.fetch.maxRedirects, 0); assert.equal(c.plugins.entries.firecrawl.enabled, false);
-  assert.deepEqual(c.plugins.allow, ['jarvis', 'tavily', 'opencode', 'google', 'memory-core', 'llama-cpp']);
+  assert.deepEqual(c.plugins.allow, ['jarvis', 'tavily', 'opencode', 'google', 'memory-core', 'llama-cpp', 'browser']);
   assert.equal(c.gateway.auth.token, '${JARVIS_GATEWAY_TOKEN}'); assert.deepEqual(c.agents.defaults.model.fallbacks, []);
   assertPolicy(c, scratch);
   const tampered = structuredClone(c); tampered.agents.entries.research.contextInjection = 'always'; assert.throws(() => assertPolicy(tampered, scratch));

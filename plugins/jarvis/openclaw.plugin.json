@@ -2,9 +2,39 @@
   "id": "jarvis",
   "name": "JARVIS permissions",
   "description": "Host-bound task scopes and isolated official Tavily Advanced / native web_fetch",
-  "activation": { "onStartup": true },
-  "cliBackends": ["jarvis-opencode-memory"],
-  "providers": ["jarvis-dream-google"],
-  "contracts": { "gatewayMethodDispatch": ["authenticated-request"], "tools": ["jarvis_memory_search", "jarvis_memory_get", "jarvis_note_read", "jarvis_note_write", "jarvis_work_note", "jarvis_work_read"] },
-  "configSchema": { "type": "object", "additionalProperties": false, "properties": {} }
+  "activation": {
+    "onStartup": true
+  },
+  "cliBackends": [
+    "jarvis-opencode-memory"
+  ],
+  "providers": [
+    "jarvis-dream-google"
+  ],
+  "contracts": {
+    "gatewayMethodDispatch": [
+      "authenticated-request"
+    ],
+    "tools": [
+      "jarvis_memory_search",
+      "jarvis_memory_get",
+      "jarvis_note_read",
+      "jarvis_note_write",
+      "jarvis_work_note",
+      "jarvis_work_read",
+      "jarvis_windows",
+      "jarvis_recycle",
+      "jarvis_document",
+      "jarvis_draft"
+    ]
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "nativeRoot": {
+        "type": "string"
+      }
+    }
+  }
 }

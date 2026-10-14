@@ -9,6 +9,7 @@ export type WorkRecord = {
   taskId: string; projectId: string; projectRevision: number; revision: number; recordVersion: number;
   userId: string; deviceId: string; agentId: string; sessionKey: string; sessionId: string;
   runId: string; worker?: { threadId?: string; turnId?: string; sessionId?: string };
+  execution?: 'local';
   request: string; acceptedPlan?: string; model?: { plan?: string; finding?: string; sources?: string[]; rationale?: string; nextStep?: string; pendingDecision?: string };
   state: 'prepared' | 'delivered' | 'running' | 'ended' | 'failed' | 'cancel-requested' | 'cancelled' | 'unknown';
   operation?: { callId: string; tool: string; revision?: number; phase: 'observed' | 'started' | 'result' | 'error' | 'missing'; resultHash?: string; effect: 'unverified' | 'verified'; sources?: string[] };
@@ -122,12 +123,18 @@ export class ResourceOwners {
   private held = new Map<string, { runId: string; callId: string; assertCurrent: () => void; signal?: AbortSignal; cleanup: () => void }>();
   claim(resources: string[], runId: string, callId: string, assertCurrent: () => void, signal?: AbortSignal) {
     assertCurrent(); if (signal?.aborted) throw new Error('Invocation cancelled');
-    if (resources.some(r => r !== 'input:mouse-keyboard' && !/^(file|window|browser):\S.{0,2047}$/.test(r))) throw new Error('Exact host resource identity required; application-wide locks unavailable');
+    if (resources.some(r => !['input:mouse-keyboard','system:default-audio','system:active-power-plan'].includes(r) && !/^(file|window|browser):\S.{0,2047}$/.test(r))) throw new Error('Exact host resource identity required; application-wide locks unavailable');
+    for(const [key,owner] of this.held)try{owner.assertCurrent();if(owner.signal?.aborted)throw new Error('Expired');}catch{owner.cleanup();this.held.delete(key);}
     for (const resource of resources) {
       const old = this.held.get(resource);
       if (old) { try { old.assertCurrent(); if (old.signal?.aborted) throw new Error('Expired'); } catch { old.cleanup(); this.held.delete(resource); } }
       const current = this.held.get(resource);
       if (current && (current.runId !== runId || current.callId !== callId)) throw new Error(`Shared resource busy: ${resource}`);
+      if(resource.startsWith('file:')) for(const [other,owner] of this.held) {
+        if(!other.startsWith('file:') || owner.runId===runId&&owner.callId===callId)continue;
+        const a=resource.toLowerCase(),b=other.toLowerCase();
+        if(a.startsWith(b+'\\') || b.startsWith(a+'\\'))throw new Error(`Overlapping file subtree busy: ${resource}`);
+      }
     }
     for (const resource of resources) {
       const onAbort = () => this.releaseCall(runId, callId);
@@ -158,7 +165,7 @@ export function installWork(api: OpenClawPluginApi, live: (runId?: string) => { 
     try { native = await request<Record<string, unknown>>('sessions.describe', { key: r.sessionKey, agentId: r.agentId }); }
     catch { return { nativeUnavailable: true }; } // Original principal's retained metadata survives deleted/unreadable native rows.
     const row = (native.session ?? native) as Record<string, unknown>;
-    if (!terminal(r)) {
+    if (!terminal(r) && r.execution !== 'local') {
       try { row.run = await request<Record<string, unknown>>('agent.wait', { runId: r.runId, timeoutMs: 0 }); }
       catch { row.run = { status: 'unavailable' }; }
     }
@@ -224,7 +231,11 @@ export function installWork(api: OpenClawPluginApi, live: (runId?: string) => { 
       const reconciled = await ledger.reconcile(r, row);
       if (name === 'jarvis.work.read' || name === 'jarvis.work.status') {
         let output: unknown;
-        if (params.callId !== undefined) {
+        if (r.execution === 'local') {
+          const call=text(params.callId ?? r.operation?.callId,'callId',256);
+          const evidence=await ledger.journal.lookup(`${key(user,r.taskId)}:e:${hash(`tool-result:${call}`)}`);
+          output=evidence?.data.localOutput;
+        } else if (params.callId !== undefined) {
           const call = text(params.callId, 'callId', 256);
           if (!r.seen[`tool-result:${call}`] || row.sessionId !== r.sessionId) throw new Error('Output not observed for this task/session incarnation');
           const history = await api.runtime.subagent.getSessionMessages({ sessionKey: r.sessionKey, limit: 100 });
@@ -333,9 +344,12 @@ export function installWork(api: OpenClawPluginApi, live: (runId?: string) => { 
         } catch { /* Returned result remains recorded; unreadable effect is unverified. */ }
       }
       const sources = [...(result?.details?.results ?? []), { url: result?.details?.url }].flatMap(v => typeof v.url === 'string' && /^https:\/\//.test(v.url) ? [v.url.slice(0, 2048)] : []).slice(0, 8);
-      await mutate(run, `tool-result:${call}`, 'after-tool-result', { callId: call, tool: event.toolName, observedRevision, present: event.result !== undefined, error, verified, sources }, r => {
+      const local=(await ledger.store.lookup(key(binding?.scope.userId ?? '',binding?.scope.taskId ?? '')))?.execution === 'local';
+      const localOutput=local ? {content:[{type:'text',text:JSON.stringify(event.result ?? {error:event.error ?? 'Missing local result'}).slice(0,12000)}],truncated:JSON.stringify(event.result ?? {}).length>12000} : undefined;
+      await mutate(run, `tool-result:${call}`, 'after-tool-result', { callId: call, tool: event.toolName, observedRevision, present: event.result !== undefined, error, verified, sources,localOutput }, r => {
         r.operation = { callId: call, tool: event.toolName, revision: observedRevision, phase: error ? 'error' : event.result === undefined ? 'missing' : 'result', effect: verified ? 'verified' : 'unverified', ...(event.result !== undefined ? { resultHash: fingerprint(event.result) } : {}), sources };
         if (error || event.result === undefined) r.blocker = error ? 'Tool error observed; effect may still require inspection' : 'Tool result missing; success unknown';
+        if(r.execution==='local')r.state=error?'failed':event.result===undefined?'unknown':'ended';
       });
     } finally { owners.releaseCall(run, call); expected.delete(`${run}:${call}`); }
   });
@@ -364,6 +378,22 @@ export function installWork(api: OpenClawPluginApi, live: (runId?: string) => { 
       return mutate(runId, `worker:${fingerprint(worker)}`, 'host-worker-identity', worker, r => { r.worker = { ...r.worker, ...worker }; });
     },
     release: (runId: string) => { owners.releaseRun(runId); for (const k of expected.keys()) if (k.startsWith(runId + ':')) expected.delete(k); },
+    async prepareLocal(scope: Scope, call: string) {
+      const result=await ledger.create(scope,scope.userStatement ?? 'Exact authenticated local operation');
+      if(result.record.seen[`tool-start:${call}`]) throw new Error('Local call already attempted; inspect native record, never replay');
+      await ledger.change(scope.userId,scope.taskId,`local-admission:${call}`,'local-admission',{callId:call},r=>{r.execution='local';r.state='prepared';r.blocker=undefined;});
+      return result.record;
+    },
+    async ensureLocal(scope: Scope) {
+      const existing=await ledger.store.lookup(key(scope.userId,scope.taskId));
+      if(existing){if(existing.runId!==scope.runId || existing.sessionId!==scope.sessionId)throw new Error('Native task identity changed');return existing;}
+      return await ledger.create(scope,scope.userStatement ?? 'Exact authenticated local operation');
+    },
+    async assertLocalResult(scope: Scope,call:string) {
+      const record=await ledger.get(scope.userId,scope.taskId);
+      const evidence=await ledger.journal.lookup(`${key(scope.userId,scope.taskId)}:e:${hash(`tool-result:${call}`)}`);
+      if(!record.seen[`tool-result:${call}`] || !evidence)throw new Error('Local result record unavailable; effect may have happened, inspect before any retry');
+    },
     async beforeTool(event: { toolName: string; params: Record<string, unknown>; toolCallId?: string }, ctx: { runId?: string; toolCallId?: string; abortSignal?: AbortSignal }) {
       const run = ctx.runId, call = event.toolCallId ?? ctx.toolCallId, binding = live(run);
       if (!run || !binding) return;
@@ -382,6 +412,19 @@ export function installWork(api: OpenClawPluginApi, live: (runId?: string) => { 
           if (typeof old === 'string' && old && typeof replacement === 'string' && content.split(old).length === 2) expected.set(`${run}:${call}`, { target, digest: hash(content.replace(old, replacement)) });
         }
       }
+      if (['jarvis_recycle', 'jarvis_draft'].includes(event.toolName)) resources.push(`file:${String(event.params.path).toLowerCase()}`);
+      if (event.toolName === 'jarvis_windows') {
+        const w=event.params.window as Record<string, unknown> | undefined;
+        if(w) resources.push(`window:${fingerprint({pid:w.pid,started:w.started,exe:path.win32.normalize(String(w.exe)).toLowerCase(),hwnd:w.hwnd})}`);
+        if(['open','focus','minimize','restore','media'].includes(String(event.params.action))) resources.push('input:mouse-keyboard');
+        if(['volume','mute','audio_status'].includes(String(event.params.action)))resources.push('system:default-audio');
+        if(['power','power_status'].includes(String(event.params.action)))resources.push('system:active-power-plan');
+      }
+      if(event.toolName === 'browser') {
+        resources.push(`browser:${String(event.params.profile)}:${String(event.params.targetId ?? 'lifecycle').toLowerCase()}`);
+        if(event.params.action === 'focus') resources.push('input:mouse-keyboard');
+      }
+      if(event.toolName==='jarvis_draft' && event.params.show)resources.push('input:mouse-keyboard');
       owners.claim(resources, run, call, () => { binding.assertCurrent(); if (!live(run)) throw new Error('Run authority expired'); }, ctx.abortSignal ?? binding.signal);
       try { await mutate(run, `tool-start:${call}`, 'tool-observed', { callId: call, tool: event.toolName, resources }, r => { r.operation = { callId: call, tool: event.toolName, revision: r.revision, phase: 'observed', effect: 'unverified' }; }); }
       catch (e) { owners.releaseCall(run, call); expected.delete(`${run}:${call}`); throw e; }

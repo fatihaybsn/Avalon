@@ -58,9 +58,13 @@ try {
   limited = await connectPeer(['operator.read', 'operator.write']);
   const status = await reviewer.request('jarvis.policy.status', {});
   assert.deepEqual(status.tools, ['web_fetch']); assert.equal(status.search.depth, 'advanced'); console.log('PASS real Gateway startup, official native web profile and missing-key catalog');
-  const session = await reviewer.request('sessions.create', { agentId: 'main', label: 'stage03-test' });
+  const session = await reviewer.request('sessions.create', { agentId: 'main', label: process.argv.includes('--quick-only')?'stage07-test':'stage03-test' }, {timeoutMs:90000});
   const key = session.key ?? session.sessionKey;
   const target = path.join(scratch, 'project'); await fs.mkdir(target);
+  if(process.argv.includes('--quick-only')) {
+    const {runQuickGateway}=await import('./gateway-quick.mjs');
+    await runQuickGateway({reviewer,requester,limited,events,key,target});
+  } else {
   try {
     const bound = await reviewer.request('jarvis.scope.bind', { sessionKey: key, agentId: 'main', runId: 'integration-run', projectId: 'integration-project', taskId: 'integration-task', role: 'project', root: target, confirmationPaths: [path.join(scratch, 'separate.txt')] });
     assert.equal(bound.bound, true); console.log('PASS actual paired-client/session scope binding');
@@ -145,6 +149,7 @@ try {
   assert.equal(retained.record.taskId, taskId); assert.equal(retained.record.operation.effect, 'verified');
   assert.notEqual(retained.record.result, 'success'); assert.equal(retained.record.request, beforeReload.record.request);
   console.log('PASS stage06 real native dispatch, retained metadata/project revision, host hook/actual effect, duplicate identity, independent subagent/parent isolation, explicit child failure, stale steer and reload without replay; parent provider gated, no successful model claimed');
+  }
 } catch (error) {
   // No credential, raw config or auth output in failure diagnostics.
   console.error('INTEGRATION_FAILED', error.message.replaceAll(token, '[redacted]'));

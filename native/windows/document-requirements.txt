@@ -1,0 +1,6 @@
+# Optional standalone document environment; no voice/media-provider packages.
+pdfplumber==0.11.9
+python-docx==1.2.0
+openpyxl==3.1.5
+Pillow==12.3.0
+lxml==6.1.1

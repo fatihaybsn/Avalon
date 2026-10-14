@@ -81,6 +81,7 @@ async function initialize() {
         case 'select': await controller.select(action.key); break;
         case 'create': await controller.create(action.title, action.kind); break;
         case 'send': await controller.send(action.key, action.message); break;
+        case 'quick': await controller.quick(action); break;
         case 'independent': await controller.independent(action.key, action.message); break;
         case 'steer': await controller.workAction('steer', action.taskId, action.message); break;
         case 'cancel': await controller.workAction('cancel', action.taskId); break;
