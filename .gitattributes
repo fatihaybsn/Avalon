@@ -1,2 +1,3 @@
-# Preserve byte-identical upstream files and their recorded SHA256 on Windows.
-/apps/desktop/vendor/openclaw/** -text
+# Pinned upstream provenance and Talk adaptations require the original LF bytes,
+# including on Windows checkouts with core.autocrlf=true.
+apps/desktop/vendor/** text eol=lf

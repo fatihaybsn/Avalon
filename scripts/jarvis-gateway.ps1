@@ -65,6 +65,8 @@ if (-not (Test-Path $profileEnv) -and [string]::IsNullOrWhiteSpace($env:JARVIS_G
 
 # Token çözülemiyorsa otomatik/geçici kimlikle başlangıca izin verme.
 if (-not (Test-Path $openclawEntry)) { Write-Error 'Proje-yerel OpenClaw bulunamadı; proje klasöründe npm ci çalıştırın.' }
+& node (Join-Path $repoRoot 'scripts\extend-talk.mjs')
+if ($LASTEXITCODE -ne 0) { Write-Error 'Sabit Talk dar araç uzatması doğrulanamadı; Gateway başlatılmadı.' }
 try { $rawConfig = Get-Content -LiteralPath $profileConfig -Raw | ConvertFrom-Json -ErrorAction Stop }
 catch { Write-Error 'Profil JSON okunamadı; Gateway başlatılmadı. Mevcut profil değiştirilmedi.' }
 # Dedicated Dreaming credential never replaces GEMINI_API_KEY / Live auth.

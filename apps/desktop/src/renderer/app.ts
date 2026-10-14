@@ -2,6 +2,7 @@ import { LitElement, html, nothing } from 'lit';
 import { renderPanelEmptyState } from '../../vendor/openclaw/ui/src/components/panel-empty-state.ts';
 import { detectTextDirection } from '../../vendor/openclaw/ui/src/lib/text-direction.ts';
 import type { Action, DesktopBridge, Snapshot } from '../shared/contracts.ts';
+import type {VoiceCommand} from '../shared/voice.ts';
 import '../../vendor/openclaw/ui/src/styles/base.css';
 import './desktop.css';
 declare global { interface Window { jarvis: DesktopBridge } }
@@ -47,6 +48,7 @@ class JarvisApp extends LitElement {
     if (ok) { this.drafts.delete(key); if (this.data?.selected === key) this.draft = ''; }
     this.waiting = false;
   }
+  private voice(command:VoiceCommand,value=''){return this.action({type:'voice',command,value});}
   override render() {
     const d = this.data, connected = d?.connection.phase === 'connected';
     const selected = d?.sessions.find(s => s.key === d.selected);
@@ -56,6 +58,21 @@ class JarvisApp extends LitElement {
         <button @click=${() => this.action({ type: 'reconnect' })}>Yeniden bağlan</button><button @click=${() => this.action({ type: 'hide' })}>Tepsiye gizle</button><button @click=${() => this.action({ type: 'quit' })}>Uygulamadan çık</button></header>
       <div class="connection-detail">${d?.connection.detail ?? 'İstemci hazırlanıyor…'}${d?.connection.requestId ? html`<br>İstek: ${d.connection.requestId}` : nothing}${d?.connection.phase === 'pairing' ? html`<br>Cihaz: ${d.connection.deviceId}` : nothing}</div>
       ${this.localError || d?.error ? html`<p class="error" role="alert">${this.localError || d?.error}</p>` : nothing}
+      ${d?.voice?html`<section class="voice-controls" aria-label="Sesli görüşme"><strong>Ses · ${d.voice.phase==='idle'?'Kapalı':d.voice.phase==='error'?'Hata':d.voice.muted?'Mikrofon susturuldu':d.voice.phase==='listening'?'Dinleniyor':d.voice.phase==='thinking'?'Yanıt hazırlanıyor':'Bağlanıyor'}</strong>
+        <span role="status">${d.voice.detail}</span>
+        <button ?disabled=${!connected||!selected||!['idle','error'].includes(d.voice.phase)} @click=${()=>this.voice('start')}>Görüşmeyi aç</button>
+        <button ?disabled=${['idle','error'].includes(d.voice.phase)} @click=${()=>this.voice('mute')}>${d.voice.muted?'Mikrofonu aç':'Mikrofonu sustur'}</button>
+        <button ?disabled=${!d.voice.turnId} @click=${()=>this.voice('stopOutput')}>Yanıtın sesini durdur</button>
+        <button ?disabled=${d.voice.phase==='idle'} @click=${()=>this.voice('end')}>Görüşmeyi bitir</button>
+        <details><summary>Cihazlar ve kısayol</summary>
+          <button @click=${()=>this.voice('devices')}>Cihazları yenile</button>
+          <label>Mikrofon<select .value=${d.voice.inputId} @change=${(e:Event)=>this.voice('input',(e.target as HTMLSelectElement).value)}><option value="">Sistem varsayılanı</option>${d.voice.inputs.filter(i=>i.id).map(i=>html`<option value=${i.id}>${i.label}</option>`)}</select></label>
+          <label>Hoparlör<select .value=${d.voice.outputId} @change=${(e:Event)=>this.voice('output',(e.target as HTMLSelectElement).value)}><option value="">Sistem varsayılanı</option>${d.voice.outputs.filter(i=>i.id).map(i=>html`<option value=${i.id}>${i.label}</option>`)}</select></label>
+          <label>Görüşme kısayolu<input maxlength="100" .value=${d.voice.shortcut} @change=${(e:Event)=>this.voice('shortcut',(e.target as HTMLInputElement).value)}></label><span>${d.voice.shortcutRegistered?'Kısayol kayıtlı':'Kısayol çalışmıyor: geçersiz veya çakışıyor'}</span>
+          <label>Boşta kapanma (dakika; 0 kapalı)<input type="number" min="0" max="240" .value=${String(d.voice.idleMinutes)} @change=${(e:Event)=>this.voice('idle',(e.target as HTMLInputElement).value)}></label>
+        </details><p class="muted">Görüşmeyi bitirmek o görüşmeden başlatılan işi iptal edebilir. Yazılı işler mikrofon gerektirmez. Telefon talimatı bu bilgisayarın sesini açmaz.</p>
+        ${d.voice.sessionKey?html`<small>Sesin bağlı olduğu sohbet: ${d.voice.sessionKey}</small>`:nothing}
+      </section>`:nothing}
       <div class="desktop-layout"><aside aria-label="Sohbetler"><h2>Sohbetler</h2>
         <button ?disabled=${!connected} @click=${() => { this.creating = !this.creating; }}>Yeni sohbet</button>
         ${this.creating ? html`<div class="create-session"><label>Sohbet türü<select .value=${this.kind} @change=${(e: Event) => this.kind = (e.target as HTMLSelectElement).value as 'daily' | 'project'}><option value="project">Ayrı proje sohbeti</option><option value="daily">Günlük sohbet</option></select></label><label>Başlık<input maxlength="120" .value=${this.title} @input=${(e: Event) => this.title = (e.target as HTMLInputElement).value}></label><button ?disabled=${!connected || !this.title.trim() || this.waiting} @click=${async () => { this.waiting = true; if (await this.action({ type: 'create', title: this.title, kind: this.kind })) { this.title = ''; this.creating = false; } this.waiting = false; }}>Oluştur</button></div>` : nothing}
@@ -90,7 +107,7 @@ class JarvisApp extends LitElement {
           ${t.blocker ? html`<p class="error">${t.blocker}</p>` : nothing}
           ${t.model ? html`<details><summary>Modelin açıklaması</summary><p>${t.model.plan}</p><p>${t.model.finding}</p><p>${t.model.rationale}</p><p>Sıradaki adım: ${t.model.nextStep}</p><p>Bekleyen karar: ${t.model.pendingDecision}</p>${t.model.sources?.map(s => html`<small>${s}</small>`)}</details>` : nothing}
           ${Object.values(t.steering).map(s => html`<p>Yönlendirme: ${s.stage}<small>${s.text}${s.modelClaim ? html`<br>Doğrulanmamış model açıklaması: ${s.modelClaim}` : nothing}</small></p>`)}
-          <button ?disabled=${!connected || !d.workAvailable} @click=${() => this.action({ type: 'workRead', taskId: t.taskId })}>Güncel çıktı</button>
+          <button ?disabled=${!connected || !d.workAvailable} @click=${() => this.action({ type: 'workRead', taskId: t.taskId })}>Güncel çıktı ${d.unreadResults?.includes(t.taskId)?'• Okunmamış':''}</button>
           <button ?disabled=${!connected || !d.workAvailable || !['running', 'delivered'].includes(t.state) || !this.guidance.trim()} @click=${() => this.action({ type: 'steer', taskId: t.taskId, message: this.guidance.trim() })}>Bu göreve ilet</button>
           ${t.model?.plan ? html`<button ?disabled=${!connected || !d.workAvailable || !['running', 'delivered'].includes(t.state)} @click=${() => this.action({ type: 'acceptPlan', taskId: t.taskId })}>Bu planı kabul et</button>` : nothing}
           <button ?disabled=${!connected || !d.workAvailable || !['running', 'delivered'].includes(t.state)} @click=${() => this.action({ type: 'cancel', taskId: t.taskId })}>Bu görevi iptal et</button>

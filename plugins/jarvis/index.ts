@@ -14,6 +14,8 @@ import { installWork } from './work.ts';
 import { installCodex } from './codex.ts';
 import {installOpenCode} from './opencode.ts';
 import {installWorkers} from './workers.ts';
+import {installLive} from './live.ts';
+import {shortResearch} from './live-reader.ts';
 import { createQuickTools, preserveFile, configureNativeRoot, localCall } from './quick.ts';
 import { QUICK_TOOLS, operationHash } from './quick-policy.ts';
 import { runBeforeToolCallHook, runAgentHarnessAfterToolCallHook } from 'openclaw/plugin-sdk/agent-harness-runtime';
@@ -103,6 +105,7 @@ export default definePluginEntry({
         return { ready: true };
       } catch (e) { return { ready: false, error: e instanceof Error ? e.message : 'Index unavailable', sourceCommitted: true }; }
     };
+    installLive(api,workspace,indexCommittedNote,(query,signal)=>shortResearch(api,query,signal),dispatchGatewayMethod,drop,work?.ledger);
     const admitCommittedNote = async (result: { note: { id: string }; dreaming: { eligible: boolean } }, index: { ready: boolean }, assertCurrent: () => void, sessionKey: string, verify = false) => {
       if (!result.dreaming.eligible || !index.ready) return { eligible: result.dreaming.eligible, requested: 0 };
       try { return await admitDreamingNotes(api, assertCurrent, [result.note.id], sessionKey, verify ? () => readNativeDreaming(api) : undefined); }

@@ -2,7 +2,7 @@
 
 Windows 11'de doğrudan çalışan, OpenClaw merkezli kişisel asistan projesi.
 Tek merkez **OpenClaw Gateway**, konuşma tarafı **Gemini Live**, ağır görev
-modeli **Space Bunny Free**'dir. Mevcut durum: **10 OpenCode işçisi entegrasyonu tamamlandı; Codex/OpenCode üç promptlu ortak canlı kabul ayrı ve henüz yapılmadı**
+modeli **Space Bunny Free**'dir. Mevcut durum: **12'ye kadar kod uygulandı; 11–12 ses/araç bağlantısının canlı kabulü ve Codex/OpenCode üç promptlu ortak canlı kabul henüz yapılmadı**
 (Gateway, görev izinleri, salt okunur araştırma, yerel GUI node'u ve sade Electron/Vite/Lit arayüzü).
 05 ile tek yerel hafıza, kontrollü kısa not araçları, yetkili ortak erişim ve
 Gemini ile altı saatlik native Dreaming düzenlemesi eklendi.
@@ -22,8 +22,11 @@ Canlı kabul, 10 sonrasında Codex ve OpenCode ile aynı üç aşamalı not uygu
 senaryosunda birlikte yapılacaktır; henüz geçtiği iddia edilmez.
 10 ile ayrı authenticated OpenCode server'ı, ortak işçi aracı ve Space Bunny'nin
 normal OpenCode CLI yönetim rotası eklendi. Çok promptlu proje yönetiminin canlı
-kabulü henüz yapılmadı. Canlı ses 11'de,
-sesli onay 13'te; tam kurulabilir dağıtım 16'dadır.
+kabulü henüz yapılmadı. 11 ile bağımsız, sandboxed Electron ses sahibi ve hazır
+Talk/Google Live yolu; 12 ile dar Gemini araçları, güncel görev bağlamı, tek kare
+ekran açıklaması ve ses kapalıyken sonuç bildirimi eklendi. Gerçek cihaz/Google
+kabulü, bilinen Gateway health/RPC engeli nedeniyle bekler; sesli onay 13'te,
+tam kurulabilir dağıtım 16'dadır.
 
 Ayrıntılı mimari: `docs/KESIN_MIMARI.md` · Aşama durumu: `docs/GELISTIRME_DURUMU.md`
 
@@ -60,7 +63,7 @@ başka bilgisayarda bağımlılıkları kurup uygulamayı yeniden derleyin.
 | Anahtar | Nereden | Ne için |
 |---|---|---|
 | `OPENCODE_API_KEY` | [opencode.ai/auth](https://opencode.ai/auth) | Görev modeli kataloğu |
-| `GEMINI_API_KEY` | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) | 11. adımdaki ses (şimdilik opsiyonel) |
+| `GEMINI_API_KEY` | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) | 11–12 Google Live görüşmesi için gerekli; yalnız yazılı kullanımda opsiyonel |
 | `JARVIS_DREAMING_GEMINI_API_KEY` | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) | 05 Dreaming; seçilmiş hafıza notlarını düzenleyen ayrı anahtar |
 | `TAVILY_API_KEY` | [app.tavily.com](https://app.tavily.com/) | Salt okunur Advanced araştırma; ücretsiz plan |
 
@@ -151,7 +154,7 @@ editörde kendi değerlerinizi doldurun. Mevcut `.env` dosyasını şablonla ezm
 kullanmadığınız boş anahtar satırlarını kaldırın. Gateway betiği bu dosyayı
 yalnız kendi CLI sürecine yükler; masaüstü buradan yalnız Gateway token'ını okur.
 Dreaming anahtarı 05 için gereklidir; yalnız sesin `GEMINI_API_KEY` anahtarı
-11. adıma kadar opsiyoneldir. Gerçek profil varsa ayarlar
+sesli görüşme kullanılmayacaksa opsiyoneldir. Gerçek profil varsa ayarlar
 oradan okunur; yoksa şablon açıkça `TEMPLATE ONLY` olarak gösterilir.
 `gateway_health: OK` yalnız kimliği doğrulanan Gateway için gösterilir;
 ilk başlatma öncesinde `STOPPED` beklenir. Değerler ekrana yazılmaz.
@@ -504,6 +507,39 @@ server'ı kendi teknik oturumlarını tutar; ortak hafızanın sahibi OpenClaw'd
 Ham kayıt yerleri ve 14 bakım envanteri: [10 bağlantı sözleşmesi](docs/10_OPENCODE_ISCISI.md).
 [Codex/OpenCode üç promptlu not uygulaması kabulü](docs/09_10_TOPLU_DOGRULAMA.md)
 henüz çalıştırılmadı; kurulum bağlantısı bu canlı proje testinin geçtiği anlamına gelmez.
+### 4g) Talk/Google Live ve Gemini dar araç bağlantısını hazırlayın
+
+Sesli kullanım için 1. adımdaki `GEMINI_API_KEY` kendi kullanıcı ortamınızda veya
+profil `.env` dosyanızda bulunmalıdır. Ayrı Dreaming anahtarı bunun yerine geçmez.
+Google hesabınızın seçili `gemini-3.8-live` modeline erişimini ve hesap/kota
+koşullarını kendiniz doğrulayın; anahtarın kayıtlı olması canlı erişim kanıtı değildir.
+
+4. adımda oluşturulan profil hazır Talk yolunu kullanır: Google,
+`provider-websocket`, `provider-direct`, `agent-consult` ve `gemini-3.8-live`.
+`jarvis-status.ps1` ile kendi profilinizin Talk satırlarını kontrol edin;
+başka modele/sağlayıcıya veya Extended Thinking ayarına sessizce geçmeyin.
+
+Gateway'i başlatmadan önce depo kökünde:
+
+```powershell
+node scripts/extend-talk.mjs
+```
+
+Bu komut yalnız proje-yerel, sabit OpenClaw `2026.10.2` Talk dosyasına JARVIS'in
+dar katalog/dispatch bağlantısını ekler. Kaynak sürümü/SHA256 uyuşmazsa durur;
+`node_modules` dosyalarını elle değiştirmeyin veya kontrolü atlamayın. Kurulum
+makbuzu, bu bilgisayara ait yollarla `node_modules/openclaw/dist/jarvis-talk-extension.json`
+içinde oluşur ve Git'e girmez. Kaynak manifest başka bilgisayarın yolu/token'ını taşımaz.
+`npm ci` sonrasında komutu tekrar çalıştırın; 5. adımdaki normal Gateway betiği de
+aynı kontrolü otomatik yapar. Çalışan Gateway yeni dosyaları otomatik devralmış sayılmaz;
+eski kurulumu güncellediyseniz normal kapatma/başlatma sırasında yeni kod yüklenir.
+
+Yeni ses framework'ü, ikinci backend veya ayrı bildirim servisi kurulmaz.
+Talk'ın 25 sabit upstream kaynak dosyası repoda korunur; browser bundle'ı 7. adımda
+yerel kaynaklardan üretilir. Normal kurulumda kaynakları GitHub'dan tekrar çekmek
+veya `vendor-talk.mjs --fetch` çalıştırmak gerekmez. 03 reader, 05 Memory Core ve
+06 görev kaydı önceki kurulum adımlarında hazırlanmış olmalıdır.
+
 ### 5) Gateway'i başlatın
 
 ```powershell
@@ -670,6 +706,10 @@ profil başvurusunu kontrol edin; yeni sır tanımladıysanız masaüstünden ta
 çıkıp yeniden açın. Cihaz private key ve scoped token'ı Windows kullanıcıya
 bağlı DPAPI ile `%APPDATA%\jarvis-desktop\device.dpapi` içinde korunur;
 bu dosyayı başka bilgisayara/kullanıcıya taşımayın. Dev ve paket aynı kaydı kullanır.
+11–12 görüşmesi için cihazın `operator.talk` yetkisi de gerekir. Eski eşleşmenin
+grant'ı kendiliğinden genişletilmez. Eksik scope/pairing hatasında `devices list`
+ile gerçek yeni isteği inceleyip yukarıdaki aynı `devices approve <requestId>`
+yolunu kullanın; genel admin yetkisi açmayın, token'ı rastgele değiştirmeyin.
 
 **Yeni sohbet** ile günlük veya proje türünü seçin, başlık verip **Oluştur**'a
 basın. Her sohbet aynı JARVIS workspace'inde ayrı geçmişle başlar; ilk açılışta
@@ -728,11 +768,49 @@ güncel olmayabilir; **Kayıtları yenile** ile uzlaştırın. **Sonuç belirsiz
 gönderim otomatik tekrar edilmez; sonucu kontrol etmeden aynı işi yeniden
 göndermeyin.
 
-Bu sürüm gerçek Gateway bağlantısı ve iletinin kabulünü doğrular; başarılı
-Space Bunny yanıtı henüz hazır değildir. Aşağıdaki bilinen `403` davranışı ve
-10. adımdaki OpenCode işçisi kararı geçerlidir. Canlı ses, mikrofon/oynatma,
-sesli onay sonraki aşamalardadır. Ortak hafıza araçları aynı workspace içindeki
-yetkili sohbetlerde kullanılabilir; Gemini araç köprüsü 12'ye aittir.
+Space Bunny'nin normal OpenCode CLI rotası 10'da bağlandı; üç promptlu canlı
+proje kabulü henüz yapılmadı. Aşağıdaki doğrudan çağrıya ilişkin bilinen `403`
+kararı korunur. 11–12 kodu ve çevrimdışı testleri hazırdır; gerçek Gateway,
+Google token/cihaz sesi ve ekran/bildirim kabulü tamamlanmış sayılmaz.
+
+### 7a) Sesli görüşme ve dar araçları kullanın (11–12)
+
+Bağlı bir sohbet seçip bu bilgisayarda **Görüşme aç** kontrolünü kullanın.
+Mikrofon/hoparlör cihazını seçebilir, mikrofonu susturabilir veya yalnız mevcut
+yanıtın oynatmasını kesebilirsiniz. Görüşmeyi tamamen bitirmek, o görüşmeden
+başlatılan işlerin native iptalini ister; başka yazılı/bağımsız işleri iptal etmez.
+Pencereyi tepsiye gizlemek veya görünür arayüzü yenilemek görüşmeyi bitirmez.
+Varsayılan kısayol `Control+Alt+Space`; çakışıyorsa arayüzden değiştirin.
+Boşta otomatik kapanma varsayılan kapalıdır; isteğe bağlı süre yerel ayarda tutulur.
+Gelen Gateway olayı, telefon iletisi veya bildirim bilgisayardaki mikrofonu açamaz.
+
+Gemini ilgili hafıza notunu, güncel host görev kaydını ve asıl çıktıyı doğrudan
+okur; kısa not/düzeltme ve dar Windows işlemleri için ağır modele ihtiyaç duymaz.
+Dosya/kodlama işi vermeden önce **Görev klasörü seç** ile gerçek hedefi seçin.
+Yeni bağımsız görev mevcut işi değiştirmez. Yeni koşulun iletilmesi, kabul edilmesi
+ve uygulanması ayrı gösterilir; sonucu belirsiz eylemi yeniden göndermeyin.
+
+Kısa araştırmada yalnız açık public sorgu kullanın: örneğin `araştır: ...`.
+Reader özel sohbet/hafıza bağlamını almaz; Tavily Advanced/ücretsiz hesap ayarı
+6. adımın aynısıdır. Araçtan dönen bulgu/link kullanıcı onayı veya tercihi değildir.
+Link göstermek için açık URL'yi veya dönen kaynak referansını belirtin.
+`birebir oku` asıl görünür çıktıyı getirir; eksik/kesilmiş çıktı açık belirtilir.
+
+`ekrana bak` tek ekranın bir karesini; `pencere: tam pencere adı` seçili pencerenin
+tek karesini mevcut Google Live girişine aktarır. Birden fazla ekran/pencere
+eşleşiyorsa önce hedef netleştirilir. Sürekli ekran akışı, kamera zorunluluğu,
+yeni vision modeli veya kalıcı screenshot klasörü yoktur.
+
+Electron çalışırken sesli görüşme kapalıysa yeni tamamlanan iş için sessiz Windows
+bildirimi gösterilir. Bildirime tıklamak ilgili işi/çıktıyı açar; mikrofon açmaz ve
+işlemi onaylamaz. Windows bildirimleri engelliyorsa sonucu **Güncel çıktı** üzerinden
+okuyun; native kayıt kaybolmaz. Okunmamış UI işareti uygulama ömrüne aittir.
+Uygulama tamamen kapalıyken bağımsız bildirim servisi çalışmaz.
+
+Bu adımlar canlı kabulün yerine geçmez. Gateway health/RPC yanıt vermiyorsa
+önceki testleri/model çağrılarını tekrar tekrar çalıştırmayın; bağlantı erişilebilir
+olduğunda gerçek görüşme, tek kare ve notification kabulünü ayrıca yapın.
+Son düzeltmeler ve sınırlar: [11–12 uygulama notları](docs/11_12_UYGULAMA_NOTLARI.md).
 
 ### 8) Windows çalıştırılabilir klasörünü oluşturun ve kontrolleri çalıştırın
 
@@ -756,6 +834,7 @@ Yerel tip ve sınır kontrolleri:
 npm run check
 npm test
 npm run test:desktop
+npm run test:live
 ```
 
 Belge fixture'larını çalıştıracak geliştirici, 4c'de oluşturduğu ortam için
@@ -763,7 +842,10 @@ Belge fixture'larını çalıştıracak geliştirici, 4c'de oluşturduğu ortam 
 bu yalnız test PDF üretimi içindir. Mevcut Codex runtime'ında zaten bulunuyorsa
 yeniden kurmayın. Masaüstü testi 18 IPC/session/stream/pairing/reconnect/görev
 sınır kontrolüdür; gerçek modele çağrı yapmaz. 57 host testiyle birlikte 75
-test vardır. Çalışan JARVIS Gateway'ine karşı Electron
+test vardır. `test:live` ayrıca 12'nin 8 host ve 3 Talk sınır testini, ilgili 10 Codex
+işçi testiyle birlikte çalıştırır; Talk uzatmasını ve browser bundle'ını yerel olarak
+hazırlar. Gerçek Gateway/Google/Tavily/worker görevi başlatmaz. Fiziksel cihaz ve
+Windows bildirimi bu sentetik kontrollerle doğrulanmış sayılmaz. Çalışan JARVIS Gateway'ine karşı Electron
 kontrolleri için masaüstünden **Uygulamadan çık** seçin, sonra:
 
 ```powershell

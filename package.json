@@ -22,6 +22,7 @@
     "desktop:start": "npm --prefix apps/desktop start",
     "desktop:pack:win": "npm --prefix apps/desktop run pack:win",
     "test:desktop": "npm --prefix apps/desktop test",
+    "test:live": "node scripts/extend-talk.mjs && node apps/desktop/scripts/vendor-talk.mjs && node --experimental-transform-types --test tests/live.test.mjs tests/codex-worker.test.mjs apps/desktop/tests/live.test.mjs",
     "test:desktop:electron": "npm --prefix apps/desktop run test:electron"
   },
   "dependencies": {

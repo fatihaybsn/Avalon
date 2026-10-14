@@ -710,7 +710,14 @@ Electron, uygulamayla birlikte gelen Chromium ortamını ve pencere/sistem tepsi
 
 OpenClaw Gateway görevlerin, izinlerin, sohbetlerin ve Memory Core'un tek merkezi kalır. Masaüstü uygulaması yerel Gateway'in mevcut WebSocket/RPC ve olay yollarını kullanır; telefondaki web arayüzü de Tailscale üzerinden aynı merkeze bağlanır. Yeni tasarım için ikinci bir görev koordinatörü, hafıza motoru veya karar modeli eklenmez. Uzun model/araç işleri OpenClaw ve mevcut işçilerde yürür; ses ve arayüz işleyişini bekletmez. [L7][D1][D5]
 
+
+14 Ekim 2026 ek kullanıcı kararı: Telefondan istenildiğinde sesli görüşme yerine yazılı talimat verilebilir. Yazılı görev mevcut sohbet/görev yoluyla yürür; telefonda veya bilgisayarda mikrofon, oynatma ya da Talk oturumu başlatmaz ve işin sürmesi için hiçbir mikrofonun açık kalmasını gerektirmez. Sesli görüşmenin kapanış davranışı ayrı, yalnız ilgili sesli görüşmeden başlatılan işe aittir. Bu karar 11'in cihaz sınırında ve 15'in telefon kabulünde korunur; 15 şimdi başlatılmaz.
+
 ### Pencere, ses ve görev farklı yaşamlar taşır
+
+**14 Ekim 2026 — son kullanıcı değişikliği (A-09/A-11/A-13):** Sesli görüşme kapanınca o görüşmeden başlatılmış işin native Talk davranışıyla iptal edilmesi kabul edilir. Ses kapanırken işin sürmesini sağlamak için ek uyarlama yapılmayacak; önceki bu yöndeki koruma şartı kaldırılmıştır. Uzun görev sırasında başlatan cihazdaki görüşmenin açık tutulması kullanıcı için uygundur; uzun işleri çoğunlukla telefondan vermeyi planlamaktadır. Bu tercih telefon tarayıcısının arka plan/kilit ekranı sınırlarını kaldırmaz ve kesintisiz telefon sesi garantisi değildir.
+
+**Kritik cihaz sınırı:** Telefondan gelen yazılı/sesli talimat, ortak sohbetin açılması, Gateway olayı, bildirim ve reconnect bilgisayardaki mikrofonu, yakalamayı, oynatmayı veya Talk görüşmesini açamaz; kapalı/susturulmuş PC sesi uzak istemci tarafından etkinleştirilemez. PC'de ses açma/susturmayı kaldırma yalnız PC'deki açık kullanıcı eylemine bağlıdır. Telefonun sesli görüşmesi telefonun kendi izinli mikrofon/oynatma yüzeyini kullanır. Ortak sohbet/görev kimliği ortak mikrofon yetkisi değildir. Bu sınır 11'de PC başlatma kapısında, 15'te gerçek telefon bağlantısında doğrulanır; telefon aşaması öne çekilmez.
 
 Ses oturumunun sahibi, görünür arayüzden bağımsız tutulacak sürekli bir ses bileşenidir. Pencereyi kapatma düğmesi uygulamayı sistem tepsisine gizleyecek; kullanıcı sesi açık bırakmışsa görüşme devam edebilecek. Mikrofonun açık olduğu görünür biçimde belirtilir ve kullanıcı sesi durdurabilir. Görünür ekranın yeniden yüklenmesi veya animasyon değişikliği ses oturumunu yok etmeyecek. Sadece web sayfasını Electron penceresine koymak bu davranışları kendiliğinden sağlamaz; pencere/tepsi ve ses bileşeninin yaşamı buna göre düzenlenecek. [D2][L6]
 
@@ -718,16 +725,16 @@ Ses oturumunun sahibi, görünür arayüzden bağımsız tutulacak sürekli bir 
 |---|---|
 | Pencereyi kapatıp tepsiye gizleme | Kullanıcının açık tuttuğu ses devam edebilir; kabul edilmiş görevler OpenClaw'da kalır. |
 | Mikrofonu susturma | Mikrofon sesi gönderilmez; görev iptali sayılmaz. |
-| Sesli görüşmeyi kapatma | Mikrofon akışı ve oynatma serbest bırakılır; sohbet kaydı ve görevler korunur. |
+| Sesli görüşmeyi kapatma | Mikrofon akışı ve oynatma serbest bırakılır; o görüşmeden başlatılan iş native Talk davranışıyla iptal edilebilir. Mevcut sohbet/görev kayıtları silinmez; işin sürmesi için ek koruma yapılmaz. |
 | Asistan konuşurken araya girme / mevcut sesi durdurma | Oynatma kesilir; ayrı iptal talebi olmadan uzman görevi iptal edilmez. |
-| Uygulamadan tamamen çıkma | Ses ve mikrofon kapanır. OpenClaw ayrı çalışıyorsa kayıtlı işler kendi devam/iptal kurallarına göre sürer. |
+| Uygulamadan tamamen çıkma | Ses ve mikrofon kapanır; kapanan görüşmeden başlatılan iş iptal edilebilir. Diğer bağımsız OpenClaw işleri kendi devam/iptal kurallarına tabidir; toplu iptal eklenmez. |
 | Görevi iptal etme | İlgili OpenClaw görevi hedeflenir; pencereyi gizleme veya sesi kapatma yerine kullanılmaz. |
 
 ### Ses kontrolü ve sonuç bildirimi
 
-Electron'ın mevcut globalShortcut yolu ile, uygulama odakta değilken de sesli görüşmeyi açıp kapatan kullanıcı tarafından değiştirilebilir bir kısayol sunulur. Kısayol başka program tarafından kullanılıyorsa sessizce çalışıyor sayılmaz; çakışma arayüzde belirtilir. Açma mevcut Talk oturumunu başlatır; kapatma mikrofon akışını ve oynatmayı bırakır, kabul edilmiş görevi iptal etmez. Mikrofonu susturma ayrı kontrol olarak kalır. [D7]
+Electron'ın mevcut globalShortcut yolu ile, uygulama odakta değilken de sesli görüşmeyi açıp kapatan kullanıcı tarafından değiştirilebilir bir kısayol sunulur. Kısayol başka program tarafından kullanılıyorsa sessizce çalışıyor sayılmaz; çakışma arayüzde belirtilir. PC'deki yerel kullanıcı kısayolu mevcut Talk oturumunu başlatır; kapatma mikrofon akışını ve oynatmayı bırakır ve o görüşmeden başlatılan iş iptal edilebilir. Mikrofonu susturma ayrı kontrol olarak kalır. Telefondan talimat bu yerel kısayolun yerini alamaz. [D7]
 
-Boşta otomatik kapanma isteğe bağlıdır; varsayılan olarak zorunlu süre konmaz. Kullanıcı etkinleştirirse belirlediği konuşma hareketsizliği süresinden sonra ses oturumu kapanır. Aktif konuşma veya bekleyen kullanıcı onayı sırasında kapanma uygulanmaz. Arka plan işi kendi yaşamına göre sürer; görevin sürmesi mikrofonun açık kalmasını gerektirmez. Kendiliğinden yeniden dinleme veya wake word altyapısı eklenmez.
+Boşta otomatik kapanma isteğe bağlıdır; varsayılan olarak zorunlu süre konmaz. Kullanıcı etkinleştirirse belirlediği konuşma hareketsizliği süresinden sonra ses oturumu kapanır. Aktif konuşma veya bekleyen kullanıcı onayı sırasında kapanma uygulanmaz. Kapanışın o görüşmeden başlatılan işi de iptal edebileceği açık gösterilir. Uzun iş sırasında başlatan cihazda görüşmenin açık tutulması kabul edilir; işi ses kapanışından bağımsız sürdürmek için ek katman yapılmaz. Kendiliğinden yeniden dinleme veya wake word altyapısı eklenmez.
 
 Electron istemcisi çalışırken sesli görüşme kapalıysa tamamlanan iş için yerel Windows bildirimi gösterilir; sonuç mevcut görev/sohbet kaydında saklanır. Bildirime tıklamak ilgili işi açar, mikrofonu kendiliğinden açmaz ve bekleyen eylemi onaylamaz. Kilit ekranında özel içerik görünmemesi için varsayılan bildirim yalnız kısa durum bilgisi taşır. Sistem bildirimleri kapalıysa sonuç arayüzde okunmamış olarak kalır; uygulama tamamen kapalıyken yeni bir bildirim servisi kurulmuş varsayılmaz. [D8]
 

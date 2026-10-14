@@ -1,0 +1,107 @@
+{
+  "commit": "b8952d477f0c932d8ddc6da5c89cab5a169b6ff1",
+  "repository": "https://github.com/openclaw/openclaw",
+  "license": "MIT",
+  "files": [
+    {
+      "path": "packages/normalization-core/src/record-coerce.ts",
+      "sha256": "6c0f118fc25744b5bb400faa6d06a36f146f3ff001210a6d07cf008ebd829616"
+    },
+    {
+      "path": "packages/normalization-core/src/string-coerce.ts",
+      "sha256": "9d0648121488d3cbbb47716c4b3048faa4c94f607bfaafe7ed6617562d4fc3c3"
+    },
+    {
+      "path": "packages/normalization-core/src/utf16-slice.ts",
+      "sha256": "12fd3212b08522a1523263c92f654151ad01605ee48a0ff58a1256889fb7cb5f"
+    },
+    {
+      "path": "packages/retry/src/index.ts",
+      "sha256": "c8a1ad11238107b21c7951e19def8ceff9b6b9a7d5d2f5f2667154912299bb10"
+    },
+    {
+      "path": "src/shared/bounded-serial-queue.ts",
+      "sha256": "adfb9624eef5e2015e410c5eec6dd7c9b716f2c46a69bdc6f33bfcc7cdaef174"
+    },
+    {
+      "path": "src/shared/deferred.ts",
+      "sha256": "2fd613018154ee1ab3e43d183d9f0c770d286dfef05562f1493cd9674545b884"
+    },
+    {
+      "path": "src/talk/agent-consult-tool.ts",
+      "sha256": "b6f68e277e9badf638eb6e9a4da529929673b37f1ce5b4f992b895d22b5b261b"
+    },
+    {
+      "path": "src/talk/agent-run-control-shared.ts",
+      "sha256": "714d681be594d777867bb3deecbe9354b98d5947331329558b5f901a2fdfd257"
+    },
+    {
+      "path": "src/talk/describe-view-tool.ts",
+      "sha256": "a23a9417a6441f94830d50b794a500c3062e4bfae42427ee21a142b3590cc929"
+    },
+    {
+      "path": "src/talk/talk-events.ts",
+      "sha256": "458e09a7f98a7d61297fe8a626f10110e5eaca119adefe52200e8cc3cc29c3fe"
+    },
+    {
+      "path": "src/talk/talk-session-controller.ts",
+      "sha256": "ef86789390ed6ebdc49d0bcb82497ce882a2c5442af70f684edd5c80285403d6"
+    },
+    {
+      "path": "src/talk/voice-transcript.ts",
+      "sha256": "b2eca4a04132ae534c5dabf921df99a043f234e1df2c3c851d9c8e9dec7be6ee"
+    },
+    {
+      "path": "src/utils/string-readers.ts",
+      "sha256": "5fc82627ba0c5b036e9cea597aef319061770a1038dbe2b8ec3683c3e98def82"
+    },
+    {
+      "path": "ui/src/lib/bytes-base64.ts",
+      "sha256": "cf5cd1599a390e51dc3415d93791ebffd5a117556c2fdcf786beb4518f38adc0"
+    },
+    {
+      "path": "ui/src/pages/chat/talk/audio.ts",
+      "sha256": "38eb86796238275ba1c629bbd0a8d0b7f20782495794250fb3cede9f42c8f13f"
+    },
+    {
+      "path": "ui/src/pages/chat/talk/camera-controller.ts",
+      "sha256": "672d1012397c6291efe9d6afdd95209a7855a6901a40b7c7786af9494bb2bf23"
+    },
+    {
+      "path": "ui/src/pages/chat/talk/google-live-lifecycle.ts",
+      "sha256": "4cff0a7043bc4e03a8ce86f141364edaa44d9209b60ec73ec0bacbedb7665944"
+    },
+    {
+      "path": "ui/src/pages/chat/talk/google-live-tools.ts",
+      "sha256": "7a201b3a42e15e0d43aed2de1bda43545ecec457bd8cfa5cb96c2516a8fd2671"
+    },
+    {
+      "path": "ui/src/pages/chat/talk/google-live.ts",
+      "sha256": "9d706d4cefa62e07840105d9b3115ee07f7507aa138435dd43aaf3b81f44fc15"
+    },
+    {
+      "path": "ui/src/pages/chat/talk/input.ts",
+      "sha256": "7319df6f85fe6eed32e795458e6edfc3b896bed08133539702d5cf536cf920dd"
+    },
+    {
+      "path": "ui/src/pages/chat/talk/session.ts",
+      "sha256": "25c37eee609a89ce6da496b7ba6cba597721dd6452b748cef0d36595a0ab3e87"
+    },
+    {
+      "path": "ui/src/pages/chat/talk/shared.ts",
+      "sha256": "092219722aa0d5769248e39da7f7e65a8cd5cfff99eae916143d4a7229b7b1d4"
+    },
+    {
+      "path": "ui/src/pages/chat/talk/transcript-owner.ts",
+      "sha256": "10ac62eb215cf6047d9d53cbc8edde2614c5870f18b168f875e8791712fcacbc"
+    },
+    {
+      "path": "ui/src/pages/chat/talk/transport.ts",
+      "sha256": "e004d902c26d01b7989b305da5ca71463b3c68eedffa9e96a59019f8b9fb8f92"
+    },
+    {
+      "path": "ui/src/pages/chat/talk/video.ts",
+      "sha256": "300008b83a880a05ee4dbd6f71d385db33cfbcf71ff3f69056284857788e681a"
+    }
+  ]
+}

@@ -5,16 +5,19 @@ export type Approval = { id: string; kind: string; status: string; title: string
 export type Submission = { id: string; sessionKey: string; status: 'sending' | 'accepted' | 'unknown' | 'rejected'; detail: string };
 export type Work = { taskId: string; projectId: string; projectRevision: number; revision: number; recordVersion: number; agentId: string; sessionKey: string; sessionId: string; runId: string; request: string; acceptedPlan?: string; state: string; result: string; blocker?: string; updatedAt: string; model?: { plan?: string; finding?: string; sources?: string[]; rationale?: string; nextStep?: string; pendingDecision?: string }; operation?: { callId: string; tool: string; revision?: number; phase: string; effect: string }; steering: Record<string, { text: string; revision: number; stage: string; modelClaim?: string }> };
 export type Snapshot = {
+  voice?: import('./voice.ts').VoiceState;
   connection: { phase: ConnectionPhase; detail: string; deviceId?: string; requestId?: string; version?: string };
   sessions: Session[]; selected?: string; messages: Message[];
   streaming: string; approvals: Approval[]; approvalsAvailable: boolean;
   submissions: Submission[]; error?: string; historyReady: boolean;
   work?: Work[]; workAvailable?: boolean; workOutput?: string;
+  unreadResults?:string[];
   quickOutput?: string;
   quickWindows?: {id:string;app:string;title:string;pid:number}[];
   resources?: { resource: string; runId: string; callId: string }[];
 };
 export type Action =
+  | {type:'voice';command:import('./voice.ts').VoiceCommand;value:string}
   | { type: 'snapshot' | 'refresh' | 'reconnect' | 'chooseScope' | 'hide' | 'quit' }
   | { type: 'select'; key: string }
   | { type: 'create'; title: string; kind: 'daily' | 'project' }

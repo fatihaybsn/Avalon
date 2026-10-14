@@ -5,6 +5,7 @@ build/
 coverage/
 *.tsbuildinfo
 apps/desktop/release/
+apps/desktop/vendor/talk/runtime.js
 
 # Secrets and credentials
 .env

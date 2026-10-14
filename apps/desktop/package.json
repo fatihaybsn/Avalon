@@ -13,6 +13,7 @@
     "start": "electron .",
     "pack:win": "npm run build && electron-builder --win --x64 --dir",
     "test": "node --experimental-transform-types --test tests/*.test.ts",
+    "test:voice": "node --experimental-transform-types --test tests/voice.test.mjs",
     "test:electron": "node tests/electron-smoke.mjs",
     "test:dev": "node tests/electron-smoke.mjs --dev",
     "test:packaged": "node tests/electron-smoke.mjs --packaged",

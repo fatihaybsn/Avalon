@@ -13,7 +13,11 @@ Salt okunur araştırma için seçilen yol resmî Tavily `tavily_search` (daima 
 ## Hafıza ve istemci
 
 - Tek yerel **OpenClaw Memory Core** kullanılır: builtin SQLite indeksi, yerel EmbeddingGemma ve hibrit arama. Önemli kullanıcı notları kontrollü ve kaynak/tarih bilgisiyle tutulur; altı saatlik Dreaming düzenleme içindir. İkinci hafıza ürünü/veritabanı kurulmaz.
-- Masaüstü **TypeScript + Electron** olur; ilk arayüz mevcut OpenClaw Control UI'nin **Vite + Lit** temelini kullanır. Ses için hazır **Talk / Google Live provider-direct** yolu temel alınır; JARVIS tarafında yalnız eksik görev/bağlam bağlantısı ve istemci yaşam döngüsü tamamlanır. Ses oturumu, pencere görünürlüğü ve görev iptali ayrı durumlar olarak ele alınır.
+- Masaüstü **TypeScript + Electron** olur; ilk arayüz mevcut OpenClaw Control UI'nin **Vite + Lit** temelini kullanır. Ses için hazır **Talk / Google Live provider-direct** yolu temel alınır; JARVIS tarafında yalnız eksik görev/bağlam bağlantısı ve istemci yaşam döngüsü tamamlanır. Pencere gizleme/reload ses oturumunu kapatmaz. **14 Ekim 2026 son kullanıcı kararı:** Sesli görüşme kapanınca o görüşmeden başlatılan işin native Talk davranışıyla iptal edilmesi kabul edilir; işi ses kapanışından bağımsız sürdürmek için ek geliştirme yapılmaz. Mikrofon susturma ve yalnız oynatmayı kesme görüşmeyi bitirmek değildir.
+- **Cihaza yerel ses sahipliği:** Telefondan gönderilen yazılı/sesli talimat, aynı sohbetin açılması, Gateway olayı, bildirim veya reconnect bilgisayardaki mikrofonu, ses yakalamayı, oynatmayı ya da Talk görüşmesini açamaz; uzak istemci bilgisayardaki kapalı/susturulmuş sesi etkinleştiremez. Bilgisayarda görüşme açma/susturmayı kaldırma yalnız o bilgisayardaki açık kullanıcı eylemiyle olur. Telefon sesli kullanılıyorsa mikrofon ve oynatma telefonun kendi izinli istemcisindedir. Uzun görev sırasında başlatan cihazdaki görüşmenin açık tutulması kullanıcı tarafından kabul edilmiştir; telefon erişimi yine 15. aşamada uygulanacaktır.
+
+
+14 Ekim 2026 ek kullanıcı kararı: Telefondan istenildiğinde sesli görüşme yerine yazılı talimat verilebilir. Yazılı görev mevcut sohbet/görev yoluyla yürür; telefonda veya bilgisayarda mikrofon, oynatma ya da Talk oturumu başlatmaz ve işin sürmesi için hiçbir mikrofonun açık kalmasını gerektirmez. Sesli görüşmenin kapanış davranışı ayrı, yalnız ilgili sesli görüşmeden başlatılan işe aittir. Bu karar 11'in cihaz sınırında ve 15'in telefon kabulünde korunur; 15 şimdi başlatılmaz.
 
 ## Windows araçları ve dış işçiler
 
