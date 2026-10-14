@@ -28,7 +28,8 @@
       "jarvis_recycle",
       "jarvis_document",
       "jarvis_draft",
-      "jarvis_worker"
+      "jarvis_worker",
+      "jarvis_send"
     ]
   },
   "configSchema": {

@@ -12,6 +12,7 @@ export class RealtimeTalkSession {
   constructor(client:{request<T=any>(method:string,params:object,options?:unknown):Promise<T>;addEventListener(listener:(e:{event:string;payload:any})=>void):()=>void},sessionKey:string,callbacks:{onStatus?:(status:'idle'|'connecting'|'listening'|'thinking'|'error',detail?:string)=>void;onInputLevel?:(level:number)=>void;onTalkEvent?:(event:TalkEvent)=>void},options:{provider:string;model:string;transport:string},local:{inputDeviceId?:string});
   start():Promise<void>; stop():Promise<void>; getVoiceSessionId():string|undefined;
   updateContext(text:string):void;
+  presentQuestion(text:string):void;
   isOutputPlaying():boolean;
   setMuted(value:boolean):void; setSink(id:string):Promise<void>|undefined;
   switchInput(id:string):Promise<void>|undefined; cancelOutput(turnId:string):boolean;

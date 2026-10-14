@@ -32,7 +32,7 @@ function adapt(name, source) {
   }
   hasPendingConsult(): boolean {`);
     source = replaceOnce(source, '  private isSupportedTool(name: string): boolean {', `  private isSupportedTool(name: string): boolean {
-    if (/^jarvis_(context|output|memory_search|memory_read|note_save|app_status|app_open|app_focus|app_minimize|app_restore|source_open|audio_status|volume|research|task_start|task_steer|task_cancel|permissions|screen)$/.test(name)) return true;`);
+    if (/^jarvis_(context|output|memory_search|memory_read|note_save|app_status|app_open|app_focus|app_minimize|app_restore|source_open|audio_status|volume|research|task_start|task_steer|task_cancel|permissions|permission_revoke|screen)$/.test(name)) return true;`);
     source = replaceOnce(source, '      if (name === REALTIME_VOICE_AGENT_CONTROL_TOOL_NAME) {', `      if (name.startsWith("jarvis_")) {
         abortController.signal.addEventListener("abort",()=>{
           void this.options.ctx.client.request("jarvis.live.cancelCall",{sessionKey:this.options.ctx.sessionKey,voiceSessionId:this.options.ctx.voiceSessionId,callId}).catch(()=>undefined);
@@ -51,7 +51,8 @@ function adapt(name, source) {
       this.finishExecution(callId, abortController);`);
   }
   if (name === base+'session.ts') {
-    source = replaceOnce(source, '  stop(): Promise<void> {', `  updateContext(text: string) { this.transport?.updateContext?.(text); }
+    source = replaceOnce(source, '  stop(): Promise<void> {', `  presentQuestion(text: string) { this.transport?.presentQuestion?.(text); }
+  updateContext(text: string) { this.transport?.updateContext?.(text); }
   isOutputPlaying() { return this.transport?.isOutputPlaying?.() ?? false; }
   setMuted(value: boolean) { this.transport?.setMuted?.(value); }
   setSink(id: string) { return this.transport?.setSink?.(id); }
@@ -60,6 +61,7 @@ function adapt(name, source) {
   stop(): Promise<void> {`);
   }
   if (name === base+'shared.ts') source = replaceOnce(source, 'export type RealtimeTalkTransport = {', `export type RealtimeTalkTransport = {
+  presentQuestion?: (text: string) => void;
   updateContext?: (text: string) => void;
   isOutputPlaying?: () => boolean;
   setMuted?: (value: boolean) => void;
@@ -68,6 +70,10 @@ function adapt(name, source) {
   cancelOutput?: (turnId: string) => boolean;`);
   if (name === base+'google-live.ts') {
     source = replaceOnce(source, '  private closed = false;', `  private closed = false;
+  presentQuestion(text: string): void {
+    if(this.closed || text.length > 11000) return;
+    this.send({clientContent:{turns:[{role:"user",parts:[{text:"Host tarafından bekletilen somut kullanıcı sorusu. Aşağıdaki metni eksiksiz ve birebir seslendir; kendin cevaplama, araç çağırma veya izin verme. Kullanıcının cevabını dar istemci işleyecek.\\n"+text}]}],turnComplete:true}});
+  }
   updateContext(text: string): void {
     if (this.closed || text.length > 12000) return;
     if (!this.toolOwner.publishContext(text)) this.send({clientContent:{turns:[{role:"user",parts:[{text}]}],turnComplete:false}});

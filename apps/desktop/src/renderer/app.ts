@@ -122,7 +122,7 @@ class JarvisApp extends LitElement {
         ${d?.submissions.slice(-5).reverse().map(s => html`<p class="submission">${s.detail}<small>${s.sessionKey}<br>${s.id}</small></p>`)}
         <h2>Bekleyen onaylar</h2>
         ${!d?.approvalsAvailable ? html`<p>Onay kaydı okunamıyor; yetkili operator.approvals bağlantısı gerekli.</p>` : !d.approvals.length ? html`<p class="muted">Gateway’de bekleyen onay yok.</p>` : d.approvals.map(a => html`<section class="approval"><strong>${a.title}</strong><p>${a.details}</p><small>${a.kind} · ${a.status}<br>${a.id}${a.runId ? html`<br>Görev: ${a.runId}` : nothing}${a.sessionKey ? html`<br>Sohbet: ${a.sessionKey}` : nothing}</small></section>`)}
-        <p class="muted">Bu aşamada onaylar görüntülenir. Karar işlemi mevcut OpenClaw yetkili onay istemcisindedir.</p></aside></div>`;
+          <p class="muted">Aktif görüşmede sunulan tek işlem sorusunu sesle yanıtlayabilirsiniz. Satın alma/ödeme ve sesle sunulamayan ayrıntılar için mevcut OpenClaw manuel onay kontrolünü kullanın.</p></aside></div>`;
   }
 }
 customElements.define('jarvis-app', JarvisApp);

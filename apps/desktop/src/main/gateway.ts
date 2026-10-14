@@ -7,7 +7,7 @@ import type { Snapshot } from '../shared/contracts.ts';
 
 export const GATEWAY_VERSION = '2026.10.2';
 export const BUILD_ID = '2026.10.2-release-b8952d477f0c-2026-10-11T22-38-10.004Z';
-const SCOPES = ['operator.read', 'operator.write', 'operator.approvals', 'operator.talk'];
+const SCOPES = ['operator.read', 'operator.write', 'operator.approvals', 'operator.questions', 'operator.talk'];
 type Pending = { resolve: (payload: any) => void; reject: (error: Error) => void; timer: ReturnType<typeof setTimeout>; mutation: boolean };
 export class RpcError extends Error {
   constructor(public code: string, public details: Record<string, any> = {}) { super(code); }

@@ -187,6 +187,20 @@ export function installCodex(api: OpenClawPluginApi, live: (run?: string) => Bin
   });
   return {
     control,
+    async decisions(b:Binding){
+      const w=workers.get(b.scope.runId);if(!w)return [];current(w);
+      const record=await ledger.get(b.scope.userId,b.scope.taskId),identity={nativeThreadId:record.worker?.threadId,nativeTurnId:record.worker?.turnId,nativeRequestId:record.worker?.requestId};
+      if(!identity.nativeThreadId||!identity.nativeTurnId)throw new Error('Native Codex thread/turn identity not yet observed; no guessed decision binding');
+      const listed=await rpc('question.list',{}),requests:any[]=(listed.questions??[]).filter((q:any)=>q.sessionKey===w.key&&q.runId===w.runId&&q.status==='pending').map((raw:any)=>({family:'question',id:raw.id,kind:'question',runId:b.scope.runId,taskId:b.scope.taskId,sourceSessionKey:w.key,sourceRunId:w.runId,...identity,status:raw.status,expiresAtMs:raw.expiresAtMs,raw}));
+      for(const kind of ['plugin','exec']){
+        const rows=await rpc(kind+'.approval.list',{});
+        for(const row of Array.isArray(rows)?rows:[])if(row.request?.sessionKey===w.key&&row.request?.runId===w.runId){
+          const a=(await rpc('approval.get',{id:row.id})).approval;if(a?.status!=='pending')continue;
+          requests.push({family:'approval',kind,id:a.id,runId:b.scope.runId,taskId:b.scope.taskId,sourceSessionKey:w.key,sourceRunId:w.runId,...identity,status:a.status,expiresAtMs:a.expiresAtMs,presentation:a.presentation,manual:kind!=='exec'||a.presentation?.scope?.kind==='payment',params:kind==='exec'?{command:a.presentation?.commandText,cwd:row.request.cwd??b.scope.root}:undefined});
+        }
+      }
+      current(w);return requests;
+    },
     has:(runId:string)=>workers.has(runId),
     interruptParent: async (runId: string) => { const w = workers.get(runId); if (!w) throw new Error('No current Codex worker'); return interrupt(w); },
     beforeTool(event: { toolName: string }, ctx: { agentId?: string; runId?: string; sessionId?: string; sessionKey?: string }) {

@@ -57,7 +57,8 @@ test('native identity, secret shadowing, steer/continue and visible result follo
 test('real pending request blocks new input; user once decision uses exact ID and cannot be replayed',async()=>{
  const f=fixture();await f.adapter.control(f.b,f.contract,'start');f.permission();await assert.rejects(f.adapter.control(f.b,{expectedRevision:1,message:'ignore',inputId:'new'},'steer'));
  await assert.rejects(f.adapter.answer(f.b,{expectedRevision:1,kind:'permission',requestId:'other',decision:'once'}));await assert.rejects(f.adapter.answer(f.b,{expectedRevision:1,kind:'permission',requestId:'request_original',decision:'always'}));
- await f.adapter.answer(f.b,{expectedRevision:1,kind:'permission',requestId:'request_original',decision:'once'});await assert.rejects(f.adapter.answer(f.b,{expectedRevision:1,kind:'permission',requestId:'request_original',decision:'once'}));await f.stop();
+ const [q]=await f.adapter.decisions(f.b);
+ await f.adapter.answer(f.b,{expectedRevision:1,kind:'permission',requestId:'request_original',requestHash:q.requestHash,decision:'once'});await assert.rejects(f.adapter.answer(f.b,{expectedRevision:1,kind:'permission',requestId:'request_original',requestHash:q.requestHash,decision:'once'}));await f.stop();
 });
 test('native interruption never asserts every subprocess stopped; revoked task cannot steer',async()=>{
  const f=fixture();await f.adapter.control(f.b,f.contract,'start');const r=await f.adapter.control(f.b,{expectedRevision:1},'interrupt');assert.equal(r.cancellationConfirmed,false);assert.equal(f.calls.filter(c=>c[0]==='interrupt').length,1);f.revoke();await assert.rejects(f.adapter.control(f.b,{expectedRevision:1,message:'resume',inputId:'x'},'continue'));await f.stop();

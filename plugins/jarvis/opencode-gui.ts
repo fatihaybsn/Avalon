@@ -9,6 +9,7 @@ import {GUI_ROLE} from './gui-policy.ts';
 import {profileConnection,cleanWorkerEnv,shellWorkerEnv} from '../../scripts/jarvis-opencode-profile.mjs';
 import {WORKER_GUIDANCE} from './worker-contract.ts';
 import {OpenCode} from '@opencode/client';
+import {MANAGER_PERMISSIONS,MANAGER_AGENT,assertManagerSession} from '../../scripts/manager-permissions.mjs';
 
 type Backend=Parameters<OpenClawPluginApi['registerCliBackend']>[0];
 export const GUI_RUNTIME='jarvis-opencode-gui';
@@ -29,10 +30,10 @@ export function hostMcpConfig(input:unknown,env:Record<string,string>) {
  return {type:'remote' as const,url:server.url!,enabled:true,headers,timeout:70000};
 }
 
-// Use OpenCode's normal config and tool behavior. The selected OpenClaw MCP
-// endpoint is the only bridge added for this run; OpenClaw checks every call.
+// Scoped manager/GUI helpers use the host-bound MCP endpoint. This does not
+// change native tools or Full access in explicitly selected coding sessions.
 export function openCodeGuiConfig(bridge:ReturnType<typeof hostMcpConfig>) {
- return {$schema:'https://opencode.ai/config.json',mcp:{openclaw:bridge}};
+ return {$schema:'https://opencode.ai/config.json',mcp:{openclaw:bridge},default_agent:'jarvis-manager',agents:{'jarvis-manager':{...MANAGER_AGENT,system:WORKER_GUIDANCE}}};
 }
 
 export function parseGuiEvent(line:string) {
@@ -61,7 +62,7 @@ export function safeManagerFailure(input:unknown) {
 }
 
 export function buildGuiBackend(manager=false):Backend {
- return {id:manager?'jarvis-opencode-main':GUI_RUNTIME,modelProvider:'opencode',nativeToolMode:'selectable',hostOwnedTools:manager?['read','write','edit','computer','browser','jarvis_worker','jarvis_work_read','jarvis_work_note','jarvis_draft','jarvis_document','jarvis_windows','jarvis_recycle','jarvis_memory_search','jarvis_memory_get','jarvis_note_read','jarvis_note_write']:['read','write','edit','computer','browser'],bundleMcp:true,bundleMcpMode:'claude-config-file',autoSelectAuthProfile:false,toolAvailabilityEnforcement:'prepare-execution',
+ return {id:manager?'jarvis-opencode-main':GUI_RUNTIME,modelProvider:'opencode',nativeToolMode:'selectable',hostOwnedTools:manager?['read','write','edit','computer','browser','jarvis_worker','jarvis_send','jarvis_work_read','jarvis_work_note','jarvis_draft','jarvis_document','jarvis_windows','jarvis_recycle','jarvis_memory_search','jarvis_memory_get','jarvis_note_read','jarvis_note_write']:['read','write','edit','computer','browser'],bundleMcp:true,bundleMcpMode:'claude-config-file',autoSelectAuthProfile:false,toolAvailabilityEnforcement:'prepare-execution',
   config:{command:'opencode',args:['run','--format','json','--model','opencode/space-bunny-free'],input:'stdin',output:'jsonl',sessionMode:'none',imageArg:'--file',imageMode:'repeat',serialize:true,reseedFromRawTranscriptWhenUncompacted:false},
   normalizeConfig:config=>({...config,command:manager?profileConnection().binary:nativeExecutable()}),resolveModelId:({modelId})=>{if(modelId!=='space-bunny-free')throw new Error('GUI worker only admits Space Bunny Free');return modelId;},parseJsonlEvent:parseGuiEvent,
   async prepareExecution(ctx) {
@@ -92,7 +93,6 @@ export function buildGuiBackend(manager=false):Backend {
      const bridge=hostMcpConfig(JSON.parse(await fs.readFile(run.args[index+1],'utf8')),run.env);
      if(!manager&&!run.toolAvailability?.openClaw?.length)throw new Error('OpenClaw host tool selection unavailable');
      const conf:any=openCodeGuiConfig(bridge);
-     if(manager){conf.default_agent='jarvis-manager';conf.agents={'jarvis-manager':{description:'OpenClaw-owned task planner and result reviewer',mode:'primary',system:WORKER_GUIDANCE,permissions:['shell','edit','read','external_directory','execute','glob','grep','webfetch','websearch','subagent'].map(action=>({action,resource:'*',effect:'deny'}))}};}
      await fs.writeFile(configPath,JSON.stringify(conf));
      const environment:NodeJS.ProcessEnv={...(s?cleanWorkerEnv(run.env,s.root):run.env),OPENCODE_CONFIG:configPath};
      if(s)environment.OPENCODE_SERVER_PASSWORD=s.password;
@@ -101,7 +101,10 @@ export function buildGuiBackend(manager=false):Backend {
      await run.liveSession?.restart();run.assertCurrent?.();run.abortSignal?.throwIfAborted();
      const args=['run','--format','json','--model',manager?'opencode/space-bunny-free#max':'opencode/space-bunny-free','--title','JARVIS scoped GUI'];
      const native=s?OpenCode.make({baseUrl:s.url,headers:s.headers}):undefined;
-     const managerSession=native?await native.session.create({agent:'jarvis-manager',model:{providerID:'opencode',id:'space-bunny-free',variant:'max'},location:{directory:scratch},title:'JARVIS task manager'}):undefined;
+     // The connected server owns execution; CLI config alone is not proof.
+     if(native){const agent=await native.agent.get({agentID:'jarvis-manager',location:{directory:scratch}});if(JSON.stringify(agent.data.permissions.slice(-MANAGER_PERMISSIONS.length))!==JSON.stringify(MANAGER_PERMISSIONS))throw new Error('Server manager agent permissions unavailable; inference blocked');}
+     const managerSession=native?await native.session.create({agent:'jarvis-manager',permissions:MANAGER_PERMISSIONS,model:{providerID:'opencode',id:'space-bunny-free',variant:'max'},location:{directory:scratch},title:'JARVIS task manager'}):undefined;
+     if(native&&managerSession)assertManagerSession(await native.session.get({sessionID:managerSession.id}),managerSession.id);
      if(native&&managerSession&&s)await native.session.environment({sessionID:managerSession.id,variables:shellWorkerEnv(run.env,s.root)});
      if(s&&managerSession)args.push('--server',s.url,'--agent','jarvis-manager','--session',managerSession.id);
      for(let i=0;i<run.args.length;i++)if(run.args[i]==='--file'){const file=run.args[++i];if(!file||!path.isAbsolute(file))throw new Error('Native staged image path required');args.push('--file',file);}

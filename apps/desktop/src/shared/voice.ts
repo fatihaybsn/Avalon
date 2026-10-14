@@ -5,12 +5,13 @@ export type VoiceState = {
   shortcut: string; shortcutRegistered: boolean; idleMinutes: number;
 };
 export type VoiceCommand = 'start' | 'end' | 'mute' | 'stopOutput' | 'input' | 'output' | 'shortcut' | 'idle' | 'devices';
-export type VoiceMediaCommand = {type:'start'; sessionKey:string} | {type:'context';text:string} | {type:'end'|'shutdown'|'devices'} | {type:'mute';value:boolean} | {type:'input'|'output';value:string} | {type:'stopOutput';turnId:string};
+export type VoiceMediaCommand = {type:'question';token:string;text:string} | {type:'start'; sessionKey:string} | {type:'context';text:string} | {type:'end'|'shutdown'|'devices'} | {type:'mute';value:boolean} | {type:'input'|'output';value:string} | {type:'stopOutput';turnId:string};
 export interface MediaBridge {
   request(method:string,params:Record<string,unknown>):Promise<any>;
   report(state:Partial<VoiceState> & {activeSpeech?:boolean}):void;
   ready():void;
   stopped():void;
+  decision(event:{type:'presented'|'input'|'final';token:string;id?:string;text?:string}):void;
   command(listener:(command:VoiceMediaCommand)=>void):()=>void;
   event(listener:(event:{event:string;payload:any})=>void):()=>void;
 }

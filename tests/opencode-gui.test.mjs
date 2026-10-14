@@ -5,6 +5,7 @@ const input={mcpServers:{openclaw:{type:'http',alwaysLoad:true,url:'http://127.0
 test('ordinary OpenCode config keeps one run-bound OpenClaw MCP tool connection',()=>{
  const actual=hostMcpConfig(input,env);assert.equal(actual.headers.Authorization,'Bearer unit-token');assert.equal(actual.enabled,true);assert.equal(actual.type,'remote');
  const config=openCodeGuiConfig(actual);assert.equal(config.mcp.openclaw.type,'remote');assert.equal(config.mcp.openclaw.url,actual.url);assert.equal(config.mcp.servers,undefined);assert.equal(config.plugins,undefined);assert.equal(config.permission,undefined);
+ assert.equal(config.default_agent,'jarvis-manager');assert.deepEqual(config.agents['jarvis-manager'].permissions,[{action:'*',resource:'*',effect:'deny'},{action:'openclaw_*',resource:'*',effect:'allow'}]);
  for(const url of ['https://evil.example/mcp','http://127.0.0.1:1234/other','http://localhost:1234/mcp'])assert.throws(()=>hostMcpConfig({mcpServers:{openclaw:{...input.mcpServers.openclaw,url}}},env));
  const merged=hostMcpConfig({...input,mcpServers:{...input.mcpServers,windows_gui:{type:'stdio',command:'uvx'}}},env);
  const isolated=openCodeGuiConfig(merged);assert.deepEqual(Object.keys(isolated.mcp),['openclaw']);assert.equal(isolated.mcp.windows_gui,undefined);

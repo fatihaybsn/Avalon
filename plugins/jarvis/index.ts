@@ -5,7 +5,7 @@ import { getMemoryCapabilityRegistration } from 'openclaw/plugin-sdk/memory-host
 import { MEMORY_TOOLS, memoryParams, originFor, readNote, writeNote, currentDerivedText } from './notes.ts';
 import { buildMemoryBackend } from './opencode-memory.ts';
 import { buildGuiBackend } from './opencode-gui.ts';
-import {configureGuiPolicy,isGuiTool,GuiObservations,GUI_ROLE,GUI_MCP_NAMES} from './gui-policy.ts';
+import {configureGuiPolicy,isGuiTool,isGuiRead,GuiObservations,GUI_ROLE,GUI_MCP_NAMES} from './gui-policy.ts';
 import { buildDreamProvider, DREAM_ROUTE, DREAM_MODELS } from './gemini-dreaming.ts';
 import { admitDreamingNotes, admitNativeRecallCall, readNativeDreaming, DREAMING_TOKEN } from './dreaming.ts';
 import fs from 'node:fs';
@@ -16,6 +16,8 @@ import {installOpenCode} from './opencode.ts';
 import {installWorkers} from './workers.ts';
 import {installLive} from './live.ts';
 import {shortResearch} from './live-reader.ts';
+import {installDecisions} from './decisions.ts';
+import {installSending} from './sending.ts';
 import { createQuickTools, preserveFile, configureNativeRoot, localCall } from './quick.ts';
 import { QUICK_TOOLS, operationHash } from './quick-policy.ts';
 import { runBeforeToolCallHook, runAgentHarnessAfterToolCallHook } from 'openclaw/plugin-sdk/agent-harness-runtime';
@@ -90,6 +92,7 @@ export default definePluginEntry({
     };
     const workspace = () => api.runtime.agent.resolveAgentWorkspaceDir(api.config, 'main');
     const work = typeof api.runtime?.state?.openKeyedStore === 'function' && typeof api.agent?.events?.registerAgentEventSubscription === 'function' ? installWork(api, live) : undefined;
+    const decisions=installDecisions(api,()=>[...authorities.values()],async s=>(await work!.ledger.get(s.userId,s.taskId)).revision,drop);
     if (!work) api.logger?.warn?.('JARVIS stage 06 unavailable: native retained state/events required');
     const codex = work && api.config.plugins?.entries?.codex?.enabled === true ? installCodex(api, live, work.ledger, undefined, work.owners) : undefined;
     if (codex) work!.setWorkerInterrupt(codex.interruptParent);
@@ -136,6 +139,7 @@ export default definePluginEntry({
       return matches[0]!;
     };
     if(opencode&&work)installWorkers(api,live,work.ledger,codex,opencode,toolScope);
+    if(work)installSending(api,toolScope,work.ledger,decisions.authorize);
     api.registerTool({ contextVersion: 2, create(ctx) {
       if (ctx.agentId !== 'main') return null;
       return createQuickTools(() => toolScope(ctx), () => { ctx.assertInvocationCurrent(); ctx.assertInputCommitAllowed?.(); });
@@ -339,6 +343,12 @@ export default definePluginEntry({
       if (codexDecision) return codexDecision;
       const native = admitNativeRecallCall(event, ctx);
       if (native) return native;
+      if(isGuiTool(event.toolName)&&!isGuiRead(event.toolName,event.params)){
+        try{for(const method of ['plugin.approval.list','exec.approval.list','question.list']){
+          const r=await dispatchGatewayMethod(method,{});if(!r.ok)throw new Error('Pending state unavailable');
+          const p=r.payload as any;if((Array.isArray(p)?p:p.questions??[]).length)return {block:true,blockReason:'Human decision pending; model GUI input cannot operate an approval control'};
+        }}catch{return {block:true,blockReason:'Human decision control isolation unavailable; GUI input blocked'};}
+      }
       const binding = live(ctx.runId);
       const decision = await evaluate(event, ctx, binding?.scope);
       if (binding && !('block' in decision)) {
@@ -367,8 +377,14 @@ export default definePluginEntry({
           if (!live(ctx.runId)) return { block: true, blockReason: 'Research scope expired' };
         }
       }
+      if(binding&&'requireApproval' in decision&&decision.requireApproval){
+        const callId=ctx.toolCallId;
+        if(!callId)return {block:true,blockReason:'Exact tool call identity required'};
+        try{return await decisions.authorize(callId,event.toolName,decision.params??event.params,binding.scope,decision.requireApproval,ctx.abortSignal);}
+        catch{return {block:true,blockReason:'Native operation approval unavailable/revoked; no effect attempted'};}
+      }
       return decision;
-    }, { priority: 10000 });
+    }, { priority: 10000, timeoutMs: 70000 });
     api.on('before_prompt_build', (_event, ctx) => ctx.agentId === 'research' ? { systemPrompt: READER_PROMPT, toolsAllow: hasTavilyKey() ? ['tavily_search', 'web_fetch'] : ['web_fetch'] } : ctx.agentId==='main'&&api.pluginConfig?.guiNode?{appendSystemContext:GUI_ROLE}:undefined, { priority: 10000 });
     api.on('before_agent_run', (event, ctx) => {
       if (ctx.agentId !== 'research') return;

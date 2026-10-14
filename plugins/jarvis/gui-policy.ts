@@ -141,6 +141,7 @@ export class GuiObservations {
   if(!observed)throw new Error('Fresh CUA window observation required before input');
   if(driver!=='cua'||p.windowRef!==observed.windowRef||p.observationId!==observed.observationId||typeof p.elementRef!=='string'||!observed.elements.has(p.elementRef))throw new Error('Input must target a window and element from the latest CUA observation');
   const element=observed.elements.get(p.elementRef)!;
+  if(action==='type'&&/[\r\n]/u.test(String(p.text)))throw new Error('Generic GUI text cannot submit via Enter; use a concrete native send operation');
   if(['set_value','type'].includes(action)&&!['Edit','ComboBox','TextBox'].includes(String(element.role)))throw new Error('Text input may target only an observed editable element');
   if(['left_click','right_click','double_click'].includes(action)&&SENSITIVE_CLICK.test(element.label??''))throw new Error('This button may submit, delete, pay or approve; the separate manual approval path is required');
   if(!element.role||!element.bounds)throw new Error('Observed target needs a role and exact bounds for same-window verification');

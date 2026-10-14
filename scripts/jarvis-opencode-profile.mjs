@@ -3,6 +3,7 @@ import path from 'node:path';
 import {spawn,execFileSync} from 'node:child_process';
 import {randomBytes} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
+import {MANAGER_AGENT} from './manager-permissions.mjs';
 export const profileRoot=()=>path.join(process.env.USERPROFILE,'.openclaw-jarvis','opencode');
 export function cleanWorkerEnv(source,root) {
  const env={};
@@ -14,8 +15,14 @@ export function cleanWorkerEnv(source,root) {
 export function shellWorkerEnv(source,root){return {...cleanWorkerEnv(source,root),OPENCODE_API_KEY:'',OPENCODE_SERVER_PASSWORD:'',OPENCODE_SERVER_USERNAME:''};}
 export function workerConfig() {
  return {$schema:'https://opencode.ai/config.json',model:'opencode/space-bunny-free',update:'disable',share:'disabled',snapshots:true,formatter:false,lsp:false,
+ agents:{'jarvis-manager':MANAGER_AGENT},
  permissions:[...['read','edit','shell','glob','grep','external_directory','webfetch','question'].map(action=>({action,resource:'*',effect:'allow'})),{action:'subagent',resource:'*',effect:'deny'}],
  policies:[{action:'provider.use',resource:'*',effect:'deny'},{action:'provider.use',resource:'opencode',effect:'allow'},{action:'plugin.use',resource:'*',effect:'deny'}]};
+}
+export function configureManager(root=profileRoot()){
+ const file=path.join(root,'config','opencode','opencode.json');
+ const c=JSON.parse(fs.readFileSync(file,'utf8'));c.agents={...c.agents,'jarvis-manager':MANAGER_AGENT};
+ fs.writeFileSync(file,JSON.stringify(c,null,2)+'\n');
 }
 export function profileConnection(root=profileRoot()) {
  const s=JSON.parse(fs.readFileSync(path.join(root,'server.json'),'utf8'));
@@ -38,6 +45,7 @@ async function main() {
  const action=process.argv[2],root=profileRoot();
  if(action==='prepare') {if(!process.argv.includes('--full-access'))throw new Error('Explicit Full access selection required');prepareProfile(process.argv[3]);console.log('Private OpenCode 2.0.28 profile prepared. No credentials copied; full access is not OS isolation.');}
  else if(action==='serve') {
+ configureManager(root);
  const s=profileConnection(root),env=cleanWorkerEnv(process.env,root);env.OPENCODE_SERVER_PASSWORD=s.password;
  if(!env.OPENCODE_API_KEY)throw new Error('OPENCODE_API_KEY unavailable; no credential fallback');
  const child=spawn(s.binary,['serve','--hostname','127.0.0.1','--port','18791'],{cwd:root,env,stdio:'inherit',windowsHide:true});

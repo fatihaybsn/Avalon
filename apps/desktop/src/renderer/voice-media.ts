@@ -5,6 +5,8 @@ const bridge=window.jarvisMedia;
 let call:RealtimeTalkSession|undefined, turns:TalkController|undefined;
 let generation=0, muted=false, inputId='',outputId='', outputTurn:string|undefined;
 let inputActive=false;
+let question:{token:string;text:string;spoken:string;ended:boolean;presented:boolean;input?:string}|undefined;
+const spoken=(s:string)=>s.toLocaleLowerCase('tr').replace(/[^\p{L}\p{N}]+/gu,' ').trim();
 const listeners=new Set<(e:{event:string;payload:any})=>void>();
 const client={request:<T=any>(method:string,params:object)=>bridge.request(method,params as Record<string,unknown>) as Promise<T>,addEventListener:(l:(e:{event:string;payload:any})=>void)=>{listeners.add(l);return()=>{listeners.delete(l);};}};
 bridge.event(e=>{for(const l of listeners)l(e);});
@@ -15,6 +17,15 @@ async function devices(){
 navigator.mediaDevices.addEventListener('devicechange',()=>{void devices().catch(()=>bridge.report({detail:'Ses cihazları okunamadı'}));});
 function talkEvent(event:TalkEvent,epoch:number){
   if(epoch!==generation)return;
+  if(question){const q=question,p=event.payload as any;
+    if(event.type==='output.text.done'&&typeof p?.text==='string')q.spoken=p.text;
+    if(event.type==='turn.ended')q.ended=true;
+    if(event.type==='turn.cancelled'){q.ended=false;q.presented=false;q.input=undefined;}
+    if(event.type==='transcript.done'&&event.final===true&&p?.role==='user'&&typeof p.text==='string'&&!muted){
+      if(q.presented&&q.input){bridge.decision({type:'final',token:q.token,id:q.input,text:p.text});q.input=undefined;}
+      else if(!q.presented){q.spoken='';q.ended=false;call?.presentQuestion(q.text);}
+    }
+  }
   if(event.type==='output.audio.delta'&&event.turnId){
     if(turns?.activeTurnId!==event.turnId)turns?.startTurn({turnId:event.turnId});
     turns?.startOutputAudio({turnId:event.turnId});outputTurn=event.turnId;
@@ -28,6 +39,7 @@ function talkEvent(event:TalkEvent,epoch:number){
   if(event.type==='session.closed')bridge.report({phase:'idle',activeSpeech:false});
 }
 async function end(){
+  question=undefined;
   ++generation;const old=call;call=undefined;turns=undefined;outputTurn=undefined;
   inputActive=false;
   // Upstream stop releases tracks, pumps, AudioContexts, sources and provider socket
@@ -35,6 +47,7 @@ async function end(){
   try {await old?.stop();} finally {bridge.report({phase:'idle',detail:'Görüşme kapalı',muted:false,activeSpeech:false,turnId:undefined});}
 }
 async function command(c:VoiceMediaCommand){
+  if(c.type==='question'){if(call&&!muted){question={token:c.token,text:c.text,spoken:'',ended:false,presented:false};call.presentQuestion(c.text);}return;}
   if(c.type==='context'){call?.updateContext(c.text);return;}
   if(c.type==='shutdown'){try{await end();}finally{bridge.stopped();}return;}
   if(c.type==='end'){await end();return;}
@@ -45,7 +58,7 @@ async function command(c:VoiceMediaCommand){
     turns=createTalkSessionController({sessionId:`local-${epoch}`,provider:'google',mode:'realtime',transport:'provider-websocket',brain:'agent-consult'});
     const active=new RealtimeTalkSession(client,c.sessionKey,{
       onStatus:(phase,detail)=>{if(epoch===generation){bridge.report({phase,detail:detail??(phase==='listening'?'Dinleniyor':phase==='thinking'?'Yanıt hazırlanıyor':phase==='idle'?'Görüşme kapalı':'Bağlanıyor')});if(phase==='error')void end().finally(()=>bridge.report({phase:'error',detail:detail??'Ses bağlantısı kesildi'})).catch(()=>{});}},
-      onInputLevel:level=>{if(epoch===generation)inputActive=level>0.025&&!muted;},
+      onInputLevel:level=>{if(epoch===generation){const was=inputActive;inputActive=level>0.025&&!muted;if(inputActive&&!was&&question?.presented&&!question.input){question.input=crypto.randomUUID();bridge.decision({type:'input',token:question.token,id:question.input});}}},
       onTalkEvent:event=>talkEvent(event,epoch)
     },{provider:'google',model:'gemini-3.8-live',transport:'provider-websocket'},{inputDeviceId:inputId||undefined});
     call=active;
@@ -58,6 +71,6 @@ async function command(c:VoiceMediaCommand){
   if(c.type==='output'){await call?.setSink(c.value);outputId=c.value;bridge.report({outputId});return;}
   if(c.type==='stopOutput'&&c.turnId===outputTurn){call?.cancelOutput(c.turnId);turns?.finishOutputAudio({turnId:c.turnId});bridge.report({activeSpeech:false});}
 }
-setInterval(()=>{if(call)bridge.report({activeSpeech:inputActive||call.isOutputPlaying()});},500);
+setInterval(()=>{if(call){bridge.report({activeSpeech:inputActive||call.isOutputPlaying()});const q=question;if(q&&!q.presented&&q.ended&&!call.isOutputPlaying()&&spoken(q.spoken)===spoken(q.text)){q.presented=true;bridge.decision({type:'presented',token:q.token});}}},100);
 bridge.command(c=>{void command(c).catch(async error=>{await end().catch(()=>{});bridge.report({phase:'error',detail:error instanceof Error?error.message:'Ses işlemi başarısız'});});});
 bridge.ready();

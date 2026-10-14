@@ -2,7 +2,7 @@ import {OpenCode,type OpenCodeClient,type OpenCodeEvent} from '@opencode/client'
 import type {OpenClawPluginApi} from 'openclaw/plugin-sdk/plugin-entry';
 import {profileConnection,profileRoot,shellWorkerEnv} from '../../scripts/jarvis-opencode-profile.mjs';
 import {workerContract,WORKER_INSTRUCTIONS,type WorkerBinding} from './worker-contract.ts';
-import {exactKeys,text,workText} from './policy.ts';
+import {exactKeys,text,workText,fingerprint} from './policy.ts';
 import type {WorkLedger,ResourceOwners,WorkRecord} from './work.ts';
 type Connection={client:OpenCodeClient;pid:number};
 type Worker={binding:WorkerBinding;id:string;client:OpenCodeClient;busy:boolean;unknown:boolean;stopped:boolean;abort:()=>void};
@@ -115,19 +115,25 @@ export function installOpenCode(api:OpenClawPluginApi,ledger:WorkLedger,owners:R
  }
  api.on('gateway_stop',async()=>{for(const w of workers.values()){w.binding.signal.removeEventListener('abort',w.abort);if(w.busy&&!w.stopped)await interrupt(w.binding.scope.runId).catch(()=>{});}for(const ac of streams.values())ac.abort();});
  async function answer(b:WorkerBinding,p:Record<string,unknown>) {
-  exactKeys(p,['sessionKey','agentId','runId','expectedRevision','kind','requestId','decision','answer']);
+  exactKeys(p,['sessionKey','agentId','runId','expectedRevision','kind','requestId','requestHash','decision','answer']);
   const w=workers.get(b.scope.runId);if(!w)throw new Error('No current OpenCode worker');current(w);
   if((await ledger.get(b.scope.userId,b.scope.taskId)).revision!==p.expectedRevision)throw new Error('Decision revision changed');
   const requestId=text(p.requestId,'native request ID',256),q=await pending(w);
+  const original=p.kind==='permission'?q.permissions.find(v=>v.id===requestId):q.forms.find(v=>v.id===requestId);
+  if(!original||fingerprint(original)!==p.requestHash)throw new Error('Native request changed/resolved; read and present it again');
   if(p.kind==='permission') {
    if(!q.permissions.some(v=>v.id===requestId)||!['once','reject'].includes(String(p.decision)))throw new Error('Exact pending permission and once/reject required; no automatic/always approval');
    await w.client.permission.reply({sessionID:w.id,requestID:requestId,decision:p.decision as 'once'|'reject'});
   } else if(p.kind==='form') {
    if(!q.forms.some(v=>v.id===requestId)||!p.answer||typeof p.answer!=='object'||Array.isArray(p.answer)||JSON.stringify(p.answer).length>12000)throw new Error('Exact pending form and bounded answer required');
    await w.client.session.form.reply({sessionID:w.id,formID:requestId,answer:p.answer as Record<string,string|number|boolean|string[]>});
+  } else if(p.kind==='cancel-form') {
+   if(!q.forms.some(v=>v.id===requestId))throw new Error('Exact pending form required');
+   await w.client.session.form.cancel({sessionID:w.id,formID:requestId});
   } else throw new Error('Unsupported native decision kind');
   await record(w,`opencode-user-decision:${requestId}`,'opencode-user-decision',{requestId,kind:p.kind});return {resolved:true,requestId};
  }
  return {control,answer,interruptParent:interrupt,has:(run:string)=>workers.has(run),observe,
+  async decisions(b:WorkerBinding){const w=workers.get(b.scope.runId);if(!w)return [];current(w);const q=await pending(w),revision=(await ledger.get(b.scope.userId,b.scope.taskId)).revision;current(w);return [...q.permissions.map(raw=>({kind:'permission',raw})),...q.forms.map(raw=>({kind:'form',raw}))].map(({kind,raw})=>({family:'opencode',kind,id:raw.id,requestHash:fingerprint(raw),sessionId:w.id,runId:b.scope.runId,taskId:b.scope.taskId,revision,expiresAtMs:b.scope.expiresAt,status:'pending',raw}));},
   async observation(r:WorkRecord){const w=workers.get(r.runId);if(!w)return {nativeUnavailable:true};const s=await status(w);return {sessionId:w.id,hasActiveRun:s.nativeActive,activeRunIds:s.nativeActive?[r.runId]:[],run:s.nativeActive?{status:'pending'}:s.outcome?{status:s.outcome==='succeeded'?'ok':'error',endedAt:Date.now()}:undefined,workerOutput:s};}};
 }

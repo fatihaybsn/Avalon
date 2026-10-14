@@ -60,6 +60,7 @@ export function quickParams(tool: string, p: Record<string, unknown>): Record<st
     if (action === 'act') {
       const r = p.request as Record<string, unknown>;
       if (!r || typeof r !== 'object') throw new Error('Request required');
+      if(r.kind==='click'||r.kind==='type')throw new Error('Browser submit/payment parameters cannot be frozen by this generic action; use a concrete native service operation');
       // No JS, generic key chords, coordinate clicks, uploads, downloads or batches.
       if (r.kind === 'click') exactKeys(r, ['kind', 'ref']);
       else if (r.kind === 'type') { exactKeys(r, ['kind', 'ref', 'text']); if (typeof r.text !== 'string' || r.text.length > 4096) throw new Error('Bounded text required'); }

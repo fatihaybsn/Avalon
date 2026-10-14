@@ -141,6 +141,7 @@ export async function evaluate(event: {toolName: string; params: Record<string, 
       return { params: { url: publicUrl(event.params.url), extractMode: 'text', maxChars: 20000 } };
     }
     if (!event.toolKind && MEMORY_TOOLS.includes(event.toolName)) return { params: memoryParams(event.toolName, event.params) };
+    if(!event.toolKind&&event.toolName==='jarvis_send')return {params:structuredClone(event.params)};
     if (!event.toolKind && WORK_TOOLS.includes(event.toolName)) {
       if (event.toolName === 'jarvis_work_read') { exactKeys(event.params, []); return { params: {} }; }
       return { params: workNoteParams(event.params) };

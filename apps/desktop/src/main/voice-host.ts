@@ -3,18 +3,24 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import type {Rpc} from './gateway.ts';
 import {mediaFrame,VoiceRpc} from './voice-policy.ts';
+import {VoiceDecisions} from './voice-decisions.ts';
 import type {VoiceState,VoiceCommand,VoiceMediaCommand} from '../shared/voice.ts';
 export class VoiceHost {
   readonly state:VoiceState={phase:'idle',detail:'Görüşme kapalı',muted:false,inputId:'',outputId:'',inputs:[],outputs:[],shortcut:'Control+Alt+Space',shortcutRegistered:false,idleMinutes:0};
   window?:BrowserWindow;
   readonly policy:VoiceRpc;
+  readonly decisions:VoiceDecisions;
   ready=false;
   private lastActivity=Date.now();
   private activeSpeech=false;
   private timer?:ReturnType<typeof setInterval>;
   private pending=false;
   private stopped?:()=>void;
-  constructor(private rpc:Rpc,private dev:boolean,private dir:string,private settingsFile:string,private selected:()=>string|undefined,private waitingDecision:()=>boolean,private publish:()=>void,projectRoot?:()=>string|undefined){this.policy=new VoiceRpc(rpc,target=>this.capture(target),async url=>{const u=new URL(url);if(u.protocol!=='https:'||u.username||u.password)throw new Error('Host link hedefi reddedildi');await shell.openExternal(u.href);},projectRoot);}
+  constructor(private rpc:Rpc,private dev:boolean,private dir:string,private settingsFile:string,private selected:()=>string|undefined,private waitingDecision:()=>boolean,private publish:()=>void,projectRoot?:()=>string|undefined){
+    this.policy=new VoiceRpc(rpc,target=>this.capture(target),async url=>{const u=new URL(url);if(u.protocol!=='https:'||u.username||u.password)throw new Error('Host link hedefi reddedildi');await shell.openExternal(u.href);},projectRoot);
+    this.decisions=new VoiceDecisions(rpc,()=>({allowed:this.policy.allowed&&this.state.voiceSessionId===this.policy.voiceId&&['listening','thinking'].includes(this.state.phase),voiceId:this.policy.voiceId,key:this.policy.key,muted:this.state.muted}),
+      (token,text)=>this.send({type:'question',token,text}),text=>{this.state.detail=text;this.context(text);this.publish();});
+  }
   private async capture(target:string){
     if(!this.policy.allowed)throw new Error('Görüşme kapalı');
     const windowTarget=/pencere\s*:\s*(.+)/i.exec(target)?.[1]?.trim();
@@ -33,6 +39,13 @@ export class VoiceHost {
   async initialize(){
     try {const p=JSON.parse(await fs.readFile(this.settingsFile,'utf8'));if(typeof p.shortcut==='string'&&p.shortcut.length<100)this.state.shortcut=p.shortcut;if(Number.isFinite(p.idleMinutes)&&p.idleMinutes>=0&&p.idleMinutes<=240)this.state.idleMinutes=p.idleMinutes;}catch{}
     ipcMain.on('jarvis:voice-ready',event=>{if(this.trusted(event)){this.ready=true;this.publish();}});
+    ipcMain.on('jarvis:voice-decision',(event,p)=>{
+      if(!this.trusted(event)||!p||typeof p.token!=='string'||p.token.length>128||!this.policy.allowed||this.state.muted)return;
+      try{if(p.type==='presented')this.decisions.presented(p.token);
+        else if(p.type==='input'&&typeof p.id==='string'&&p.id.length<128)this.decisions.input(p.token,p.id);
+        else if(p.type==='final'&&typeof p.id==='string'&&typeof p.text==='string'&&p.text.length<=8000)void this.decisions.final(p.token,p.id,p.text).catch(()=>{this.decisions.clear();});
+      }catch{this.decisions.clear();}
+    });
     ipcMain.handle('jarvis:voice-rpc',async(event,method,params)=>{if(!this.trusted(event))throw new Error('Media sender rejected');try{return await this.policy.request(method,params);}catch{throw new Error('Talk isteği reddedildi veya Gateway erişilemiyor; ses kapsamı/token/model ayarını kontrol edin');}});
     ipcMain.on('jarvis:voice-state',(event,p)=>{
       if(!this.trusted(event)||!p||typeof p!=='object')return;
@@ -58,7 +71,8 @@ export class VoiceHost {
     await this.window.loadURL(this.dev?'http://127.0.0.1:5173/voice.html':'jarvis://app/voice.html');
     this.registerShortcut(this.state.shortcut);
     this.timer=setInterval(()=>{
-      if(!this.state.idleMinutes||!this.policy.allowed||this.state.phase==='connecting'||this.state.phase==='thinking'||this.waitingDecision()||this.activeSpeech)return;
+      if(this.ready)void this.decisions.refresh();
+      if(!this.state.idleMinutes||!this.policy.allowed||this.state.phase==='connecting'||this.state.phase==='thinking'||this.waitingDecision()||this.decisions.active||this.activeSpeech)return;
       if(Date.now()-this.lastActivity>=this.state.idleMinutes*60000)void this.action('end','');
     },1000);
   }

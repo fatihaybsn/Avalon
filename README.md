@@ -2,7 +2,7 @@
 
 Windows 11'de doğrudan çalışan, OpenClaw merkezli kişisel asistan projesi.
 Tek merkez **OpenClaw Gateway**, konuşma tarafı **Gemini Live**, ağır görev
-modeli **Space Bunny Free**'dir. Mevcut durum: **12'ye kadar kod uygulandı; 11–12 ses/araç bağlantısının canlı kabulü ve Codex/OpenCode üç promptlu ortak canlı kabul henüz yapılmadı**
+modeli **Space Bunny Free**'dir. Mevcut durum: **13'e kadar kod uygulandı; 11–13 ses/araç/onay bağlantısının canlı kabulü ve Codex/OpenCode üç promptlu ortak canlı kabul henüz yapılmadı**
 (Gateway, görev izinleri, salt okunur araştırma, yerel GUI node'u ve sade Electron/Vite/Lit arayüzü).
 05 ile tek yerel hafıza, kontrollü kısa not araçları, yetkili ortak erişim ve
 Gemini ile altı saatlik native Dreaming düzenlemesi eklendi.
@@ -25,8 +25,11 @@ normal OpenCode CLI yönetim rotası eklendi. Çok promptlu proje yönetiminin c
 kabulü henüz yapılmadı. 11 ile bağımsız, sandboxed Electron ses sahibi ve hazır
 Talk/Google Live yolu; 12 ile dar Gemini araçları, güncel görev bağlamı, tek kare
 ekran açıklaması ve ses kapalıyken sonuç bildirimi eklendi. Gerçek cihaz/Google
-kabulü, bilinen Gateway health/RPC engeli nedeniyle bekler; sesli onay 13'te,
-tam kurulabilir dağıtım 16'dadır.
+kabulü, bilinen Gateway health/RPC engeli nedeniyle bekler. 13 ile mevcut OpenClaw
+onaylarına sesli karar, native işçi soruları, dar izin geri alma ve tek işlem
+kanal gönderimi eklendi; gerçek hesap/gönderim kabulü bekliyor. Finansal olumlu
+karar sesle açılamaz; ödeme entegrasyonu hazır değildir. Tam kurulabilir dağıtım
+16'dadır.
 
 Ayrıntılı mimari: `docs/KESIN_MIMARI.md` · Aşama durumu: `docs/GELISTIRME_DURUMU.md`
 
@@ -498,8 +501,9 @@ Space Bunny Free/max** kullanılır. Belirtilen kullanıcı seçimi bu varsayıl
 önceliklidir. OpenCode seçimleri gerçek server model/variant kataloğuyla denetlenir.
 Native işçi sorusu veya izni gerçek pending ID ile bekler; model cevaplamaz.
 Yetkili kullanıcı için `jarvis.worker.answer` native once/reject veya form
-cevabını taşır; Electron form paneli/sesli karar bu aşamada eklenmedi.
-Yetkili karar yolu yoksa bekleme açık gösterilir; 13'te ses bağlanacaktır.
+cevabını taşır. 13'ün sesli karar yolunu aşağıdaki 4h ve 7b ile hazırlayın;
+karmaşık/gizli native formlar manuel yüzeyde kalır. Yetkili karar yolu yoksa
+bekleme açık gösterilir; model cevaplamaz.
 
 JARVIS sonucu/diff'i isteklerle karşılaştırıp gerektiğinde aynı işe devam veya
 düzeltme promptu verir. Üç/beş prompt her işe zorunlu değildir. Kodlama
@@ -539,6 +543,37 @@ Talk'ın 25 sabit upstream kaynak dosyası repoda korunur; browser bundle'ı 7. 
 yerel kaynaklardan üretilir. Normal kurulumda kaynakları GitHub'dan tekrar çekmek
 veya `vendor-talk.mjs --fetch` çalıştırmak gerekmez. 03 reader, 05 Memory Core ve
 06 görev kaydı önceki kurulum adımlarında hazırlanmış olmalıdır.
+
+### 4h) Sesli onay ve dar gönderim yolunu hazırlayın (13)
+
+Önce 4–4g'yi, özellikle 4f'deki ayrı OpenCode profilini hazırlayın. Yeni paket,
+karar modeli, onay veritabanı veya ikinci Gateway kurmayın. Mevcut kurulumu
+güncelliyorsanız açık işin sonucunu kontrol edin; kendi Gateway ve OpenCode
+server terminallerini normal `Ctrl+C` ile durdurun. Depo kökünde:
+
+```powershell
+node scripts/jarvis-stage13-config.mjs
+```
+
+Komut mevcut `%USERPROFILE%\.openclaw-jarvis\openclaw.json` profiline
+`jarvis_send` kataloğunu ve 4f'deki özel OpenCode config'ine dar `jarvis-manager`
+agent'ını ekler. Eksik ilk profilin yerine geçmez. Önceki Gateway ayarları aynı
+profilde `openclaw.before-stage13.json` olarak bir kez korunur; mevcut yedek
+ezilmez. Anahtar, hesap veya cihaz kimliği oluşturmaz/değiştirmez. Başka
+bilgisayarın profilini, yedeğini veya `server.json` dosyasını kopyalamayın.
+
+4f'deki `jarvis-opencode-server.ps1 -Action Start` ile OpenCode'u yeniden açın,
+ardından 5'te Gateway'i başlatın. Çalışan süreç yeni dosyayı yükledi varsayılmaz.
+Normal Space Bunny yöneticisi yalnız görev kapsamındaki OpenClaw MCP araçlarını
+kullanır; native agent/session izinleri okunup doğrulanamazsa model turu başlamaz.
+Bu ayrım, açıkça seçtiğiniz Codex/OpenCode **kodlama** oturumlarının Full access
+terminal/dosya davranışını kaldırmaz. Gerçek mesaj gönderimi veya ödeme görevini
+kodlama işçisine vermeyin; Full access işletim sistemi izolasyonu değildir.
+
+Güncellemeden sonra 7'de masaüstünü yeniden derleyin ve cihaz pairing/scope
+kontrolünü tamamlayın. `npm ci` veya 4'teki genel profil politikasını yeniden
+uyguladıysanız sırasıyla 4f–4h'yi de yeniden uygulayın; 4g'deki Talk uzatmasını
+atlamayın. Hesap/kanal bağlantısı ve sesli kullanım aşağıdaki 7b'dedir.
 
 ### 5) Gateway'i başlatın
 
@@ -706,7 +741,9 @@ profil başvurusunu kontrol edin; yeni sır tanımladıysanız masaüstünden ta
 çıkıp yeniden açın. Cihaz private key ve scoped token'ı Windows kullanıcıya
 bağlı DPAPI ile `%APPDATA%\jarvis-desktop\device.dpapi` içinde korunur;
 bu dosyayı başka bilgisayara/kullanıcıya taşımayın. Dev ve paket aynı kaydı kullanır.
-11–12 görüşmesi için cihazın `operator.talk` yetkisi de gerekir. Eski eşleşmenin
+11–13 görüşmesi için cihazın `operator.talk`, onay/soru yolu için
+`operator.approvals` ve `operator.questions` yetkileri gerekir; istemci ayrıca
+mevcut `operator.read` / `operator.write` kapsamlarını kullanır. Eski eşleşmenin
 grant'ı kendiliğinden genişletilmez. Eksik scope/pairing hatasında `devices list`
 ile gerçek yeni isteği inceleyip yukarıdaki aynı `devices approve <requestId>`
 yolunu kullanın; genel admin yetkisi açmayın, token'ı rastgele değiştirmeyin.
@@ -725,7 +762,8 @@ Klasör seçilmezse yalnız dar hafıza araçları için memory kapsamı bağlan
 genel dosya/web/exec yetkisi verilmez. Klasör seçimi
 uygulama ömründe tutulur; yeniden açılışta gerektiğinde tekrar seçin.
 Görev ve bekleyen onaylar sağ panelde native OpenClaw kayıtlarından okunur.
-04'te onay **görüntülenir**; karar mevcut yetkili OpenClaw onay istemcisindedir.
+Aktif görüşmede 13'ün sesli karar yolu kullanılır; manuel kararlar mevcut yetkili
+OpenClaw onay istemcisindedir. Kullanım ve sınırlar 7b'dedir.
 
 06 çalışma görünümü aynı sağ paneldedir. İstek normal gönderildiğinde native
 run ve kalıcı görev kaydı birlikte ilişkilendirilir. Devam eden işe yön vermek
@@ -750,8 +788,9 @@ ile güncel hedefleri alın, birden fazla pencere varsa doğru pencereyi seçin.
 Host hedefi PID + başlangıç zamanı + exe + HWND ile yeniden doğrular; eski
 hedef token'ı 60 saniye sonra yenilenmelidir. Kapatma normal `WM_CLOSE` ister;
 "kapatma istendi" ile "kapandı" ayrıdır. Kaydetme penceresi çıkarsa karar sizindir.
-Kapatma onayı mevcut yetkili OpenClaw istemcisinde elle allow-once/deny ile
-verilir; bu Electron menüsüne 13'ün onay çözümleyicisi henüz eklenmedi.
+Kapatma için host'un sunduğu tek işlem sorusu aktif görüşmede sesle
+yanıtlanabilir; görüşme kapalıysa mevcut yetkili OpenClaw kontrolünde manuel
+allow-once/deny kullanın. Ayrı bir model erişimli onay düğmesi eklenmedi.
 
 `jarvis_document`, `jarvis_draft` ve `jarvis_recycle` exact görev/klasör kapsamıyla
 mevcut Gateway araçlarıdır; bu aşamada masaüstünde ayrı belge/silme düğmesi
@@ -812,6 +851,67 @@ Bu adımlar canlı kabulün yerine geçmez. Gateway health/RPC yanıt vermiyorsa
 olduğunda gerçek görüşme, tek kare ve notification kabulünü ayrıca yapın.
 Son düzeltmeler ve sınırlar: [11–12 uygulama notları](docs/11_12_UYGULAMA_NOTLARI.md).
 
+### 7b) Sesli onay, işçi soruları ve gerçek kanal hesabı (13)
+
+4h hazırlığı, 5'in çalışan Gateway'i ve 7'nin yetkili masaüstü cihazı gerekir.
+7a'dan görüşmeyi açın. JARVIS gerçek son hedefi, hesabı/alıcıyı, içerik/eki veya
+komut/yolu ve görev/revizyon/istek/süre bilgisini sunar. Sorunun seslendirilmesi
+bittikten sonra yeni bir mikrofon sözüyle açıkça **evet/onaylıyorum**, **hayır**
+veya **iptal** deyin. Önceki turun eveti, sessizlik ve modelin “onaylandı” demesi
+işlem açmaz. Birden fazla istek sırayla sunulur; belirsiz/koşullu cevap yeniden
+sorulur. Hedef, içerik veya görev revizyonu değişirse yeni onay gerekir.
+
+Codex/OpenCode kodlama sırasında native soru/izin istediğinde aynı yoldan size
+sunulur; olağan terminal ve geliştirme işlemleri tekrar soru gerektirmez.
+Seçenek sorusunda seçeneğin tam adını, serbest alanda **yanıt ...** diyerek
+cevabınızı söyleyin. Çoklu seçimde seçenekleri tek tek söyleyip **bitti** deyin.
+Gizli, harici kaynaklı veya koşullu/dinamik alanlar native manuel forma bırakılır;
+model sizin yerinize seçenek/default işaretlemez. OpenCode'da bir native izin
+isteğini reddetmek aynı oturumdaki diğer bekleyen izinleri de reddedebilir.
+Süre dolumu, iptal veya native isteğin çözülmesi sonrası eski cevap gönderilmez.
+
+“Bu görevde hangi izinlerin var?” ile mevcut grant'ları sorabilirsiniz.
+“Dosya iznini kaldır” yalnız tek uygun grant varsa uygulanır; çoklu görevde
+önce listelenen görevi netleştirin. İzin kaldırmak yapılmış gönderimi geri almaz
+ve çalışan alt süreçlerin tamamının durduğunu kanıtlamaz; görev iptali ayrıdır.
+
+**Kanal/hesap kurulumu otomatik değildir.** Bu repo sizin WhatsApp/e-posta
+hesabınızı veya oturumunuzu içermez. Kullanacağınız kanalın mevcut OpenClaw
+tarafında desteklenen eklentisini ve kendi hesabınızı onun native kurulum/giriş
+yoluyla bağlayın; genel browser/terminal ile gönderim kısayolu oluşturmayın.
+Desteklenmeyen sağlayıcı için bu adımda hazır bağlantı sözü verilmez.
+Gateway hazır olduktan sonra salt okunur kanal durumunu inceleyebilirsiniz:
+
+```powershell
+.\node_modules\.bin\openclaw.cmd --profile jarvis gateway call channels.status --json
+```
+
+Çıktıda gerçek gönderen hesap yapılandırılmış/bağlı görünmeli ve alıcı native
+konuşma/dizin yolunda çözülebilmelidir. Kendi hesap bilgisini başkasıyla veya
+repoyla paylaşmayın. Aynı adlı kişi ya da birden fazla hesap eşleşiyorsa tam
+alıcı/hesabı sesle netleştirin. “Ali'ye gönder” görev isteğidir; son hesap,
+alıcı, metin ve ek hazırlandıktan sonra ayrıca **tek gönderim onayı** istenir.
+Ek gönderecekseniz önce 7'de görev klasörünü seçin; yalnız bu izin altındaki
+tek normal dosya, en çok **8 MiB**, sabit byte kopyası/SHA256 ile desteklenir.
+Ek değişirse yeniden onay gerekir. Hesap yoksa araç bağlantıyı eksik bildirir.
+Native kabul/queued cevabı teslim edildi anlamına gelmez; belirsiz sonucu
+aynı gönderimi tekrarlayarak çözmeye çalışmayın. Gelen mesaja otomatik cevap
+yetkisi açılmaz.
+
+Satın alma/bağlı ödeme için olumlu karar **manuel** kontrolden gelmelidir;
+sesle reddetme/iptal mümkündür. Hazır bir ödeme entegrasyonu açılmadı.
+Somut finansal etkiyi donduramayan genel browser click/type kapalıdır;
+bekleyen native onay/soru varken model GUI girdisi de durur. JARVIS kendi
+onay kontrolünü model aracılığıyla kullanmaz. Sesle sunulamayan uzun önizleme
+ve manuel kararlar için mevcut OpenClaw kontrol panelindeki native onayı
+inceleyin; güvenlik sınırını kapatmayın.
+
+13'ün çevrimdışı sınır testleri geçti; gerçek Gateway/Talk/mikrofon, native
+işçi sorusu ve sizin kanal hesabınızın gönderimi henüz canlı kabul edilmiş
+değildir. Bilinen Gateway health/RPC sorunu sürerken bu yolları hazır
+varsaymayın veya aynı dış işlemi yeniden denemeyin. Güncel kanıt ve eksikler:
+[13 uygulama kaydı](docs/GELISTIRME_DURUMU.md#13--uygulama-ve-dar-doğrulama-15-ekim-2026).
+
 ### 8) Windows çalıştırılabilir klasörünü oluşturun ve kontrolleri çalıştırın
 
 Depo kökünde:
@@ -835,6 +935,7 @@ npm run check
 npm test
 npm run test:desktop
 npm run test:live
+npm run test:decisions
 ```
 
 Belge fixture'larını çalıştıracak geliştirici, 4c'de oluşturduğu ortam için
@@ -844,7 +945,10 @@ yeniden kurmayın. Masaüstü testi 18 IPC/session/stream/pairing/reconnect/gör
 sınır kontrolüdür; gerçek modele çağrı yapmaz. 57 host testiyle birlikte 75
 test vardır. `test:live` ayrıca 12'nin 8 host ve 3 Talk sınır testini, ilgili 10 Codex
 işçi testiyle birlikte çalıştırır; Talk uzatmasını ve browser bundle'ını yerel olarak
-hazırlar. Gerçek Gateway/Google/Tavily/worker görevi başlatmaz. Fiziksel cihaz ve
+hazırlar. `test:decisions`, 13'ün sesli karar/kimlik/izin/gönderim ve ilgili native
+işçi/manager sınırlarını kapsayan **35 çevrimdışı test** çalıştırır; bazı Codex
+testleri `test:live` ile ortaktır, sayılar birbirine eklenmez. Hesap veya canlı
+modele çağrı yapmaz. Gerçek Gateway/Google/Tavily/worker görevi başlatmaz. Fiziksel cihaz ve
 Windows bildirimi bu sentetik kontrollerle doğrulanmış sayılmaz. Çalışan JARVIS Gateway'ine karşı Electron
 kontrolleri için masaüstünden **Uygulamadan çık** seçin, sonra:
 
@@ -940,7 +1044,7 @@ sessiz geçiş olmaz):
 - Çalışma kaydı (06): Electron sağ paneli mevcut native run/session ile retained proje/görev kaydını gösterir. **Bağımsız iş başlat**, fresh native subagent session açar; **Bu göreve ilet**, **Bu planı kabul et**, **Güncel çıktı** ve exact iptal seçili göreve gider. Normal sohbet veya başka sohbet seçimi mevcut işi iptal etmez. Ayrıntılar: [06 çalışma kaydı](docs/06_CALISMA_KAYDI.md). Mevcut profile yalnız 06 ayarlarını eklemek için `node scripts/jarvis-work-config.mjs`; native entegrasyon testi `npm run test:work:gateway`. Pause bu native yolda desteklenmez.
 - Dar işlemler (07): sağ panelde **Hızlı Windows işlemi**; belge/OCR, kontrollü not ve recycle için [07 sözleşmesi](docs/07_DAR_ISLEMLER.md). Browser'ın alan adı/login engeli kullanıcı kararıyla ileride çözülecek; hazır kabul etmeyin.
 - GUI (08): Gateway'e ek olarak etkileşimli Windows node penceresi açık olmalıdır; `.\scripts\jarvis-desktop-node.ps1` komutunu 5. adımda anlatıldığı gibi çalıştırın. Tarayıcı sayfa işlemlerinde managed Playwright, genel Windows arayüzünde CUA varsayılandır. CUA görev ve taze hedef gözlemiyle sınırlıdır; Windows-MCP yalnız gözlem/bekleme sağlar. SDK teslimi `unknown` raporlayabildiğinden başka uygulamalarda background yazma garantisi yoktur.
-- Codex (09): `.\scripts\jarvis-codex-profile.ps1 -Action Check`; ayrı hesap/native işçi bağlantısı. Canlı Codex/OpenCode kabulü 10 sonrasındadır. Model/işçi sessiz değiştirilmez; native kullanıcı sorusu bekler, sesli çözüm 13'tedir.
+- Codex (09): `.\scripts\jarvis-codex-profile.ps1 -Action Check`; ayrı hesap/native işçi bağlantısı. Canlı Codex/OpenCode kabulü 10 sonrasındadır. Model/işçi sessiz değiştirilmez; native sorunun sesli kullanıcı yolu 4h/7b'de hazırlanır, canlı kabulü bekler.
 - İşçiler (10): önce `.\scripts\jarvis-opencode-server.ps1 -Action Start`; Gateway açıkken `gateway call jarvis.worker.setup --json`. Kullanıcının Codex/OpenCode seçimi korunur; gerçek sonuç incelemesi ve native devam/iptal aynı görevde yapılır.
 - Başlat: `.\scripts\jarvis-gateway.ps1` · Durdur: `Ctrl+C`
 - Masaüstü geliştirme: `npm run desktop:dev`
@@ -974,7 +1078,7 @@ gösterilir; belirsiz yazma reconnect'te tekrar edilmez. Ayrıntılar ve test s�
 
 ## Proje yapısı
 
-03 izin eklentisi, 05 yerel hafıza, 06 retained çalışma kaydı ve 08 sınırlı Windows GUI yolu uygulanmıştır. Sınırlar ve gerçek test kanıtı: [03 yetki sınırları](docs/03_YETKI_SINIRLARI.md), [06 çalışma kaydı](docs/06_CALISMA_KAYDI.md), [geliştirme durumu](docs/GELISTIRME_DURUMU.md). Kontroller: `npm run check`, `npm test`, `npm run test:gateway`, `npm run test:work:gateway`. Resmî Tavily Advanced + web_fetch yapılandırıldı; gerçek Advanced API erişimi doğrulandı ([güvenli kurulum](docs/TAVILY_KURULUM.md)). Genel web_search kapalıdır; sesli onay 13'e aittir.
+03 izin eklentisi, 05 yerel hafıza, 06 retained çalışma kaydı ve 08 sınırlı Windows GUI yolu uygulanmıştır. Sınırlar ve gerçek test kanıtı: [03 yetki sınırları](docs/03_YETKI_SINIRLARI.md), [06 çalışma kaydı](docs/06_CALISMA_KAYDI.md), [geliştirme durumu](docs/GELISTIRME_DURUMU.md). Kontroller: `npm run check`, `npm test`, `npm run test:gateway`, `npm run test:work:gateway`. Resmî Tavily Advanced + web_fetch yapılandırıldı; gerçek Advanced API erişimi doğrulandı ([güvenli kurulum](docs/TAVILY_KURULUM.md)). Genel web_search kapalıdır. 13'ün sesli onay/native işçi sorusu ve dar gönderim bağlantısı uygulanmıştır; `npm run test:decisions` çevrimdışı kontrolüdür, gerçek ses/hesap/gönderim kabulü bekler.
 
 ```
 apps/desktop/ Electron main/preload, Vite + Lit renderer, seçili lisanslı upstream dosyaları
