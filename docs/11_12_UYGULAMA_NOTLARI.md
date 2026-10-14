@@ -37,7 +37,7 @@ kopyası kaldırıldı; gerekli upstream kaynaklar `vendor/talk/sources` altınd
 provenance ile zaten korunur. Üretilen `vendor/talk/runtime.js` Git dışında tutulur;
 masaüstü build/dev veya `npm run test:live` yeniden üretir. Regresyon testleri,
 kullanılan yardımcılar ve kaynak karar tarihçesi kalıntı olarak silinmedi.
-`.gitattributes` sabit vendor kaynaklarını Windows checkout'unda da LF tutar;
+`.gitattributes` sabit vendor kaynaklarının özgün baytlarını Windows checkout'unda da korur;
 Git'in CRLF dönüşümü SHA256/provenance kontrolünü veya Talk uzatma eşleşmesini bozmaz.
 Başka eski geçici Gateway/node profilleri bu hızlı kontrolde aktif/pasif oldukları
 kesinleştirilmediği için topluca silinmedi; proje dışındaki kurulumlara dokunulmadı.
