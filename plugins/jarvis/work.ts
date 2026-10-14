@@ -9,8 +9,8 @@ import {isGuiTool} from './gui-policy.ts';
 export type WorkRecord = {
   taskId: string; projectId: string; projectRevision: number; revision: number; recordVersion: number;
   userId: string; deviceId: string; agentId: string; sessionKey: string; sessionId: string;
-  runId: string; worker?: { threadId?: string; turnId?: string; sessionId?: string };
-  execution?: 'local';
+  runId: string; worker?: { threadId?: string; turnId?: string; sessionId?: string; agentId?: string; sessionKey?: string; runId?: string; itemId?: string; requestId?: string | number };
+  execution?: 'local' | 'codex';
   request: string; acceptedPlan?: string; model?: { plan?: string; finding?: string; sources?: string[]; rationale?: string; nextStep?: string; pendingDecision?: string };
   state: 'prepared' | 'delivered' | 'running' | 'ended' | 'failed' | 'cancel-requested' | 'cancelled' | 'unknown';
   operation?: { callId: string; tool: string; revision?: number; phase: 'observed' | 'started' | 'result' | 'error' | 'missing'; resultHash?: string; effect: 'unverified' | 'verified'; sources?: string[] };
@@ -102,10 +102,10 @@ export class WorkLedger {
   async reconcile(r: WorkRecord, native: { sessionId?: unknown; hasActiveRun?: unknown; activeRunIds?: unknown; run?: Record<string, unknown> }) {
     if (terminal(r)) return r;
     const different = r.generation !== this.generation;
-    const sameSession = native.sessionId === r.sessionId;
+    const sameSession = native.sessionId === (r.execution === 'codex' ? r.worker?.sessionId : r.sessionId);
     const run = native.run;
     const finished = sameSession && run && ['ok', 'error'].includes(String(run.status)) && typeof run.endedAt === 'number';
-    const active = sameSession && Array.isArray(native.activeRunIds) && native.activeRunIds.includes(r.runId);
+    const active = sameSession && Array.isArray(native.activeRunIds) && native.activeRunIds.includes(r.execution === 'codex' ? r.worker?.runId : r.runId);
     if (!different && (active || run?.status === 'pending')) return r;
     const data = { different, sameSession, active, status: run?.status, endedAt: run?.endedAt, stopReason: run?.stopReason };
     return (await this.change(r.userId, r.taskId, `reconcile:${this.generation}:${fingerprint(data)}`, 'native-reconciliation', data, current => {
@@ -153,6 +153,7 @@ export function installWork(api: OpenClawPluginApi, live: (runId?: string) => { 
   const owners = new ResourceOwners();
   const expected = new Map<string, { target: string; digest: string }>();
   let observationError = false;
+  let workerInterrupt: ((runId: string) => Promise<unknown>) | undefined;
   const fail = (e: unknown) => { observationError = true; api.logger.error(`JARVIS work observation unavailable: ${e instanceof Error ? e.message : 'native state failed'}`); };
   const mutate = async (runId: string, id: string, kind: string, data: Record<string, unknown>, update: (r: WorkRecord) => void) => {
     const binding = live(runId); if (!binding) return;
@@ -163,11 +164,11 @@ export function installWork(api: OpenClawPluginApi, live: (runId?: string) => { 
   };
   const nativeObservation = async (r: WorkRecord) => {
     let native: Record<string, unknown>;
-    try { native = await request<Record<string, unknown>>('sessions.describe', { key: r.sessionKey, agentId: r.agentId }); }
+    try { native = await request<Record<string, unknown>>('sessions.describe', { key: r.execution === 'codex' ? r.worker?.sessionKey : r.sessionKey, agentId: r.execution === 'codex' ? r.worker?.agentId : r.agentId }); }
     catch { return { nativeUnavailable: true }; } // Original principal's retained metadata survives deleted/unreadable native rows.
     const row = (native.session ?? native) as Record<string, unknown>;
     if (!terminal(r) && r.execution !== 'local') {
-      try { row.run = await request<Record<string, unknown>>('agent.wait', { runId: r.runId, timeoutMs: 0 }); }
+      try { row.run = await request<Record<string, unknown>>('agent.wait', { runId: r.execution === 'codex' ? r.worker?.runId : r.runId, timeoutMs: 0 }); }
       catch { row.run = { status: 'unavailable' }; }
     }
     return row;
@@ -248,8 +249,8 @@ export function installWork(api: OpenClawPluginApi, live: (runId?: string) => { 
           const content = parts.map(p => p.text).join('\n');
           output = { role: 'toolResult', toolCallId: call, content: [{ type: 'text', text: content.slice(0, 12000) }], truncated: content.length > 12000 };
         }
-        else if (name === 'jarvis.work.read' && row.sessionId === r.sessionId) {
-          const native = await request<Record<string, unknown>>('agent.wait', { runId: r.runId, timeoutMs: 0 });
+        else if (name === 'jarvis.work.read' && row.sessionId === (r.execution === 'codex' ? r.worker?.sessionId : r.sessionId)) {
+          const native = await request<Record<string, unknown>>('agent.wait', { runId: r.execution === 'codex' ? r.worker?.runId : r.runId, timeoutMs: 0 });
           const reply = native.terminalReply as { disposition?: unknown; text?: unknown } | undefined;
           const visible = reply?.disposition === 'visible' && typeof reply.text === 'string' ? reply.text : typeof native.error === 'string' ? native.error : undefined;
           if (visible) output = { role: reply?.disposition === 'visible' ? 'assistant' : 'native-error', content: [{ type: 'text', text: visible.slice(0, 12000) }], truncated: visible.length > 12000, runId: r.runId };
@@ -261,6 +262,11 @@ export function installWork(api: OpenClawPluginApi, live: (runId?: string) => { 
       if (binding && (binding.scope.userId !== user || binding.scope.deviceId !== client.connect.device.id || binding.scope.taskId !== r.taskId)) throw new Error('Cannot borrow a different task grant');
       current(); binding?.assertCurrent();
       if (name === 'jarvis.work.cancel') {
+        if (r.execution === 'codex') {
+          if (!workerInterrupt) throw new Error('Native Codex interrupt path unavailable');
+          const receipt = await workerInterrupt(r.runId);
+          current(); respond(true, { record: publicRecord(await ledger.get(user, r.taskId)), native: receipt }); return;
+        }
         await ledger.change(user, r.taskId, `cancel:${r.revision}`, 'cancel-request', {}, v => { v.state = 'cancel-requested'; }, current);
         const receipt = await request<Record<string, unknown>>('chat.abort', { sessionKey: r.sessionKey, agentId: r.agentId, runId: r.runId });
         if (receipt.aborted === true && Array.isArray(receipt.runIds) && receipt.runIds.includes(r.runId)) {
@@ -357,6 +363,7 @@ export function installWork(api: OpenClawPluginApi, live: (runId?: string) => { 
   api.on('gateway_stop', () => { for (const v of owners.snapshot()) owners.releaseRun(v.runId); expected.clear(); });
   return {
     ledger, owners,
+    setWorkerInterrupt: (handler: (runId: string) => Promise<unknown>) => { workerInterrupt = handler; },
     async confirmSteer(runId: string, inputId: string, callId: string, stage: 'applying' | 'applied', assertNativeEvidence: () => void) {
       const binding = live(runId); if (!binding) throw new Error('Current steering owner required');
       const current = () => { binding.assertCurrent(); if (!live(runId)) throw new Error('Task authority expired'); assertNativeEvidence(); };

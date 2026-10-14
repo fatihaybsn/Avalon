@@ -59,6 +59,16 @@ test('retained metadata is stable, CAS revisions reject stale updates, duplicate
   assert.equal(reconciled.state, 'unknown'); assert.match(reconciled.blocker, /not proven/);
 });
 
+test('Codex work cancellation uses its native worker interrupt and does not abort the parent run',async()=>{
+  const x=setup(async(name)=>{if(name==='sessions.describe')return {sessionId:'codex-sid',activeRunIds:['codex-run']};if(name==='agent.wait')return {status:'pending'};throw new Error('Unexpected parent control '+name);});
+  await x.work.ledger.create(scope,'Codex task');
+  await x.work.ledger.change(scope.userId,scope.taskId,'worker','worker',{},r=>{r.execution='codex';r.state='running';r.worker={agentId:'jarvis-codex',sessionId:'codex-sid',sessionKey:'agent:jarvis-codex:task',runId:'codex-run'};});
+  let target;
+  x.work.setWorkerInterrupt(async run=>{target=run;await x.work.ledger.change(scope.userId,scope.taskId,'interrupt','interrupt',{},r=>{r.state='cancel-requested';});return {cancellationConfirmed:false};});
+  const result=await x.invoke('cancel',{taskId:scope.taskId,expectedRevision:1});
+  assert.equal(result[0],true,result[2]?.message);assert.equal(target,scope.runId);assert.equal(result[1].record.state,'cancel-requested');assert.equal(result[1].native.cancellationConfirmed,false);
+});
+
 test('start uses documented native dispatch once and never replays an ambiguous write', async () => {
   const x = setup(); const a = await x.invoke('start', { runId: scope.runId, message: 'source request' });
   assert.equal(a[0], true); assert.equal(a[1].record.state, 'delivered');

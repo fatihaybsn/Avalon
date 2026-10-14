@@ -7,13 +7,13 @@ import assert from 'node:assert/strict';
 export function applyWork(config) {
   config.agents.defaults.maxConcurrent = 3;
   config.agents.defaults.subagents = { ...config.agents.defaults.subagents, maxConcurrent: 3 };
-  for (const tools of [config.agents.entries.main.tools, config.tools]) tools.allow = [...new Set([...tools.allow, 'jarvis_work_note', 'jarvis_work_read'])];
+  for (const tools of [config.agents.entries.main.tools, ...(config.tools.allow ? [config.tools] : [])]) tools.allow = [...new Set([...tools.allow, 'jarvis_work_note', 'jarvis_work_read'])];
   return config;
 }
 export function assertWork(config) {
   assert.equal(config.agents.defaults.maxConcurrent, 3);
   assert.equal(config.agents.defaults.subagents.maxConcurrent, 3);
-  for (const tools of [config.agents.entries.main.tools, config.tools]) for (const name of ['jarvis_work_note', 'jarvis_work_read']) assert.ok(tools.allow.includes(name), `Missing ${name}`);
+  for (const tools of [config.agents.entries.main.tools, ...(config.plugins?.entries?.codex?.enabled === true ? [] : [config.tools])]) for (const name of ['jarvis_work_note', 'jarvis_work_read']) assert.ok(tools.allow.includes(name), `Missing ${name}`);
 }
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const checking = process.argv[2] === '--check';

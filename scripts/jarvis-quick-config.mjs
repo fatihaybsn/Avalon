@@ -5,8 +5,8 @@ import {fileURLToPath} from 'node:url';
 const repo=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 export function applyQuick(config) {
   config.plugins.entries.jarvis.config={...config.plugins.entries.jarvis.config,nativeRoot:path.join(repo,'native','windows')};
-  for(const tools of [config.tools,config.agents.entries.main.tools]) tools.allow=[...new Set([...tools.allow,'jarvis_windows','jarvis_recycle','jarvis_document','jarvis_draft','browser'])];
-  config.tools.deny=config.tools.deny.filter(t=>t!=='browser');
+  for(const tools of [...(config.tools.allow ? [config.tools] : []),config.agents.entries.main.tools]) tools.allow=[...new Set([...tools.allow,'jarvis_windows','jarvis_recycle','jarvis_document','jarvis_draft','browser'])];
+  if(config.tools.deny)config.tools.deny=config.tools.deny.filter(t=>t!=='browser');
   config.plugins.allow=[...new Set([...config.plugins.allow,'browser'])];
   config.plugins.entries.browser={enabled:true};
   config.browser={enabled:true,evaluateEnabled:false,allowSystemProfileImport:false,defaultProfile:'jarvis-visible',headless:false,noSandbox:false,attachOnly:false,ssrfPolicy:{dangerouslyAllowPrivateNetwork:false,allowRfc2544BenchmarkRange:false,allowIpv6UniqueLocalRange:false},profiles:{'jarvis-visible':{cdpPort:18810,headless:false},'jarvis-background':{cdpPort:18811,headless:true}}};

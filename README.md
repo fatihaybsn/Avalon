@@ -2,7 +2,7 @@
 
 Windows 11'de doğrudan çalışan, OpenClaw merkezli kişisel asistan projesi.
 Tek merkez **OpenClaw Gateway**, konuşma tarafı **Gemini Live**, ağır görev
-modeli **Space Bunny Free**'dir. Mevcut durum: **08 Windows GUI yolu uygulandı; browser düzeltmesi kullanıcı kararıyla sonraya bırakıldı**
+modeli **Space Bunny Free**'dir. Mevcut durum: **09 native Codex işçisi uygulandı; canlı kabul 10 sonrasına ertelendi**
 (Gateway, görev izinleri, salt okunur araştırma, yerel GUI node'u ve sade Electron/Vite/Lit arayüzü).
 05 ile tek yerel hafıza, kontrollü kısa not araçları, yetkili ortak erişim ve
 Gemini ile altı saatlik native Dreaming düzenlemesi eklendi.
@@ -15,6 +15,11 @@ profili eklendi. Genel web/login, strict native DNS sınırı nedeniyle hazır d
 Windows-MCP okuma/bekleme araçları eklendi. CUA yazması yalnız taze gözlenen
 hedefe ve açık background isteğine bağlıdır; SDK teslimi `unknown` raporlayabildiği
 için test fixture'ı dışındaki uygulamalarda arka plan garantisi verilmez.
+09 ile ayrı kullanıcı hesabına bağlı resmi native Codex işçisi, görev devir
+sözleşmesi, olay/diff kaydı, devam/yönlendirme ve native iptal bağlantısı eklendi.
+Codex için kullanıcı seçimiyle Full access etkin; bu dosya izolasyonu değildir.
+Canlı kabul, 10 sonrasında Codex ve OpenCode ile aynı üç aşamalı not uygulaması
+senaryosunda birlikte yapılacaktır; henüz geçtiği iddia edilmez.
 Başarılı ağır görev/yanıt entegrasyonu OpenCode işçisiyle 10'da, canlı ses 11'de,
 sesli onay 13'te; tam kurulabilir dağıtım 16'dadır.
 
@@ -26,7 +31,7 @@ Ayrıntılı mimari: `docs/KESIN_MIMARI.md` · Aşama durumu: `docs/GELISTIRME_D
 - Node.js `>=24.16.0 <25 || >=26.1.0` (doğrulanan: `v24.20.0`; 22/23/25 ve 26.0 desteklenmez)
 - npm `11.19.0`, Git
 - 08 Windows-MCP yolu için Astral `uv`/`uvx`; kurulum ve paket önbelleği 4d'de.
-- Hesaplar: OpenCode (görev modeli), Tavily ücretsiz hesap (araştırma), Google AI Studio (05 Dreaming için gerekli; canlı konuşma 11'de)
+- Hesaplar: Codex işçisi için uygun ChatGPT/Codex hesabı (girişi kullanıcı yapar), OpenCode (görev modeli), Tavily ücretsiz hesap (araştırma), Google AI Studio (05 Dreaming için gerekli; canlı konuşma 11'de)
 - Yerel belge okuma için Python 3.12 ve 4c'deki kütüphaneler; Windows işlemleri ve görsel OCR Python gerektirmez.
 - Browser için kurulu Chromium tabanlı Edge/Chrome; Playwright Core mevcut OpenClaw paketinden kullanılır.
 
@@ -343,6 +348,77 @@ Bu `%USERPROFILE%\.openclaw-jarvis-desktop\openclaw.json` oluşturur; tokenı
 dosyaya kopyalamaz ve Windows servisi kurmaz. Dosya zaten varsa betik üzerine
 yazmayı reddeder; mevcut node ayarını incelemeden silmeyin veya ezmeyin.
 
+### 4e) Native Codex işçisini kurun ve hesabınızı bağlayın
+
+Bu adım 4'teki profil/politika hazırlığından sonra, Gateway başlamadan yapılır.
+Çalışan Gateway varsa kendi terminalinde `Ctrl+C` ile normal durdurun; Codex
+masaüstü uygulamasını kapatmayın. Resmi eklentiyi seçili OpenClaw sürümüyle
+aynı sürüme sabitleyin; `npm ci` profil eklentisini ayrıca kurmaz:
+
+```powershell
+.\node_modules\.bin\openclaw.cmd --profile jarvis plugins install @openclaw/codex@2026.10.2 --pin
+```
+
+Bu eklentinin managed Codex bağımlılığı stable `0.160.0`'dır. PATH'teki Codex,
+masaüstü alpha veya FURY binary'si seçilmez. Aşağıdaki blok yalnız bu profilin
+resmi eklenti kurulumundaki Windows binary'sini bulur; belirsizlikte durur:
+
+```powershell
+$codexCandidates = @(Get-ChildItem -Path "$env:USERPROFILE\.openclaw-jarvis\npm\projects\openclaw-codex-*\node_modules\@openai\codex-win32-x64\vendor\x86_64-pc-windows-msvc\bin\codex.exe" -File -ErrorAction SilentlyContinue)
+if ($codexCandidates.Count -ne 1) { throw 'Tek managed stable Codex binary bulunamadı; PATH alternatifi kullanmayın.' }
+$codexBinary = $codexCandidates[0].FullName
+& $codexBinary --version
+```
+
+Beklenen çıktı `codex-cli 0.160.0`'dır. Başka sürüm görünürse devam etmeyin;
+ana OpenClaw'ı veya worker modelini kendiliğinden yükseltmeyin. Codex yalnız
+seçtiğiniz görevde **Full access** kullanacaktır: terminal/dosya/ağ erişimi
+çalışma klasörünün dışına çıkabilir. Bu erişimi seçiyorsanız açık flag ile
+ayrı işçiyi hazırlayın, ardından kendi hesabınıza etkileşimli giriş yapın:
+
+```powershell
+node scripts/jarvis-codex-config.mjs "$codexBinary" --enable-selected-worker
+node scripts/jarvis-policy-config.mjs --check "$env:USERPROFILE\.openclaw-jarvis\openclaw.json"
+.\scripts\jarvis-codex-profile.ps1 -Action Login
+```
+
+Giriş kodunu/bağlantısını yalnız kendiniz kullanın; credential veya eski state
+kopyalamayın. Hesap `jarvis-codex` agent'ında `openai:jarvis-codex` olarak
+saklanır. Native Codex home agent kapsamında yönetilir; profil ayrılığı aynı
+Windows kullanıcısının bütün dosyalarını izole etmez. Betik binary sürümünü
+kontrol eder, eski config'i repo dışında yedekler, native stdio bağlantısını
+sabitler, JARVIS/model/Gateway sırlarının ortamdan temizlenmesini ayarlar ve
+ana/research araç sınırlarını korur. Flag verilmezse işçi kapalı hazırlanır;
+Full access kendiliğinden açılmaz. Genel host exec politikası açılmaz; yeni
+serbest command runner, ikinci yürütücü veya ana model kurulmaz.
+
+5. adımda Gateway'i başlatıp `ready` kaydını bekledikten sonra:
+
+```powershell
+.\scripts\jarvis-codex-profile.ps1 -Action Check
+```
+
+`enabled`, `fullAccessConfigured` ve `authReady` alanları `true` olmalıdır.
+`liveTurnVerified:false` henüz gerçek model işi sınanmadığını belirtir.
+Model görev devrinde açık seçilir; Luna 6 dahil model adı ve düşünme seviyesi
+hesap/stable protokol desteği görülmeden varsayılmaz. API anahtarıyla ücretli
+veya başka model yedeği yoktur. Codex görev başlatma ayrıca mevcut proje
+grant'ına ve yetkili `operator.admin` kullanıcı/cihaz kimliğine bağlıdır;
+masaüstünün normal dar sohbet yetkisi bunun yerine geçmez.
+
+Kurulum sonrası eski eklenti instance hatası veya başlangıç reddi olursa,
+önce görünen hatayı düzeltin; Gateway'i kendi terminalinde `Ctrl+C` ile
+normal durdurup 5'teki betikle yeniden açın. Başlangıç kurtarma beklerken
+ikinci Gateway başlatmayın. `taskkill`, genel `doctor --fix` veya Codex
+masaüstünü yeniden başlatmak bu kurulumun parçası değildir.
+
+09'un canlı kabulü kullanıcı kararıyla **10 sonrasında** yapılacaktır:
+JARVIS aynı basit not uygulamasını Codex ve OpenCode ile ayrı klasörlerde,
+üç sonuç odaklı promptla yönetecek; soru, devam/yönlendirme ve iptal de
+kontrol edilecektir. [Toplu doğrulama planı](docs/09_10_TOPLU_DOGRULAMA.md)
+ve [09 bağlantı sözleşmesi](docs/09_CODEX_ISCISI.md) gerçek sınırları açıklar.
+Bu kurulum, 10'un yönetim bağlantısının veya 13'ün sesli karar yolunun hazır
+olduğu anlamına gelmez.
 ### 5) Gateway'i başlatın
 
 ```powershell
@@ -669,6 +745,9 @@ bağlanacak; sessizce ücretli modele geçilmez.
 
 ## Başka bir sağlayıcı ekleme (ör. OpenAI)
 
+Aşağıdaki genel ana model değiştirme örneği Codex dış işçisi kurulumu değildir.
+09 için 4e'yi kullanın; Space Bunny ana modelini değiştirmeyin.
+
 Anahtarınızı OpenAI'dan alıp profilde saklayın (etkileşimli yardımcı sorar):
 
 ```powershell
@@ -694,6 +773,7 @@ sessiz geçiş olmaz):
 - Çalışma kaydı (06): Electron sağ paneli mevcut native run/session ile retained proje/görev kaydını gösterir. **Bağımsız iş başlat**, fresh native subagent session açar; **Bu göreve ilet**, **Bu planı kabul et**, **Güncel çıktı** ve exact iptal seçili göreve gider. Normal sohbet veya başka sohbet seçimi mevcut işi iptal etmez. Ayrıntılar: [06 çalışma kaydı](docs/06_CALISMA_KAYDI.md). Mevcut profile yalnız 06 ayarlarını eklemek için `node scripts/jarvis-work-config.mjs`; native entegrasyon testi `npm run test:work:gateway`. Pause bu native yolda desteklenmez.
 - Dar işlemler (07): sağ panelde **Hızlı Windows işlemi**; belge/OCR, kontrollü not ve recycle için [07 sözleşmesi](docs/07_DAR_ISLEMLER.md). Browser'ın alan adı/login engeli kullanıcı kararıyla ileride çözülecek; hazır kabul etmeyin.
 - GUI (08): Gateway'e ek olarak etkileşimli Windows node penceresi açık olmalıdır; `.\scripts\jarvis-desktop-node.ps1` komutunu 5. adımda anlatıldığı gibi çalıştırın. Tarayıcı sayfa işlemlerinde managed Playwright, genel Windows arayüzünde CUA varsayılandır. CUA görev ve taze hedef gözlemiyle sınırlıdır; Windows-MCP yalnız gözlem/bekleme sağlar. SDK teslimi `unknown` raporlayabildiğinden başka uygulamalarda background yazma garantisi yoktur.
+- Codex (09): `.\scripts\jarvis-codex-profile.ps1 -Action Check`; ayrı hesap/native işçi bağlantısı. Canlı Codex/OpenCode kabulü 10 sonrasındadır. Model/işçi sessiz değiştirilmez; native kullanıcı sorusu bekler, sesli çözüm 13'tedir.
 - Başlat: `.\scripts\jarvis-gateway.ps1` · Durdur: `Ctrl+C`
 - Masaüstü geliştirme: `npm run desktop:dev`
 - Derle/çalıştır: `npm run desktop:build`, ardından `npm run desktop:start`
@@ -709,7 +789,10 @@ sessiz geçiş olmaz):
 - Olağan proje yazmaları görev kapsamıyla yürür; başka hedef için ek izin gerekir.
   Kritik onay yalnız allow-once/deny ve sabit parametrelerle mevcut OpenClaw
   kayıtlarından geçer. Modele genel resolver/config aracı verilmez. Shell, UAC,
-  genel kalıcı silme ve force-kill kapalıdır; satın alma/ödeme henüz açılmadı.
+  genel kalıcı silme ve force-kill ana JARVIS yolunda kapalıdır; satın alma/ödeme henüz açılmadı.
+- Kullanıcının seçtiği Codex görevi Full access ile terminal/dosya/ağ kullanabilir;
+  proje klasörü OS izolasyonu değildir. Görev kimliği/grant ve before-tool relay
+  korunur; JARVIS sonucu inceler. Ayrı profil ve ortam temizliği bütün disk sırlarına erişimi engellemez.
 - Araştırmaya USER/MEMORY/sohbet/anahtar/proje içeriği eklenmez. Web içeriği ve
   okuyucu özeti veri olarak etiketlenir; onay veya kullanıcı emri sayılmaz.
 - Eski FURY klasörü proje dışındadır; state/auth Sohbet içe aktarılmaz.

@@ -19,6 +19,7 @@ Salt okunur araştırma için seçilen yol resmî Tavily `tavily_search` (daima 
 
 - Önce uygun doğrudan dosya/API/CLI işlemi; tarayıcı için yönetilen **OpenClaw browser + Playwright**; genel Windows GUI için varsayılan **OpenClaw computer/CUA** kullanılır. **Windows-MCP**, yalnız belirgin GUI/toplu işlem katkısı sağladığında aynı OpenClaw merkezinden sınırlı tamamlayıcıdır. Kurulum/teşhis PowerShell 7'yi mevcut OpenClaw izin yolunda kullanır. WSL/Linux katmanı eklenmez.
 - Kodlama işçileri **Codex** ve ardından **OpenCode**'dur; uzun bağımsız işler OpenClaw'ın yerleşik alt ajanlarıyla yönetilir. Başlangıç sınırı aynı anda en çok üç bağımsız ağır iştir. Ayrı backend, job queue, koordinatör veya ajan framework'ü eklenmez.
+- **14 Ekim 2026 kullanıcı kararı:** Kullanıcı tarafından seçilen Codex görevi native **Full access** ile çalışır. JARVIS somut çalışma klasörü/planı verir ve gerçek sonucu inceler; çalışma klasörü veya ayrı profil işletim sistemi dosya izolasyonu sağlamaz. Bu seçim ana JARVIS/research araç yetkilerini genişletmez. Tek resmi native Codex işçisi, açık stable binary ve ayrı kullanıcı auth profili kullanılır; model/işçi yedeği ve modelin insan kararını çözmesi yoktur.
 
 ## Görev, izin ve kayıt kimlikleri
 

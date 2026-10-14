@@ -25,7 +25,7 @@ export function applyMemory(config) {
   config.agents.entries.main.tools.allow.push(...memoryTools);
   delete config.agents.entries.main.memory; // inherit the single exact local config
   config.agents.entries.research.memory = { search: { enabled: false, rememberAcrossConversations: false, experimental: { sessionMemory: false } } };
-  config.tools.allow.push(...memoryTools);
+  if(config.tools.allow)config.tools.allow.push(...memoryTools);
   config.agents.defaults.compaction = { ...config.agents.defaults.compaction, memoryFlush: { enabled: false } };
   config.agents.defaults.userTimezone = 'Europe/Istanbul';
   config.agents.defaults.contextInjection = 'never';

@@ -11,6 +11,7 @@ import { admitDreamingNotes, admitNativeRecallCall, readNativeDreaming, DREAMING
 import fs from 'node:fs';
 import path from 'node:path';
 import { installWork } from './work.ts';
+import { installCodex } from './codex.ts';
 import { createQuickTools, preserveFile, configureNativeRoot, localCall } from './quick.ts';
 import { QUICK_TOOLS, operationHash } from './quick-policy.ts';
 import { runBeforeToolCallHook, runAgentHarnessAfterToolCallHook } from 'openclaw/plugin-sdk/agent-harness-runtime';
@@ -85,6 +86,8 @@ export default definePluginEntry({
     const workspace = () => api.runtime.agent.resolveAgentWorkspaceDir(api.config, 'main');
     const work = typeof api.runtime?.state?.openKeyedStore === 'function' && typeof api.agent?.events?.registerAgentEventSubscription === 'function' ? installWork(api, live) : undefined;
     if (!work) api.logger?.warn?.('JARVIS stage 06 unavailable: native retained state/events required');
+    const codex = work && api.config.plugins?.entries?.codex?.enabled === true ? installCodex(api, live, work.ledger, undefined, work.owners) : undefined;
+    if (codex) work!.setWorkerInterrupt(codex.interruptParent);
     const indexCommittedNote = async () => {
       try {
         const memory = getMemoryCapabilityRegistration();
@@ -323,6 +326,8 @@ export default definePluginEntry({
       }catch(e){respond(false,undefined,{code:'UNAVAILABLE',message:e instanceof Error?e.message:'GUI status unavailable'});}
     },{scope:'operator.read'});
     api.on('before_tool_call', async (event, ctx) => {
+      const codexDecision = codex?.beforeTool(event, ctx);
+      if (codexDecision) return codexDecision;
       const native = admitNativeRecallCall(event, ctx);
       if (native) return native;
       const binding = live(ctx.runId);
