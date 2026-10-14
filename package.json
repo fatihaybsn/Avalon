@@ -25,6 +25,7 @@
     "test:desktop:electron": "npm --prefix apps/desktop run test:electron"
   },
   "dependencies": {
+    "@opencode/client": "2.0.28",
     "openclaw": "2026.10.2"
   },
   "devDependencies": {

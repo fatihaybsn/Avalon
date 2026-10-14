@@ -1,6 +1,6 @@
 # 09–10 — Birlikte canlı Vibe Coding doğrulaması
 
-14 Ekim 2026 kullanıcı kararı: 09'un canlı görev doğrulaması, 10'daki OpenCode işçisi ve Space Bunny yönetim bağlantısı tamamlandıktan sonra Codex ve OpenCode ile birlikte yapılacak. Bu kayıt testin geçtiği anlamına gelmez. Şimdi uygulama oluşturulmaz, model çağrılmaz ve 10 başlatılmaz.
+14 Ekim 2026 kullanıcı kararı: 09'un canlı görev doğrulaması, 10'daki OpenCode işçisi ve Space Bunny yönetim bağlantısı tamamlandıktan sonra Codex ve OpenCode ile birlikte yapılacak. Bu kayıt testin geçtiği anlamına gelmez. Son kullanıcı yönlendirmesiyle üç promptlu doğrulama daha sonra başlatılacak; bu ayar güncellemesinde uygulama oluşturulmaz veya kodlama görevi gönderilmez. 10 uygulama durumu GELISTIRME_DURUMU.md içindedir.
 
 ## JARVIS'e verilecek görev
 
@@ -18,7 +18,7 @@ Bu aynı görev iki ayrı çalışmada, ayrı yeni klasörlerde yapılır: önce
 
 ## Model ve soru koşulları
 
-Codex için kullanıcının istediği model **Luna 6**, düşünme seviyesi desteklenen en düşük seçenektir. Canlı doğrulama öncesi hesaptaki resmi model kimliği ve kurulu stable protokolün desteklediği düşünme seçenekleri doğrulanır; isim/parametre tahmin edilmez. Desteklenmiyorsa açık engel bildirilir; başka model veya ücretli API sessiz kullanılmaz. OpenCode kodlama işçisinin modeli aynı olduğu varsayılmaz; kullanıcı seçimi ve gerçek hesap desteğiyle belirlenir. Space Bunny ana yönetici olarak normal OpenCode yolunu kullanır; doğrudan provider/HTTP çağrısı yoktur.
+Son kullanıcı kararı: Codex için **Luna 6 (`openai/gpt-6-luna`) / xhigh**, OpenCode için **Space Bunny Free (`opencode/space-bunny-free`) / max** kullanılacak. Model veya düşünme alanı belirtilmezse bu varsayılanlar geçerli; açık kullanıcı seçimi önceliklidir. Canlı doğrulama öncesi hesaptaki resmi model kimliği ve kurulu stable protokolün desteklediği düşünme seçenekleri doğrulanır; isim/parametre tahmin edilmez. Desteklenmiyorsa açık engel bildirilir; başka model veya ücretli API sessiz kullanılmaz. OpenCode kodlama işçisinin modeli aynı olduğu varsayılmaz; kullanıcı seçimi ve gerçek hesap desteğiyle belirlenir. Space Bunny ana yönetici olarak normal OpenCode yolunu kullanır; doğrudan provider/HTTP çağrısı yoktur.
 
 Proje adı gibi gerçek bir tercih sorusu çıkarsa JARVIS bunu mevcut OpenClaw kullanıcı karar yoluna taşımalı, kullanıcı yanıtı aynı bekleyen native request/thread/turn kimliğine bağlanmalıdır. Soru üretmek için sahte olay yazılmaz. 13 öncesinde sesli yanıt beklenmez; mevcut yetkili yazılı karar yolu yoksa gerçek bekliyor/kapalı durumu gösterilir. Model insan kararı vermez. Bu kontrol için ilk talimatta proje adını kesinleştirmemek tercih edilebilir.
 
@@ -29,3 +29,5 @@ Proje adı gibi gerçek bir tercih sorusu çıkarsa JARVIS bunu mevcut OpenClaw 
 - Not ekleme/düzenleme/silme ve yeniden açıldığında saklama gerçek uygulamada çalışır; uygulama çalıştırma açıklaması vardır.
 - Aynı görevde desteklenen yönlendirme/devam yolu ayrıca gözlenir. Üç prompt tek başına interrupt kanıtı değildir: ayrı kısa sahipli işlemde native iptal kontrolü yapılır; durduğu bilinmeyen alt süreç için tam iptal iddiası yoktur.
 - Her işçi için sonuç ayrı kaydedilir. Birinin başarısı diğerinin doğrulaması sayılmaz. 09 ve 10'un canlı kapanışı ancak ilgili gerçek kanıtlar sonrası güncellenir.
+
+Uygulama takibi: 10'un kod/private server/ortak işçi bağlantısı uygulandı; gerçek çok promptlu proje kabulü ayrı bir sonraki kullanıcı doğrulamasıdır. Bağlantı durumu için GELISTIRME_DURUMU.md ve 10_OPENCODE_ISCISI.md okunmalıdır.

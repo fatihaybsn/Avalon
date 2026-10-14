@@ -17,3 +17,5 @@ Doğrulama: 11 dar config/kimlik/izin/soru/iptal testi, kurulu Gateway registry 
 Gerçek Gateway doğrulaması: native Codex ve JARVIS eklentileri yüklü, plugin errors/unavailable boş. Ayrı authReady:true, Full access etkin; canlı model turu henüz doğrulanmadı.
 
 Son kullanıcı kararı: canlı kabul 10 sonrasında Codex ve OpenCode ile birlikte yapılacaktır. Görev, üç prompt akışı, Luna 6/en düşük düşünme tercihi ve soru/iptal kabul koşulları [09–10 toplu doğrulama](09_10_TOPLU_DOGRULAMA.md) içindedir. 09 uygulandı; canlı kapanış ertelendi, test geçmiş sayılmaz.
+
+14 Ekim son kullanıcı kararı: model/düşünme belirtilmezse Codex kodlama işi openai/gpt-6-luna / xhigh kullanır; açık kullanıcı seçimi önceliklidir. Native stable model/list kataloğu bu modeli ve xhigh desteğini doğruladı. Üç promptlu canlı kabul kullanıcı kararıyla henüz başlatılmadı.

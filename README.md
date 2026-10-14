@@ -2,7 +2,7 @@
 
 Windows 11'de doğrudan çalışan, OpenClaw merkezli kişisel asistan projesi.
 Tek merkez **OpenClaw Gateway**, konuşma tarafı **Gemini Live**, ağır görev
-modeli **Space Bunny Free**'dir. Mevcut durum: **09 native Codex işçisi uygulandı; canlı kabul 10 sonrasına ertelendi**
+modeli **Space Bunny Free**'dir. Mevcut durum: **10 OpenCode işçisi entegrasyonu tamamlandı; Codex/OpenCode üç promptlu ortak canlı kabul ayrı ve henüz yapılmadı**
 (Gateway, görev izinleri, salt okunur araştırma, yerel GUI node'u ve sade Electron/Vite/Lit arayüzü).
 05 ile tek yerel hafıza, kontrollü kısa not araçları, yetkili ortak erişim ve
 Gemini ile altı saatlik native Dreaming düzenlemesi eklendi.
@@ -20,7 +20,9 @@ sözleşmesi, olay/diff kaydı, devam/yönlendirme ve native iptal bağlantısı
 Codex için kullanıcı seçimiyle Full access etkin; bu dosya izolasyonu değildir.
 Canlı kabul, 10 sonrasında Codex ve OpenCode ile aynı üç aşamalı not uygulaması
 senaryosunda birlikte yapılacaktır; henüz geçtiği iddia edilmez.
-Başarılı ağır görev/yanıt entegrasyonu OpenCode işçisiyle 10'da, canlı ses 11'de,
+10 ile ayrı authenticated OpenCode server'ı, ortak işçi aracı ve Space Bunny'nin
+normal OpenCode CLI yönetim rotası eklendi. Çok promptlu proje yönetiminin canlı
+kabulü henüz yapılmadı. Canlı ses 11'de,
 sesli onay 13'te; tam kurulabilir dağıtım 16'dadır.
 
 Ayrıntılı mimari: `docs/KESIN_MIMARI.md` · Aşama durumu: `docs/GELISTIRME_DURUMU.md`
@@ -400,8 +402,9 @@ serbest command runner, ikinci yürütücü veya ana model kurulmaz.
 
 `enabled`, `fullAccessConfigured` ve `authReady` alanları `true` olmalıdır.
 `liveTurnVerified:false` henüz gerçek model işi sınanmadığını belirtir.
-Model görev devrinde açık seçilir; Luna 6 dahil model adı ve düşünme seviyesi
-hesap/stable protokol desteği görülmeden varsayılmaz. API anahtarıyla ücretli
+Kodlama model/düşünme seçimi belirtilmezse Codex için **Luna 6
+(`openai/gpt-6-luna`) / xhigh** kullanılır. Açık kullanıcı seçimi önceliklidir;
+desteklenmeyen seçimde hata gösterilir, sessiz model/düşünme yedeği yoktur. API anahtarıyla ücretli
 veya başka model yedeği yoktur. Codex görev başlatma ayrıca mevcut proje
 grant'ına ve yetkili `operator.admin` kullanıcı/cihaz kimliğine bağlıdır;
 masaüstünün normal dar sohbet yetkisi bunun yerine geçmez.
@@ -419,6 +422,88 @@ kontrol edilecektir. [Toplu doğrulama planı](docs/09_10_TOPLU_DOGRULAMA.md)
 ve [09 bağlantı sözleşmesi](docs/09_CODEX_ISCISI.md) gerçek sınırları açıklar.
 Bu kurulum, 10'un yönetim bağlantısının veya 13'ün sesli karar yolunun hazır
 olduğu anlamına gelmez.
+### 4f) OpenCode kodlama server'ını ve Space Bunny yönetim rotasını hazırlayın
+
+10 için OpenCode **V2 2.0.28** native Windows CLI gereklidir. `npm ci`, aynı
+sürümün hafif `@opencode/client` istemcisini kurar; native CLI ayrıca kurulur.
+Mevcut CLI varsa önce `opencode --version` ile kontrol edin; 2.0.28 ise
+tekrar kurmayın. Eksikse kendi kullanıcı kurulumunuzda:
+
+```powershell
+npm install -g @opencode/cli@2.0.28
+opencode --version
+```
+
+In-process `@opencode/sdk`, C++ derleme/Visual Studio veya ikinci host runtime
+bu bağlantıya gerekli değildir. `OPENCODE_API_KEY` 1. adımda kendi kullanıcı
+ortamınızda kayıtlı olmalıdır; eski auth/state dosyası kopyalanmaz.
+
+Native binary yolunu belirleyin; aşağıdaki standart npm kurulum yolunu kendi
+bilgisayarınızda kontrol edin. Başka klasöre kurduysanız gerçek `.exe` yolunu
+verin; başka sürüm veya FURY binary'sine düşmeyin:
+
+```powershell
+$opencodeBinary = Join-Path (npm root -g) '@opencode/cli/bin/opencode.exe'
+if (-not (Test-Path -LiteralPath $opencodeBinary -PathType Leaf)) { throw 'Native OpenCode binary yolunu doğrulayın.' }
+& $opencodeBinary --version
+node scripts/jarvis-opencode-profile.mjs prepare "$opencodeBinary" --full-access
+node scripts/jarvis-worker-config.mjs --full-access
+node scripts/jarvis-policy-config.mjs --check "$env:USERPROFILE\.openclaw-jarvis\openclaw.json"
+```
+
+Bu açık flag, **OpenCode kodlama işçisi için Full access seçiminizdir**:
+çalışma klasörü dışında dosya/ağ erişimi mümkün olabilir. Sıradan JARVIS host
+shell/research izinleri açılmaz. Ayrı server'ın config/data/cache/state/DB'si
+`%USERPROFILE%\.openclaw-jarvis\opencode` içinde olur; eski global OpenCode
+server'ı değiştirilmez. Üretilen `server.json` server password ve kendi PID/yol
+bilgisini içerir; repoya, sohbete veya başka bilgisayara kopyalamayın.
+Provider anahtarı server'a verilir; shell çocuklarına ayrı temiz ortam geçer.
+Profil ayrılığı bütün disk dosyalarının OS izolasyonu değildir.
+
+Gateway'den önce ayrı PowerShell 7 penceresinde server'ı başlatın:
+
+```powershell
+.\scripts\jarvis-opencode-server.ps1 -Action Start
+```
+
+Bu pencere açık kalır; normal durdurma `Ctrl+C`'dir. Server yalnız
+`127.0.0.1:18791` adresinde HTTP Basic kimliğiyle çalışır; port doluysa başka
+süreci zorla kapatmayın. Başka pencerede gerçek server kimliğini kontrol edin:
+
+```powershell
+.\scripts\jarvis-opencode-server.ps1 -Action Check
+```
+
+5'te Gateway hazır olduktan sonra:
+
+```powershell
+.\node_modules\.bin\openclaw.cmd --profile jarvis gateway call jarvis.worker.setup --json
+```
+
+Bu, iki işçiyi ve authenticated OpenCode `2.0.28` / ana
+`opencode/space-bunny-free` / `jarvis-opencode-main` rotasını göstermelidir.
+Seçili model değişmez; Space Bunny istekleri normal OpenCode CLI/işçi yolundan
+geçer. Doğrudan provider model HTTP isteği ve sessiz model/işçi yedeği yoktur.
+08'in GUI görüntü/MCP yolu yeniden kurulmaz; Codex 09'un tek native harness'inde
+kalır. Model veya native worker unavailable ise durum açık gösterilir.
+
+Kullanıcı görevinde **“Codex ile yap”** veya **“OpenCode ile yap”** seçimini
+belirtin; görev kapsamı için mevcut masaüstü klasör seçimini kullanın.
+`jarvis_worker` host görev kimliği/kökü/revizyonunu ekler; her küçük işte form
+doldurmak gerekmez. Belirsiz/iki işçi içeren seçimde soru gerekir. Model/düşünme alanları atlanırsa **Codex: Luna 6/xhigh**, **OpenCode:
+Space Bunny Free/max** kullanılır. Belirtilen kullanıcı seçimi bu varsayılanlardan
+önceliklidir. OpenCode seçimleri gerçek server model/variant kataloğuyla denetlenir.
+Native işçi sorusu veya izni gerçek pending ID ile bekler; model cevaplamaz.
+Yetkili kullanıcı için `jarvis.worker.answer` native once/reject veya form
+cevabını taşır; Electron form paneli/sesli karar bu aşamada eklenmedi.
+Yetkili karar yolu yoksa bekleme açık gösterilir; 13'te ses bağlanacaktır.
+
+JARVIS sonucu/diff'i isteklerle karşılaştırıp gerektiğinde aynı işe devam veya
+düzeltme promptu verir. Üç/beş prompt her işe zorunlu değildir. Kodlama
+server'ı kendi teknik oturumlarını tutar; ortak hafızanın sahibi OpenClaw'dır.
+Ham kayıt yerleri ve 14 bakım envanteri: [10 bağlantı sözleşmesi](docs/10_OPENCODE_ISCISI.md).
+[Codex/OpenCode üç promptlu not uygulaması kabulü](docs/09_10_TOPLU_DOGRULAMA.md)
+henüz çalıştırılmadı; kurulum bağlantısı bu canlı proje testinin geçtiği anlamına gelmez.
 ### 5) Gateway'i başlatın
 
 ```powershell
@@ -774,6 +859,7 @@ sessiz geçiş olmaz):
 - Dar işlemler (07): sağ panelde **Hızlı Windows işlemi**; belge/OCR, kontrollü not ve recycle için [07 sözleşmesi](docs/07_DAR_ISLEMLER.md). Browser'ın alan adı/login engeli kullanıcı kararıyla ileride çözülecek; hazır kabul etmeyin.
 - GUI (08): Gateway'e ek olarak etkileşimli Windows node penceresi açık olmalıdır; `.\scripts\jarvis-desktop-node.ps1` komutunu 5. adımda anlatıldığı gibi çalıştırın. Tarayıcı sayfa işlemlerinde managed Playwright, genel Windows arayüzünde CUA varsayılandır. CUA görev ve taze hedef gözlemiyle sınırlıdır; Windows-MCP yalnız gözlem/bekleme sağlar. SDK teslimi `unknown` raporlayabildiğinden başka uygulamalarda background yazma garantisi yoktur.
 - Codex (09): `.\scripts\jarvis-codex-profile.ps1 -Action Check`; ayrı hesap/native işçi bağlantısı. Canlı Codex/OpenCode kabulü 10 sonrasındadır. Model/işçi sessiz değiştirilmez; native kullanıcı sorusu bekler, sesli çözüm 13'tedir.
+- İşçiler (10): önce `.\scripts\jarvis-opencode-server.ps1 -Action Start`; Gateway açıkken `gateway call jarvis.worker.setup --json`. Kullanıcının Codex/OpenCode seçimi korunur; gerçek sonuç incelemesi ve native devam/iptal aynı görevde yapılır.
 - Başlat: `.\scripts\jarvis-gateway.ps1` · Durdur: `Ctrl+C`
 - Masaüstü geliştirme: `npm run desktop:dev`
 - Derle/çalıştır: `npm run desktop:build`, ardından `npm run desktop:start`
@@ -790,7 +876,7 @@ sessiz geçiş olmaz):
   Kritik onay yalnız allow-once/deny ve sabit parametrelerle mevcut OpenClaw
   kayıtlarından geçer. Modele genel resolver/config aracı verilmez. Shell, UAC,
   genel kalıcı silme ve force-kill ana JARVIS yolunda kapalıdır; satın alma/ödeme henüz açılmadı.
-- Kullanıcının seçtiği Codex görevi Full access ile terminal/dosya/ağ kullanabilir;
+- Kullanıcının seçtiği Codex veya OpenCode kodlama görevi Full access ile terminal/dosya/ağ kullanabilir;
   proje klasörü OS izolasyonu değildir. Görev kimliği/grant ve before-tool relay
   korunur; JARVIS sonucu inceler. Ayrı profil ve ortam temizliği bütün disk sırlarına erişimi engellemez.
 - Araştırmaya USER/MEMORY/sohbet/anahtar/proje içeriği eklenmez. Web içeriği ve

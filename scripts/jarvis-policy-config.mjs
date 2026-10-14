@@ -7,10 +7,12 @@ import { applyWork, assertWork } from './jarvis-work-config.mjs';
 import { applyQuick, assertQuick } from './jarvis-quick-config.mjs';
 import {applyGui} from './jarvis-gui-config.mjs';
 import { separateCodexTools } from './codex-worker-policy.mjs';
+import {applyWorkers} from './jarvis-worker-config.mjs';
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export function applyPolicy(config, profileDir, pluginPath = path.join(repo, 'plugins', 'jarvis')) {
   const codexEnabled = config.plugins?.entries?.codex?.enabled === true;
+  const workersEnabled=config.plugins?.entries?.jarvis?.config?.openCodeFullAccess===true;
   const guiNode=config.plugins?.entries?.jarvis?.config?.guiNode;
   config.plugins ??= {};
   config.plugins.load ??= {};
@@ -31,6 +33,7 @@ export function applyPolicy(config, profileDir, pluginPath = path.join(repo, 'pl
   delete config.tools.alsoAllow;
   applyMemory(config);
   const prepared = applyGui(applyQuick(applyWork(config)),guiNode);
+  if(workersEnabled)applyWorkers(prepared);
   if (codexEnabled) { prepared.plugins.allow.push('codex'); separateCodexTools(prepared, profileDir); }
   return prepared;
 }

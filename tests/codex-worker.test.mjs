@@ -64,7 +64,7 @@ test('ingress validates explicit worker, root, contract and revision before disp
   }
   const bad=await f.call('start',f.contract,{...f.client,authenticatedUserId:'other'});assert.equal(bad.ok,false);assert.equal(f.requests.length,0);
   const started=await f.call('start',f.contract);assert.equal(started.ok,true,started.error?.message);
-  const created=f.requests.find(r=>r.method==='sessions.create');assert.equal(created.p.permissionMode,'full');assert.equal(created.p.agentRuntime,'codex');assert.equal(created.p.cwd,root);
+  const created=f.requests.find(r=>r.method==='sessions.create');assert.equal(created.p.permissionMode,'full');assert.equal(created.p.agentRuntime,'codex');assert.equal(created.p.cwd,root);assert.equal(created.p.thinkingLevel,'xhigh');
   assert.ok(!('fork' in created.p));assert.ok(!('parentSessionKey' in created.p));
   const duplicate=await f.call('start',f.contract);assert.equal(duplicate.ok,false);assert.equal(f.requests.filter(r=>r.method==='sessions.create').length,1);
 });

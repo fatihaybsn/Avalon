@@ -145,6 +145,10 @@ export async function evaluate(event: {toolName: string; params: Record<string, 
       if (event.toolName === 'jarvis_work_read') { exactKeys(event.params, []); return { params: {} }; }
       return { params: workNoteParams(event.params) };
     }
+    if(!event.toolKind&&event.toolName==='jarvis_worker'&&scope.role==='project') {
+      exactKeys(event.params,['action','worker','expectedRevision','model','thinking','request','purpose','scope','context','output','verification','message']);
+      return {params:event.params}; // Invocation rechecks original human choice, contract/revision and live authority.
+    }
     if (!event.toolKind && [...QUICK_TOOLS, 'browser'].includes(event.toolName)) return await quickDecision(event.toolName, event.params, scope);
     if (!event.toolKind && isGuiTool(event.toolName)) return await guiDecision(event.toolName,event.params,scope);
     if (scope.role === 'memory') return block('Memory-only scope has no general file, web or execution authority');

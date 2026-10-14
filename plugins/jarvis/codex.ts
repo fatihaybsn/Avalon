@@ -1,8 +1,7 @@
+import { workerContract,WORKER_DEFAULTS } from './worker-contract.ts';
 import type { OpenClawPluginApi } from 'openclaw/plugin-sdk/plugin-entry';
 import { dispatchGatewayMethod } from 'openclaw/plugin-sdk/gateway-method-runtime';
 import { randomUUID } from 'node:crypto';
-import path from 'node:path';
-import fs from 'node:fs/promises';
 import { exactKeys, text, workText, type Scope } from './policy.ts';
 import type { WorkLedger, ResourceOwners } from './work.ts';
 
@@ -18,17 +17,7 @@ const request: Request = async (method, params) => {
   return r.payload as Record<string, any>;
 };
 
-export async function codexContract(p: Record<string, unknown>, scope: Scope, revision: number) {
-  if (scope.role !== 'project' || !scope.root) throw new Error('Current project task required');
-  if (p.worker !== 'codex' || p.expectedRevision !== revision) throw new Error('Explicit Codex choice and current revision required');
-  if (typeof p.projectRoot !== 'string' || path.win32.normalize(p.projectRoot).toLowerCase() !== path.win32.normalize(scope.root).toLowerCase()) throw new Error('Project root differs from admitted task');
-  const root = await fs.realpath(scope.root);
-  if (!(await fs.stat(root)).isDirectory()) throw new Error('Project directory required');
-  const model = text(p.model, 'selected Codex model', 160);
-  if (!/^openai\/[a-zA-Z0-9._-]+$/.test(model)) throw new Error('Explicit official OpenAI model selection required; no model fallback');
-  const contract = Object.fromEntries(['request','purpose','scope','context','output','verification'].map(k => [k, workText(p[k], k, k === 'context' ? 12000 : 4000)]));
-  return { ...contract, worker: 'codex', projectRoot: root, model, permissionMode: 'full', taskId: scope.taskId, projectId: scope.projectId, revision };
-}
+export const codexContract = (p: Record<string, unknown>, scope: Scope, revision: number) => workerContract(p, scope, revision, 'codex');
 
 // Ephemeral connection authority over native OpenClaw sessions, not a second
 // executor, scheduler, approval registry, task store, or model loop.
@@ -43,7 +32,7 @@ export function installCodex(api: OpenClawPluginApi, live: (run?: string) => Bin
   };
   api.registerGatewayMethod('jarvis.codex.setup', async ({ respond }) => {
     const appServer = api.config.plugins?.entries?.codex?.config?.appServer as { command?: string; sandbox?: string } | undefined;
-    try { respond(true, { workerAgent: CODEX_AGENT, enabled: api.config.plugins?.entries?.codex?.enabled === true, binary: appServer?.command, pinnedVersion: '0.160.0', fullAccessConfigured: appServer?.sandbox === 'danger-full-access', authReady: authReady(), authProfile: 'openai:jarvis-codex', model: 'Explicit user/account-supported selection required at handoff; no forced default', liveTurnVerified: false }); }
+    try { respond(true, { workerAgent: CODEX_AGENT, enabled: api.config.plugins?.entries?.codex?.enabled === true, binary: appServer?.command, pinnedVersion: '0.160.0', fullAccessConfigured: appServer?.sandbox === 'danger-full-access', authReady: authReady(), authProfile: 'openai:jarvis-codex', defaults:WORKER_DEFAULTS.codex, model: 'Explicit user choice takes priority; omitted fields use the user-approved defaults', liveTurnVerified: false }); }
     catch { respond(true, { workerAgent: CODEX_AGENT, authReady: false, reason: 'Dedicated Codex account not connected; no fallback', liveTurnVerified: false }); }
   }, { scope: 'operator.read', profileAccess: 'required' });
   const current = (w: Worker) => {
@@ -82,29 +71,25 @@ export function installCodex(api: OpenClawPluginApi, live: (run?: string) => Bin
       throw e;
     }
   };
-  const method: Parameters<OpenClawPluginApi['registerGatewayMethod']>[1] = async options => {
-    const { params: p, client, sessionAccessAuthority: access, respond, req } = options;
-    try {
-      const b = live(String(p.runId));
-      if (!b || !access || client?.invalidated || client?.connect.role !== 'operator' || !client.connect.scopes?.includes('operator.admin') || (client.authenticatedUserProfile?.profileId ?? client.authenticatedUserId) !== b.scope.userId || client.connect.device?.id !== b.scope.deviceId || access.target.sessionId !== b.scope.sessionId || access.target.sessionKey !== b.scope.sessionKey) throw new Error('Current original operator/admin task authority required for selected Full access');
-      const assert = () => { access.assertCurrent(); b.assertCurrent(); if (!live(b.scope.runId) || client.invalidated) throw new Error('Task authority revoked'); };
-      assert();
-      const action = req.method.split('.').at(-1);
+  const control = async (b: Binding, p: Record<string, unknown>, action: string, respond: (ok: boolean, payload?: any, error?: any) => void) => {
+    const assert = () => { b.assertCurrent(); if (!live(b.scope.runId) || b.signal.aborted) throw new Error('Task authority revoked'); };
+    assert();
       const old = workers.get(b.scope.runId);
       if (action === 'start') {
-        exactKeys(p, ['sessionKey','agentId','runId','worker','projectRoot','expectedRevision','model','request','purpose','scope','context','output','verification']);
+        exactKeys(p, ['sessionKey','agentId','runId','worker','projectRoot','expectedRevision','model','thinking','request','purpose','scope','context','output','verification']);
         if (!authReady()) throw new Error('Dedicated Codex subscription login required; run scripts/jarvis-codex-profile.ps1 -Action Login yourself');
         if (old || starting.has(b.scope.runId)) throw new Error('Codex already attempted for this task; use status/continue, never replay');
         starting.add(b.scope.runId);
         try {
-        const r = (await ledger.create(b.scope, workText(p.request, 'request', 4000))).record;
+        const r = (await ledger.create(b.scope, b.scope.userStatement??workText(p.request, 'request', 4000))).record;
+        if(r.execution==='opencode')throw new Error('Task already admitted to OpenCode; no silent worker switch');
         const contract = await codexContract(p, b.scope, r.revision); assert();
         const w: Worker = { parent: b, key: `agent:${CODEX_AGENT}:jarvis:${randomUUID()}`, sessionId: '', runId: '', busy: false, stopped: false, unresolved: false, decisionPending: false, abort: () => { void interrupt(w).catch(e => api.logger.error(`Codex interrupt unresolved: ${e instanceof Error ? e.message : 'unknown'}`)); } };
         workers.set(b.scope.runId, w);
         await record(w, 'codex-admission', 'codex-admission', contract, v => { v.execution = 'codex'; v.state = 'prepared'; });
         try {
           // No parent transcript fork; only the bounded handoff is sent.
-          const created = await rpc('sessions.create', { key: w.key, idempotencyKey: w.key, agentId: CODEX_AGENT, model: contract.model, agentRuntime: 'codex', permissionMode: 'full', cwd: contract.projectRoot, label: `Codex ${b.scope.taskId}`.slice(0,64) });
+          const created = await rpc('sessions.create', { key: w.key, idempotencyKey: w.key, agentId: CODEX_AGENT, model: contract.model, thinkingLevel:contract.thinking, agentRuntime: 'codex', permissionMode: 'full', cwd: contract.projectRoot, label: `Codex ${b.scope.taskId}`.slice(0,64) });
           if (created.key !== w.key || typeof created.sessionId !== 'string') throw new Error('Native session identity mismatch');
           w.sessionId = created.sessionId; assert();
           await record(w, 'codex-session', 'codex-native-session', { key: w.key, sessionId: w.sessionId }, v => { v.worker = { agentId: CODEX_AGENT, sessionKey: w.key, sessionId: w.sessionId }; });
@@ -150,6 +135,15 @@ export function installCodex(api: OpenClawPluginApi, live: (run?: string) => Bin
       } else if (action === 'continue') {
         w.busy = false; respond(true, { native: await send(w, message), revision: changed.record.revision });
       } else throw new Error('Unsupported Codex control');
+  };
+  const method: Parameters<OpenClawPluginApi['registerGatewayMethod']>[1] = async options => {
+    const { params: p, client, sessionAccessAuthority: access, respond, req } = options;
+    try {
+      const b = live(String(p.runId));
+      if (!b || !access || client?.invalidated || client?.connect.role !== 'operator' || !client.connect.scopes?.includes('operator.admin') || (client.authenticatedUserProfile?.profileId ?? client.authenticatedUserId) !== b.scope.userId || client.connect.device?.id !== b.scope.deviceId || access.target.sessionId !== b.scope.sessionId || access.target.sessionKey !== b.scope.sessionKey) throw new Error('Current original operator/admin task authority required for selected Full access');
+      const assert = () => { access.assertCurrent(); b.assertCurrent(); if (!live(b.scope.runId) || client.invalidated) throw new Error('Task authority revoked'); };
+      assert();
+      await control(b, p, req.method.split('.').at(-1)!, respond);
     } catch (e) { respond(false, undefined, { code: 'INVALID_REQUEST', message: e instanceof Error ? e.message : 'Codex request failed' }); }
   };
   // SDK session-scoped registrations require operator.write; the handler above
@@ -192,6 +186,8 @@ export function installCodex(api: OpenClawPluginApi, live: (run?: string) => Bin
     workers.clear();
   });
   return {
+    control,
+    has:(runId:string)=>workers.has(runId),
     interruptParent: async (runId: string) => { const w = workers.get(runId); if (!w) throw new Error('No current Codex worker'); return interrupt(w); },
     beforeTool(event: { toolName: string }, ctx: { agentId?: string; runId?: string; sessionId?: string; sessionKey?: string }) {
       if (ctx.agentId !== CODEX_AGENT) return undefined;

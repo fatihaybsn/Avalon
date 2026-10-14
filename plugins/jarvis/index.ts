@@ -12,6 +12,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { installWork } from './work.ts';
 import { installCodex } from './codex.ts';
+import {installOpenCode} from './opencode.ts';
+import {installWorkers} from './workers.ts';
 import { createQuickTools, preserveFile, configureNativeRoot, localCall } from './quick.ts';
 import { QUICK_TOOLS, operationHash } from './quick-policy.ts';
 import { runBeforeToolCallHook, runAgentHarnessAfterToolCallHook } from 'openclaw/plugin-sdk/agent-harness-runtime';
@@ -33,6 +35,7 @@ export default definePluginEntry({
     let dreamingStatus: { phase: string; error?: string; admitted?: number; at?: string; evidence?: unknown } = { phase: 'idle' };
     api.registerCliBackend(buildMemoryBackend({ workspace: () => api.runtime.agent.resolveAgentWorkspaceDir(api.config, 'main'), onDecision: evidence => { modelEvidence = evidence; dreamingStatus = { ...dreamingStatus, phase: 'structured-decision', at: new Date().toISOString() }; } }));
     api.registerCliBackend(buildGuiBackend());
+    if(api.pluginConfig?.openCodeFullAccess===true)api.registerCliBackend(buildGuiBackend(true));
     api.registerProvider(buildDreamProvider(() => api.runtime.agent.resolveAgentWorkspaceDir(api.config, 'main'), evidence => {
       modelEvidence = evidence; dreamingStatus = { phase: 'structured-decision', evidence, at: new Date().toISOString() };
       api.logger.info(`JARVIS Dreaming host-validated decision: ${JSON.stringify(evidence)}`);
@@ -88,6 +91,8 @@ export default definePluginEntry({
     if (!work) api.logger?.warn?.('JARVIS stage 06 unavailable: native retained state/events required');
     const codex = work && api.config.plugins?.entries?.codex?.enabled === true ? installCodex(api, live, work.ledger, undefined, work.owners) : undefined;
     if (codex) work!.setWorkerInterrupt(codex.interruptParent);
+    const opencode=work&&api.pluginConfig?.openCodeFullAccess===true?installOpenCode(api,work.ledger,work.owners):undefined;
+    if(opencode){work!.setWorkerInterrupt(run=>opencode.has(run)?opencode.interruptParent(run):codex?codex.interruptParent(run):Promise.reject(new Error('Selected worker unavailable')));work!.setExternalObservation(opencode.observation);}
     const indexCommittedNote = async () => {
       try {
         const memory = getMemoryCapabilityRegistration();
@@ -127,6 +132,7 @@ export default definePluginEntry({
       if (ctx.agentId !== 'main' || matches.length !== 1) throw new Error('Current authorized main task required');
       return matches[0]!;
     };
+    if(opencode&&work)installWorkers(api,live,work.ledger,codex,opencode,toolScope);
     api.registerTool({ contextVersion: 2, create(ctx) {
       if (ctx.agentId !== 'main') return null;
       return createQuickTools(() => toolScope(ctx), () => { ctx.assertInvocationCurrent(); ctx.assertInputCommitAllowed?.(); });
@@ -257,7 +263,7 @@ export default definePluginEntry({
         const scope = await makeScope(params, { ...target, userId, deviceId });
         // A fresh operator turn releases completed direct local grants in this
         // same incarnation; it does not cancel another native or pending job.
-        for(const id of localScopes) {
+        for(const id of new Set([...localScopes,...authorities.keys()].filter(id=>localScopes.has(id)||opencode?.has(id)||codex?.has(id)))) {
           const old=live(id)?.scope;
           if(!old || old.userId!==userId || old.deviceId!==deviceId || old.sessionId!==target.sessionId || id===scope.runId)continue;
           const record=await work?.ledger.get(userId,old.taskId).catch(()=>undefined);
@@ -403,7 +409,7 @@ export default definePluginEntry({
       if (ctx.agentId !== 'research' || !['tavily_search', 'web_fetch'].includes(event.toolName ?? '') || event.message.role !== 'toolResult') return;
       return { message: { ...event.message, content: event.message.content.map(part => part.type === 'text' ? { ...part, text: JSON.stringify({ kind: 'external-data', tool: event.toolName, trust: 'untrusted', authority: 'none', content: part.text }) } : part) } };
     });
-    api.on('agent_end', (event, ctx) => { const runId = event.runId ?? ctx.runId; if (runId) drop(runId); });
+    api.on('agent_end', (event, ctx) => { const runId = event.runId ?? ctx.runId; if (runId&&!opencode?.has(runId)&&!codex?.has(runId)) drop(runId); });
     api.on('gateway_stop', () => { stopped = true; for (const runId of authorities.keys()) drop(runId); });
   }
 });

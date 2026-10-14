@@ -7,7 +7,8 @@
   },
   "cliBackends": [
     "jarvis-opencode-memory",
-    "jarvis-opencode-gui"
+    "jarvis-opencode-gui",
+    "jarvis-opencode-main"
   ],
   "providers": [
     "jarvis-dream-google"
@@ -26,13 +27,15 @@
       "jarvis_windows",
       "jarvis_recycle",
       "jarvis_document",
-      "jarvis_draft"
+      "jarvis_draft",
+      "jarvis_worker"
     ]
   },
   "configSchema": {
     "type": "object",
     "additionalProperties": false,
     "properties": {
+      "openCodeFullAccess": { "type": "boolean" },
       "nativeRoot": {
         "type": "string"
       },

@@ -10,7 +10,7 @@ export type WorkRecord = {
   taskId: string; projectId: string; projectRevision: number; revision: number; recordVersion: number;
   userId: string; deviceId: string; agentId: string; sessionKey: string; sessionId: string;
   runId: string; worker?: { threadId?: string; turnId?: string; sessionId?: string; agentId?: string; sessionKey?: string; runId?: string; itemId?: string; requestId?: string | number };
-  execution?: 'local' | 'codex';
+  execution?: 'local' | 'codex' | 'opencode';
   request: string; acceptedPlan?: string; model?: { plan?: string; finding?: string; sources?: string[]; rationale?: string; nextStep?: string; pendingDecision?: string };
   state: 'prepared' | 'delivered' | 'running' | 'ended' | 'failed' | 'cancel-requested' | 'cancelled' | 'unknown';
   operation?: { callId: string; tool: string; revision?: number; phase: 'observed' | 'started' | 'result' | 'error' | 'missing'; resultHash?: string; effect: 'unverified' | 'verified'; sources?: string[] };
@@ -102,7 +102,7 @@ export class WorkLedger {
   async reconcile(r: WorkRecord, native: { sessionId?: unknown; hasActiveRun?: unknown; activeRunIds?: unknown; run?: Record<string, unknown> }) {
     if (terminal(r)) return r;
     const different = r.generation !== this.generation;
-    const sameSession = native.sessionId === (r.execution === 'codex' ? r.worker?.sessionId : r.sessionId);
+    const sameSession = native.sessionId === (['codex','opencode'].includes(r.execution??'') ? r.worker?.sessionId : r.sessionId);
     const run = native.run;
     const finished = sameSession && run && ['ok', 'error'].includes(String(run.status)) && typeof run.endedAt === 'number';
     const active = sameSession && Array.isArray(native.activeRunIds) && native.activeRunIds.includes(r.execution === 'codex' ? r.worker?.runId : r.runId);
@@ -154,6 +154,7 @@ export function installWork(api: OpenClawPluginApi, live: (runId?: string) => { 
   const expected = new Map<string, { target: string; digest: string }>();
   let observationError = false;
   let workerInterrupt: ((runId: string) => Promise<unknown>) | undefined;
+  let externalObservation:((r:WorkRecord)=>Promise<Record<string,any>>)|undefined;
   const fail = (e: unknown) => { observationError = true; api.logger.error(`JARVIS work observation unavailable: ${e instanceof Error ? e.message : 'native state failed'}`); };
   const mutate = async (runId: string, id: string, kind: string, data: Record<string, unknown>, update: (r: WorkRecord) => void) => {
     const binding = live(runId); if (!binding) return;
@@ -163,6 +164,7 @@ export function installWork(api: OpenClawPluginApi, live: (runId?: string) => { 
     return ledger.change(scope.userId, scope.taskId, id, kind, data, update);
   };
   const nativeObservation = async (r: WorkRecord) => {
+    if(r.execution==='opencode')return externalObservation?externalObservation(r):{nativeUnavailable:true};
     let native: Record<string, unknown>;
     try { native = await request<Record<string, unknown>>('sessions.describe', { key: r.execution === 'codex' ? r.worker?.sessionKey : r.sessionKey, agentId: r.execution === 'codex' ? r.worker?.agentId : r.agentId }); }
     catch { return { nativeUnavailable: true }; } // Original principal's retained metadata survives deleted/unreadable native rows.
@@ -249,6 +251,7 @@ export function installWork(api: OpenClawPluginApi, live: (runId?: string) => { 
           const content = parts.map(p => p.text).join('\n');
           output = { role: 'toolResult', toolCallId: call, content: [{ type: 'text', text: content.slice(0, 12000) }], truncated: content.length > 12000 };
         }
+        else if(name==='jarvis.work.read'&&r.execution==='opencode')output=row.workerOutput;
         else if (name === 'jarvis.work.read' && row.sessionId === (r.execution === 'codex' ? r.worker?.sessionId : r.sessionId)) {
           const native = await request<Record<string, unknown>>('agent.wait', { runId: r.execution === 'codex' ? r.worker?.runId : r.runId, timeoutMs: 0 });
           const reply = native.terminalReply as { disposition?: unknown; text?: unknown } | undefined;
@@ -262,7 +265,7 @@ export function installWork(api: OpenClawPluginApi, live: (runId?: string) => { 
       if (binding && (binding.scope.userId !== user || binding.scope.deviceId !== client.connect.device.id || binding.scope.taskId !== r.taskId)) throw new Error('Cannot borrow a different task grant');
       current(); binding?.assertCurrent();
       if (name === 'jarvis.work.cancel') {
-        if (r.execution === 'codex') {
+        if (r.execution === 'codex'||r.execution==='opencode') {
           if (!workerInterrupt) throw new Error('Native Codex interrupt path unavailable');
           const receipt = await workerInterrupt(r.runId);
           current(); respond(true, { record: publicRecord(await ledger.get(user, r.taskId)), native: receipt }); return;
@@ -306,6 +309,7 @@ export function installWork(api: OpenClawPluginApi, live: (runId?: string) => { 
         if (e.sessionId && e.sessionId !== r.sessionId) return;
         if (r.nativeSequence !== undefined && e.seq <= r.nativeSequence) return;
         r.nativeSequence = e.seq;
+        if(['codex','opencode'].includes(r.execution??'')&&['lifecycle','error','approval'].includes(e.stream))return;
         if (e.stream === 'lifecycle' && e.data.phase === 'start') r.state = 'running';
         if (e.stream === 'lifecycle' && e.data.phase === 'end') { r.state = 'ended'; r.result = 'native-ended'; }
         if (e.stream === 'error' || e.stream === 'lifecycle' && e.data.phase === 'error') { r.state = 'failed'; r.result = 'native-error'; r.blocker = 'Native runtime error; inspect current output'; }
@@ -322,6 +326,7 @@ export function installWork(api: OpenClawPluginApi, live: (runId?: string) => { 
     const run = event.runId ?? ctx.runId; if (!run) return;
     try { await mutate(run, 'agent-end', 'native-agent-end', { success: event.success, hasError: Boolean(event.error) }, r => {
       const completed = event.success === true && !event.error;
+      if(r.execution==='codex'||r.execution==='opencode')return;
       r.state = completed ? 'ended' : 'failed'; r.result = completed ? 'native-ended' : 'native-error';
       if (!completed) r.blocker = 'Native agent ended without successful execution; inspect output';
     }); } finally { owners.releaseRun(run); for (const k of expected.keys()) if (k.startsWith(run + ':')) expected.delete(k); }
@@ -364,6 +369,7 @@ export function installWork(api: OpenClawPluginApi, live: (runId?: string) => { 
   return {
     ledger, owners,
     setWorkerInterrupt: (handler: (runId: string) => Promise<unknown>) => { workerInterrupt = handler; },
+    setExternalObservation:(handler:(r:WorkRecord)=>Promise<Record<string,any>>)=>{externalObservation=handler;},
     async confirmSteer(runId: string, inputId: string, callId: string, stage: 'applying' | 'applied', assertNativeEvidence: () => void) {
       const binding = live(runId); if (!binding) throw new Error('Current steering owner required');
       const current = () => { binding.assertCurrent(); if (!live(runId)) throw new Error('Task authority expired'); assertNativeEvidence(); };
