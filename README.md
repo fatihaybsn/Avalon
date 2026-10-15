@@ -2,7 +2,7 @@
 
 Windows 11'de doğrudan çalışan, OpenClaw merkezli kişisel asistan projesi.
 Tek merkez **OpenClaw Gateway**, konuşma tarafı **Gemini Live**, ağır görev
-modeli **Space Bunny Free**'dir. Mevcut durum: **13'e kadar kod uygulandı; 11–13 ses/araç/onay bağlantısının canlı kabulü ve Codex/OpenCode üç promptlu ortak canlı kabul henüz yapılmadı**
+modeli **Space Bunny Free**'dir. Mevcut durum: **15'e kadar kaynak bağlantıları uygulandı; 14–15 native paket kurulumu ve 11–15 canlı kabul tamamlanmadı. Codex/OpenCode üç promptlu ortak canlı kabul de bekliyor.**
 (Gateway, görev izinleri, salt okunur araştırma, yerel GUI node'u ve sade Electron/Vite/Lit arayüzü).
 05 ile tek yerel hafıza, kontrollü kısa not araçları, yetkili ortak erişim ve
 Gemini ile altı saatlik native Dreaming düzenlemesi eklendi.
@@ -29,7 +29,11 @@ kabulü, bilinen Gateway health/RPC engeli nedeniyle bekler. 13 ile mevcut OpenC
 onaylarına sesli karar, native işçi soruları, dar izin geri alma ve tek işlem
 kanal gönderimi eklendi; gerçek hesap/gönderim kabulü bekliyor. Finansal olumlu
 karar sesle açılamaz; ödeme entegrasyonu hazır değildir. Tam kurulabilir dağıtım
-16'dadır.
+16'dadır. 15 ile native otomasyon yönetimi, desteklenen araçlı proje işinin
+zamanlanmış yürütme bağlantısı, kalıcı sohbet sonucu/bildirim ve aynı web
+Control UI üzerinden özel Tailscale telefon erişimi kaynakta eklendi.
+Native SDK derlemesindeki kaynak hataları nedeniyle yeni paket henüz kurulmadı;
+`npm ci` bu kaynak değişikliklerini içeren bir dağıtım kurmaz.
 
 Ayrıntılı mimari: `docs/KESIN_MIMARI.md` · Aşama durumu: `docs/GELISTIRME_DURUMU.md`
 
@@ -42,6 +46,9 @@ Ayrıntılı mimari: `docs/KESIN_MIMARI.md` · Aşama durumu: `docs/GELISTIRME_D
 - Hesaplar: Codex işçisi için uygun ChatGPT/Codex hesabı (girişi kullanıcı yapar), OpenCode (görev modeli), Tavily ücretsiz hesap (araştırma), Google AI Studio (05 Dreaming için gerekli; canlı konuşma 11'de)
 - Yerel belge okuma için Python 3.12 ve 4c'deki kütüphaneler; Windows işlemleri ve görsel OCR Python gerektirmez.
 - Browser için kurulu Chromium tabanlı Edge/Chrome; Playwright Core mevcut OpenClaw paketinden kullanılır.
+- 15 telefon erişimi için PC ve telefonda Tailscale, aynı özel ağa yetkili kullanıcı
+  girişi; telefonda HTTPS ve mikrofon izni verebilen güncel bir tarayıcı gerekir.
+  Yalnız PC kullanımında Tailscale gerekmez.
 
 ## Kurulum (sıfırdan)
 
@@ -572,6 +579,71 @@ kontrolünü tamamlayın. `npm ci` veya 4'teki genel profil politikasını yenid
 uyguladıysanız sırasıyla 4f–4h'yi de yeniden uygulayın; 4g'deki Talk uzatmasını
 atlamayın. Hesap/kanal bağlantısı ve sesli kullanım aşağıdaki 7b'dedir.
 
+### 4i) Native otomasyon ve özel telefon erişimini hazırlayın (15)
+
+**Bu aşamanın kaynak paketi henüz kurulabilir olarak doğrulanmadı.** `npm ci`
+stok OpenClaw `2026.10.2` kurar; yalnız aşağıdaki config komutları 14–15'in
+native SDK/Control UI değişikliklerini kurmaz. Hazır arşiv/release bu repoda yoktur.
+Kaynak düzeltmeleri ve paket denetimi bitmeden 15'i günlük kullanım için açmayın.
+Geliştirici için sabit kaynak commit'i
+`b8952d477f0c932d8ddc6da5c89cab5a169b6ff1`; önce
+`native/openclaw-v2026.10.2-stage14.patch`, ardından
+`native/openclaw-v2026.10.2-stage15.patch` uygulanır. Kaynak hazırlama,
+SDK/runtime/worker üretimi, paket içerik denetimi ve proje-yerel kurulumun
+kalan sırası [güncel geliştirme durumunda](docs/GELISTIRME_DURUMU.md) bulunur.
+Oradaki yerel Windows/pnpm yollarını kendi makinenize uyarlayın; başka kişinin
+profilini/kimliğini taşımayın. `scripts/pack-native-windows.mjs` eksik SDK
+dosyalarını üretmez; aynı kaynağa ait doğrulanmış build/worker gerektirir.
+Yeniden `npm ci` çalıştırmak yerel native paketi stok sürüme döndürür.
+
+Doğrulanmış native paket kurulduktan, 4–4h tamamlandıktan sonra Gateway'i
+kendi terminalinde normal `Ctrl+C` ile durdurup depo kökünde:
+
+```powershell
+node scripts/jarvis-automation-config.mjs
+node scripts/jarvis-policy-config.mjs --check "$env:USERPROFILE\.openclaw-jarvis\openclaw.json"
+```
+
+İlk komut mevcut jarvis profilinde `nativeAutomations` ve native `automations`
+kataloğunu açar; önceki ayarı profil altında
+`openclaw.before-stage15-automations.json` olarak bir kez yedekler. İş oluşturmaz,
+ikinci scheduler kurmaz, genel admin yetkisi vermez. Config dosyasını değiştirmek
+çalışan süreci güncellemez; 5'te normal başlatma, ardından 7'de istemci derlemesi gerekir.
+
+Telefon kullanacaksanız PC ve telefonda Tailscale hesabınıza giriş yapın;
+tailnet erişim kurallarınız iki cihazın erişimine izin vermelidir. PC'de MagicDNS
+ve özel HTTPS sertifikası için Tailscale hesabındaki ilgili desteği etkinleştirin.
+Betik standart `%ProgramFiles%\Tailscale\tailscale.exe` kurulumunu kullanır.
+Gateway kapalıyken önce yalnız ön kontrol, başarılıysa config hazırlığı:
+
+```powershell
+node scripts/jarvis-mobile-config.mjs
+node scripts/jarvis-mobile-config.mjs --apply
+```
+
+Komut kendi cihazınızın özel `https://<cihaz>.<tailnet>.ts.net` adresini bulur;
+başka bilgisayarın adresini kopyalamayın. Mevcut Serve/Funnel route'u varsa aynı
+hedefe gitse bile durur; `tailscale serve reset` çalıştırmayın, mevcut hizmete
+etkisini değerlendirmeden route'u silmeyin/üzerine yazmayın. Uygulama bir kez
+`openclaw.before-stage15-mobile.json` yedeği alır; yalnız config hazırlar,
+route/Gateway başlatmaz. Ön kontrol mevcut route varken tekrar geçmeyebilir;
+çalışan route'u bunun için kaldırmayın.
+
+Native Gateway 5'te başlatıldığında kendi Serve yolunu yönetir. Loopback,
+token ve device pairing korunur; `gateway.auth.allowTailscale=false` kalır.
+Funnel/genel internet yayını veya identity-header ile tokensız erişim açmayın.
+Yalnız seçili özel HTTPS origin eklenir. Telefonda betiğin gösterdiği adresi
+açıp mevcut Gateway token'ını **Control UI bağlantı alanına** elle girin;
+tokenı URL'ye, komut satırına, log'a veya Git'e koymayın. 7'deki native cihaz
+eşleştirme adımını telefonun gerçek cihaz kimliği için ayrıca tamamlayın.
+PC ile aynı sohbetleri kullanın; yeni bir backend veya mobil uygulama kurmayın.
+
+Telefon mikrofonu kendi tarayıcı iznini ve o cihazdaki açık kullanıcı eylemini
+gerektirir. Telefon yazısı/sesi/reconnect PC mikrofonunu, oynatmayı veya Talk'ı
+açamaz ve PC susturmasını kaldıramaz. Arka plan/kilit ekranında telefon görüşmesi
+kapanabilir; kesintisiz arka plan sesi vaat edilmez. Gateway health/RPC sorunu
+giderilmeden gerçek telefon/cron kabulü tamamlanmış sayılmaz.
+
 ### 5) Gateway'i başlatın
 
 ```powershell
@@ -924,12 +996,40 @@ için yeni kurulumlarda Adım 14'ün otomatik bakımını hazır varsaymayın.
 `node scripts/jarvis-stage14-config.mjs` tek başına bu özelliği kurmaz veya
 etkinleştirmez.
 
-Bu çalışma alanında kaynak derlemesi `native-protocol` adımını geçti; ardından
-`plugins:assets:build`, yerel pnpm çalıştırıcısı açılamadığı için durdu. Bu bir
-RAM hatası değildir. Bu nedenle doğrulanmış kaynak kurulum komutu henüz yoktur;
-bu adım tamamlandığında README'ye test edilmiş kurulum sırası eklenecektir.
+Backend runtime derlemesi tamamlandı; pnpm başlatıcısı engeli mevcut pnpm'nin
+Node girişiyle aşıldı. Son SDK declaration derlemesi ise üç kaynak dosyasındaki
+eksik import/undefined kontrollerinde durdu; düzeltme ve paket kurulumu bekliyor.
+Bu nedenle uçtan uca doğrulanmış native kurulum tarifi henüz yoktur; 4i'deki
+hazırlık komutları bu engeli çözmez. Yerel geliştirme makinesinde sanal bellek
+4 GB'tan 8 GB'a çıkarılıp yeniden başlatıldı ve son deneme bellek hatası vermedi.
+Bu, tüm kurulumlar için sabit 8/16 GB gereksinimi değildir; Windows ayarını
+körü körüne değiştirmeyin. Güncel engel ve devam sırası:
+[güncel geliştirme durumu](docs/GELISTIRME_DURUMU.md).
 Unutma önizlemesi ile gerçek bakımın kapsamı ve kalan engeller:
 [14 uygulama kaydı](docs/14_UNUTMA_VE_HAM_KAYIT_BAKIMI.md).
+
+### 7d) Zamanlanmış sonuçlar ve telefon kullanımı (15)
+
+4i'deki native kurulum tamamlandıktan sonra isteğinizde amacı, tek seferlik
+tarih veya günlük/haftalık saati (Europe/Istanbul), hedef proje/görev kapsamını
+ve ilgili özel sohbeti belirtin. Gemini basit hatırlatmayı dar araçla yönetir;
+karmaşık proje işi mevcut Space Bunny/OpenCode yolunda hazırlanır.
+Desteklenen zamanlanmış etkiler seçili proje içinde dosya okuma/yazma/düzenleme,
+görev notu ve kayıt okumadır. Shell, otomatik ödeme/dış gönderim ve Full access
+kodlama işçisi yetkisi bu işlemle açılmaz; eski insan onayı taşınmaz.
+
+Sonuç aynı özel sohbet/run geçmişinde saklanır. PC sesi zaten açık ve uygunsa
+mevcut context yolu kullanılır; ses kapalı/susturulmuş ve Electron açıkken kısa
+Windows bildirimi gelir. Bildirim sesi/mikrofonu açmaz. Electron kapalıyken
+sonuç geçmişte kalır; reconnect eski sonucu yeni iş sonucu gibi duyurmaz ve
+eski talimatı tekrar göndermez. PC/Gateway kapalıyken yerel iş yapılmış sayılmaz.
+Kaçırılmış iş/retry mevcut native kurala bağlıdır; `cron.skipMissedJobs`
+varsayılanı değiştirilmedi. Belirsiz dış işlemi otomatik tekrar ettirmeyin.
+
+Canlı kabulde PC sesi kapalıyken telefondan talimat verip reconnect sonrasında
+PC sesinin kapalı kaldığını ayrıca doğrulayın. Bu kabul henüz yapılmadı;
+çevrimdışı testler gerçek telefon/hesap erişiminin kanıtı değildir.
+Ayrıntılar: [15 otomasyon ve telefon](docs/15_OTOMASYON_VE_TELEFON.md).
 
 ### 8) Windows çalıştırılabilir klasörünü oluşturun ve kontrolleri çalıştırın
 

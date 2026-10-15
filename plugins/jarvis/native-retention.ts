@@ -2,7 +2,7 @@ import type {OpenClawPluginApi} from 'openclaw/plugin-sdk/plugin-entry';
 
 export type RawWindow={sessionKey:string;sessionId:string;targetKind:'active'|'cold'|'lifecycle'|'cleanup';generation:string;archiveName?:string};
 type Cursor=Pick<RawWindow,'targetKind'|'sessionId'|'generation'|'archiveName'>;
-type Result={removedMessages:number;eligibleMessages:number;removedDerivedSummaries?:number;eligibleDerivedSummaries?:number;nextAfterSeq:number;hasMore:boolean;previewHash:string;nextDueAtMs?:number;blockedScopes:string[]};
+type Result={removedMessages:number;eligibleMessages:number;removedDerivedSummaries?:number;eligibleDerivedSummaries?:number;generation?:string;nextAfterSeq:number;hasMore:boolean;previewHash:string;nextDueAtMs?:number;blockedScopes:string[]};
 type NativeRaw={
   listRawRetentionWindows(p:{agentId:string;storePath?:string;afterCursor?:Cursor;signal:AbortSignal;assertIdle:()=>void}):Promise<{windows:RawWindow[];nextCursor?:Cursor}>;
   maintainSessionRawRetention(p:{scope:RawWindow&{agentId:string;storePath?:string};request:{nowMs:number;afterSeq:number;mode:'preview'|'apply';expectedPreviewHash?:string};signal:AbortSignal;assertIdle:()=>void}):Promise<Result>;

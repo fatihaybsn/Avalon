@@ -35,6 +35,7 @@ export class VoiceHost {
   }
   context(text:string){if(this.ready&&this.policy.allowed&&text.length<=12000)this.send({type:'context',text});}
   get permitted(){return this.policy.allowed;}
+  get canAnnounce(){return this.policy.allowed&&!this.state.muted&&!this.activeSpeech&&!this.decisions.active&&this.state.phase==='listening';}
   trusted(event:Electron.IpcMainEvent|Electron.IpcMainInvokeEvent){return mediaFrame(event.sender.id,this.window?.webContents.id,event.senderFrame?.url??'',event.senderFrame===this.window?.webContents.mainFrame,this.dev);}
   async initialize(){
     try {const p=JSON.parse(await fs.readFile(this.settingsFile,'utf8'));if(typeof p.shortcut==='string'&&p.shortcut.length<100)this.state.shortcut=p.shortcut;if(Number.isFinite(p.idleMinutes)&&p.idleMinutes>=0&&p.idleMinutes<=240)this.state.idleMinutes=p.idleMinutes;}catch{}

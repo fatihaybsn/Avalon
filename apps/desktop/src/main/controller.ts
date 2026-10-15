@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import {bindChatTask} from '../shared/chat-task.ts';
 import type { Snapshot, Session, Work } from '../shared/contracts.ts';
 import { RpcError, type Rpc } from './gateway.ts';
 import { projectMessages, projectSession, projectApproval, record, text, messageText } from './projection.ts';
@@ -158,10 +159,8 @@ export class DesktopController {
     this.snapshot.submissions = [...this.snapshot.submissions.slice(-49), submission]; this.sending.add(key); this.emit();
     let sent = false;
     try {
-      const shortInput = message.trim().replace(/\s+/gu, ' ');
-      const userInput = message.length <= 4096 && shortInput.length <= 1800 && !/[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(message) ? { userInput: message } : {};
       const projectId = this.projectIds.get(key) ?? this.snapshot.work?.find(r => r.sessionKey === key && r.sessionId === session.sessionId)?.projectId ?? key;
-      await this.rpc.request('jarvis.scope.bind', { sessionKey: key, agentId: this.agentId, runId: id, taskId: id, projectId, ...(root ? { role: 'project', root } : { role: 'memory' }), ...userInput }, true);
+      await bindChatTask({request:(m,p)=>this.rpc.request(m,p,true)},key,id,message,{projectId,root});
       sent = true;
       await this.rpc.request('jarvis.work.start', { sessionKey: key, agentId: this.agentId, runId: id, message, ...(key.startsWith(`agent:${this.agentId}:subagent:`) ? { independent: true } : {}) }, true);
       submission.status = 'accepted'; submission.detail = 'Gateway iletinin kabulünü doğruladı; çalışma durumu host kayıtlarından okunur.';
@@ -220,7 +219,7 @@ export class DesktopController {
     if (event === 'desktop.disconnected') {
       this.stop(); this.selectionEpoch++; this.snapshot.historyReady = false; this.streams.clear(); this.snapshot.streaming = ''; this.emit(); return;
     }
-    if (event === 'sessions.changed' || event === 'desktop.gap' || event.endsWith('.approval.requested') || event.endsWith('.approval.resolved')) {
+    if (event === 'cron' || event === 'sessions.changed' || event === 'desktop.gap' || event.endsWith('.approval.requested') || event.endsWith('.approval.resolved')) {
       this.listRevision++;
       if (event === 'desktop.gap') { this.streams.clear(); this.snapshot.streaming = ''; }
       void this.refresh().catch(e => this.showError(e)); return;

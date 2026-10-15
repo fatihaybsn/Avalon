@@ -38,6 +38,7 @@
     "type": "object",
     "additionalProperties": false,
     "properties": {
+      "nativeAutomations": { "type": "boolean" },
       "openCodeFullAccess": { "type": "boolean" },
       "nativeRoot": {
         "type": "string"

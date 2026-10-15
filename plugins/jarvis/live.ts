@@ -8,10 +8,12 @@ import {APPS} from './quick-policy.ts';
 import {resolvePinnedHostnameWithPolicy} from 'openclaw/plugin-sdk/ssrf-runtime';
 import type {WorkLedger} from './work.ts';
 import {previewForget} from './forget.ts';
+import {automationParams,dispatchSessionAutomation} from './automations.ts';
 type Request=Parameters<Parameters<OpenClawPluginApi['registerGatewayMethod']>[1]>[0];
 const str=(max=256)=>({type:'string',maxLength:max});
 const tool=(name:string,description:string,properties:Record<string,unknown>,required:string[]=Object.keys(properties))=>({type:'function',name,description,parameters:{type:'object',properties,required,additionalProperties:false}});
 export const LIVE_TOOLS=[
+  tool('jarvis_automation','Manage only explicitly requested native reminders in this private conversation. List/get before changes; echo the observed configRevision. spec is the native job object as JSON; exact Istanbul user date/time and empty toolsAllow required. No model call, force-run or new execution authority.',{action:{type:'string',enum:['list','get','runs','create','update','pause','resume','remove']},jobId:str(128),spec:str(4096),configRevision:str(256),offset:{type:'integer',minimum:0}},['action']),
   tool('jarvis_context','Read current host task phase, concrete result, blocker and next step. No model call.',{}),
   tool('jarvis_output','Read original visible output/source for an observed task. For verbatim requests preserve the returned text exactly.',{taskId:str(128),callId:str(256)},['taskId']),
   tool('jarvis_memory_search','Search relevant current source notes; results keep provenance.',{query:str()}),
@@ -47,8 +49,8 @@ export function validateLiveArgs(name:string,input:unknown){
   return p;
 }
 type Operation={abort:AbortController;scopes:string[]};
-type Call={user:string;device:string;conn:string;key:string;sid:string;root?:string;statement?:string;entryId?:string;seen:Set<string>;used:Set<string>;tasks:Map<string,any>;started:Map<string,string>;pending:Map<string,Operation>;prepared:Map<string,{id:string;key:string;message:string;operation:Operation}>;windows:Map<string,{app:string;window:any;at:number}>;sources:Map<string,string>;abort:AbortController;current:()=>void;release:()=>void};
-export function installLive(api:OpenClawPluginApi,workspace:()=>string,index:()=>Promise<unknown>,search:(query:string,signal:AbortSignal)=>Promise<any>,dispatch=dispatchGatewayMethod,dropScope:(id:string)=>void=()=>{},ledger?:WorkLedger,previewNativeForget?:(scope:Scope,current:()=>void,signal:AbortSignal,id:string,revision:number)=>Promise<unknown>){
+type Call={user:string;device:string;conn:string;key:string;sid:string;root?:string;statement?:string;entryId?:string;seen:Set<string>;used:Set<string>;tasks:Map<string,any>;started:Map<string,string>;pending:Map<string,Operation>;prepared:Map<string,{id:string;key:string;message:string;operation:Operation}>;windows:Map<string,{app:string;window:any;at:number}>;sources:Map<string,string>;automations:Map<string,any>;abort:AbortController;current:()=>void;release:()=>void};
+export function installLive(api:OpenClawPluginApi,workspace:()=>string,index:()=>Promise<unknown>,search:(query:string,signal:AbortSignal)=>Promise<any>,dispatch=dispatchGatewayMethod,dropScope:(id:string)=>void=()=>{},ledger?:WorkLedger,previewNativeForget?:(scope:Scope,current:()=>void,signal:AbortSignal,id:string,revision:number)=>Promise<unknown>,automation=dispatchSessionAutomation){
   const calls=new Map<string,Call>();
   const request=async(method:string,params:Record<string,unknown>)=>{const r=await dispatch(method,params,{expectFinal:true,timeoutMs:65000});if(!r.ok)throw new Error(r.error?.message??'Native request refused');return r.payload as any;};
   const cancelStarted=async(c:Call,onlyId?:string)=>{for(const [id,key]of c.started){if(onlyId&&id!==onlyId)continue;try{const r=await request('jarvis.work.status',{sessionKey:key,agentId:'main',taskId:id});if(r.record&&!['ended','failed'].includes(r.record.state))await request('jarvis.work.cancel',{sessionKey:key,agentId:'main',taskId:id,expectedRevision:r.record.revision});}catch{api.logger.warn('Voice task cancellation outcome unknown; inspect the existing task record');}}};
@@ -59,7 +61,7 @@ export function installLive(api:OpenClawPluginApi,workspace:()=>string,index:()=
     async cancelCall(o){const c=bound(o);exactKeys(o.params,['sessionKey','agentId','voiceSessionId','callId']);const p=c.pending.get(String(o.params.callId))??c.prepared.get(String(o.params.callId))?.operation;if(!p)throw new Error('Call already closed; do not reuse its ID');p.abort.abort();for(const id of p.scopes)if(!c.started.has(id))dropScope(id);return {cancellationRequested:true,effect:'unverified'};},
     async startPrepared(o){const c=bound(o);exactKeys(o.params,['sessionKey','agentId','voiceSessionId','callId']);const call=String(o.params.callId),p=c.prepared.get(call);if(!p||p.operation.abort.signal.aborted)throw new Error('Task preparation cancelled/consumed');c.prepared.delete(call);c.pending.set(call,p.operation);try{c.current();c.started.set(p.id,p.key);const result=await request('jarvis.work.start',{sessionKey:p.key,agentId:'main',runId:p.id,message:p.message,independent:true});if(c.abort.signal.aborted){await cancelStarted(c,p.id);throw new Error('Voice ended; read native cancellation status');}if(p.operation.abort.signal.aborted)throw new Error('Provider call closed; accepted native task remains in its record');return result;}finally{c.pending.delete(call);}},
     async catalog(o){identity(o);exactKeys(o.params,['sessionKey','agentId']);return {tools:LIVE_TOOLS};},
-    async open(o){const who=identity(o);exactKeys(o.params,['sessionKey','agentId','voiceSessionId']);const id=text(o.params.voiceSessionId,'voiceSessionId',1024);if(calls.has(id))throw new Error('Voice ID already owned');if(calls.size>=16)throw new Error('Too many voice calls');const access=o.sessionAccessAuthority!.retain();const abort=new AbortController();calls.set(id,{...who,seen:new Set(),used:new Set(),tasks:new Map(),started:new Map(),pending:new Map(),prepared:new Map(),windows:new Map(),sources:new Map(),abort,current:access.assertCurrent,release:access.release});access.signal.addEventListener('abort',()=>close(id),{once:true});return {ok:true};},
+    async open(o){const who=identity(o);exactKeys(o.params,['sessionKey','agentId','voiceSessionId']);const id=text(o.params.voiceSessionId,'voiceSessionId',1024);if(calls.has(id))throw new Error('Voice ID already owned');if(calls.size>=16)throw new Error('Too many voice calls');const access=o.sessionAccessAuthority!.retain();const abort=new AbortController();calls.set(id,{...who,seen:new Set(),used:new Set(),tasks:new Map(),started:new Map(),pending:new Map(),prepared:new Map(),windows:new Map(),sources:new Map(),automations:new Map(),abort,current:access.assertCurrent,release:access.release});access.signal.addEventListener('abort',()=>close(id),{once:true});return {ok:true};},
     async workspace(o){const c=bound(o);exactKeys(o.params,['sessionKey','agentId','voiceSessionId','root']);const scope=await makeScope({sessionKey:c.key,agentId:'main',runId:'voice-folder',taskId:'voice-folder',projectId:c.key,role:'project',root:o.params.root},{agentId:'main',sessionKey:c.key,sessionId:c.sid,userId:c.user,deviceId:c.device});c.root=scope.root;return {ok:true};},
     async transcript(o){const c=bound(o);exactKeys(o.params,['sessionKey','agentId','voiceSessionId','entryId','role','text','timestamp']);if(o.params.role==='user'&&c.entryId!==o.params.entryId){const s=canonicalUserStatement(o.params.text);if(!s)throw new Error('Bounded final user input required');c.statement=s;c.entryId=text(o.params.entryId,'entryId',1024);}return {ok:true};},
     async close(o){const who=identity(o),id=text(o.params.voiceSessionId,'voiceSessionId',1024),c=calls.get(id);if(c&&Object.entries(who).some(([k,v])=>c[k as keyof Call]!==v))throw new Error('Different voice owner');if(c){c.abort.abort();await cancelStarted(c);}close(id);return {ok:true};},
@@ -73,11 +75,26 @@ export function installLive(api:OpenClawPluginApi,workspace:()=>string,index:()=
       try {
       current();
       const base={sessionKey:c.key,agentId:'main'};
-      const mutating=['jarvis_note_save','jarvis_app_open','jarvis_app_focus','jarvis_app_minimize','jarvis_app_restore','jarvis_source_open','jarvis_volume','jarvis_research','jarvis_task_start','jarvis_task_steer','jarvis_task_cancel','jarvis_screen','jarvis_permission_revoke'].includes(name);
+      const mutating=(name==='jarvis_automation'&&!['list','get','runs'].includes(String(args.action)))||['jarvis_note_save','jarvis_app_open','jarvis_app_focus','jarvis_app_minimize','jarvis_app_restore','jarvis_source_open','jarvis_volume','jarvis_research','jarvis_task_start','jarvis_task_steer','jarvis_task_cancel','jarvis_screen','jarvis_permission_revoke'].includes(name);
       if(mutating){if(!c.statement||!c.entryId||!o.client?.connect.scopes?.includes('operator.write'))throw new Error('New explicit user input required');const use=c.entryId+':'+name;if(c.used.has(use))throw new Error('This input already attempted; inspect before retry');c.used.add(use);}
       if(mutating&&name!=='jarvis_research'&&/^(?:araştır|ara|kontrol et)\s*:/iu.test(statement!))throw new Error('A public query cannot authorize another action');
       let result:any;
-      if(name==='jarvis_context'){result=await request('jarvis.work.status',base);c.tasks.clear();for(const r of result.records??[])if(r.sessionKey===c.key||r.projectId===c.key){c.tasks.set(r.taskId,r);for(const [i,url] of (r.operation?.sources??[]).entries())try{const ref=r.taskId+':source-'+(i+1);c.sources.set(ref,publicUrl(url));}catch{}}result={records:[...c.tasks.values()],sources:[...c.sources].map(([ref,url])=>({ref,url})),observationError:result.observationError,pauseSupported:false};}
+      if(name==='jarvis_automation'){
+        const action=String(args.action),id=args.jobId===undefined?undefined:String(args.jobId);
+        if(['update','pause','resume','remove'].includes(action)){
+          const observed=id?c.automations.get(id):undefined;
+          if(!observed||args.configRevision!==observed.configRevision)throw new Error('Read this automation and echo its current native configRevision first');
+        }
+        let job:Record<string,unknown>|undefined;
+        if(args.spec!==undefined){if(!['create','update'].includes(action))throw new Error('Unexpected automation definition');job=JSON.parse(String(args.spec));}
+        if(action==='pause'||action==='resume')job={enabled:action==='resume'};
+        const nativeAction=action==='create'?'add':['pause','resume'].includes(action)?'update':action;
+        const p=automationParams({action:nativeAction,...id?{jobId:id}:{},...job?{job}:{},...args.offset!==undefined?{offset:args.offset}:{}},{sessionKey:c.key,role:'memory',userStatement:statement});
+        current();result=await automation({sessionKey:c.key,agentId:'main',action:nativeAction as any,...id?{jobId:id}:{},...p.job?{job:p.job as Record<string,unknown>}:{},...args.configRevision?{expectedConfigRevision:String(args.configRevision)}:{},...args.offset!==undefined?{offset:Number(args.offset)}:{}});current();
+        for(const r of (Array.isArray(result?.jobs)?result.jobs:[result?.job??result]))if(r?.id&&typeof r.configRevision==='string'&&r.owner?.sessionKey===c.key)c.automations.set(r.id,r);
+        if(action==='remove'&&id)c.automations.delete(id);
+      }
+      else if(name==='jarvis_context'){result=await request('jarvis.work.status',base);c.tasks.clear();for(const r of result.records??[])if(r.sessionKey===c.key||r.projectId===c.key){c.tasks.set(r.taskId,r);for(const [i,url] of (r.operation?.sources??[]).entries())try{const ref=r.taskId+':source-'+(i+1);c.sources.set(ref,publicUrl(url));}catch{}}result={records:[...c.tasks.values()],sources:[...c.sources].map(([ref,url])=>({ref,url})),observationError:result.observationError,pauseSupported:false};}
       else if(name==='jarvis_output'||name==='jarvis_task_steer'||name==='jarvis_task_cancel'){
         const r=c.tasks.get(String(args.taskId));if(!r)throw new Error('Read context and clarify the exact task first');
         const target={sessionKey:r.sessionKey,agentId:r.agentId,taskId:r.taskId};

@@ -8,7 +8,20 @@ import {routeTalkExtension} from '../native/openclaw/talk-extension.mjs';
 import {supportsNativeTalkPackage} from '../scripts/extend-talk.mjs';
 import {WorkLedger} from '../plugins/jarvis/work.ts';
 const key='agent:main:live',work={taskId:'existing',projectId:key,sessionKey:key,agentId:'main',sessionId:'sid',runId:'existing',revision:2,state:'running',result:'unverified',model:{finding:'12 kaynak; özgün sayı',sources:['https://example.com/']}};
-function fixture(workspace,search=async()=>({details:{results:[]}})){
+test('Gemini automation uses native session owner directly, not a model/task/admin fallback; stale/replayed writes stop',async()=>{
+ const native=[],job={id:'reminder1',configRevision:'r1',owner:{sessionKey:key},sessionKey:key};
+ const f=fixture('unused',undefined,async p=>{native.push(p);return p.action==='list'?{jobs:[job]}:job;});
+ await f.open();assert.equal((await f.tool('jarvis_automation',{action:'list'})).ok,true);
+ await f.say('reminder1 otomasyonunu duraklat');
+ assert.equal((await f.tool('jarvis_automation',{action:'pause',jobId:'reminder1',configRevision:'old'})).ok,false);
+ await f.say('reminder1 otomasyonunu duraklat');
+ const r=await f.tool('jarvis_automation',{action:'pause',jobId:'reminder1',configRevision:'r1'});assert.equal(r.ok,true,r.error?.message);
+ assert.deepEqual(native.at(-1),{sessionKey:key,agentId:'main',action:'update',jobId:'reminder1',job:{enabled:false},expectedConfigRevision:'r1'});
+ assert.equal((await f.tool('jarvis_automation',{action:'pause',jobId:'reminder1',configRevision:'r1'})).ok,false);
+ assert.equal(f.requests.length,0);await f.invoke('close',{voiceSessionId:'voice'});
+ assert.equal((await f.tool('jarvis_automation',{action:'list'})).ok,false);
+});
+function fixture(workspace,search=async()=>({details:{results:[]}}),automation){
   const methods={},requests=[],abort=new AbortController(),rows=new Map([['existing',structuredClone(work)]]);let valid=true;
   const client={connId:'conn',authenticatedUserProfile:{profileId:'user'},connect:{role:'operator',device:{id:'device'},scopes:['operator.read','operator.write','operator.talk']}};
   const access={target:{agentId:'main',sessionKey:key,sessionId:'sid'},assertCurrent(){if(!valid)throw new Error('revoked');},retain(){return{signal:abort.signal,assertCurrent:this.assertCurrent,release(){}};}};
@@ -22,7 +35,7 @@ function fixture(workspace,search=async()=>({details:{results:[]}})){
     return{ok:true,payload};};
   const store=()=>{const data=new Map();return{async lookup(k){return structuredClone(data.get(k));},async registerIfAbsent(k,v){if(data.has(k))return false;data.set(k,structuredClone(v));return true;},async update(k,fn){const v=fn(structuredClone(data.get(k)));if(v!==undefined)data.set(k,structuredClone(v));},async entriesInKeyRange(){return[...data].map(([key,value])=>({key,value}));}};};
   const ledger=new WorkLedger(store(),store(),store());
-  installLive({config:{},logger:{warn(){}},registerGatewayMethod(n,h){methods[n]=h;},on(){}},()=>workspace,async()=>({ready:true}),search,dispatch,()=>{},ledger);
+  installLive({config:{},logger:{warn(){}},registerGatewayMethod(n,h){methods[n]=h;},on(){}},()=>workspace,async()=>({ready:true}),search,dispatch,()=>{},ledger,undefined,automation);
   let callNo=0;
   const invoke=async(name,params={},changed={})=>{let response;await methods['jarvis.live.'+name]({params:{sessionKey:key,agentId:'main',...params},client,sessionAccessAuthority:access,respond(ok,payload,error){response={ok,payload,error};},...changed});return response;};
   const open=()=>invoke('open',{voiceSessionId:'voice'});

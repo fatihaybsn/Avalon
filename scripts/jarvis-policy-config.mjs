@@ -8,12 +8,14 @@ import { applyQuick, assertQuick } from './jarvis-quick-config.mjs';
 import {applyGui} from './jarvis-gui-config.mjs';
 import { separateCodexTools } from './codex-worker-policy.mjs';
 import {applyWorkers} from './jarvis-worker-config.mjs';
+import {applyAutomations} from './jarvis-automation-config.mjs';
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export function applyPolicy(config, profileDir, pluginPath = path.join(repo, 'plugins', 'jarvis')) {
   const codexEnabled = config.plugins?.entries?.codex?.enabled === true;
   const workersEnabled=config.plugins?.entries?.jarvis?.config?.openCodeFullAccess===true;
   const guiNode=config.plugins?.entries?.jarvis?.config?.guiNode;
+  const nativeAutomations=config.plugins?.entries?.jarvis?.config?.nativeAutomations===true;
   config.plugins ??= {};
   config.plugins.load ??= {};
   config.plugins.load.paths = [...new Set([...(config.plugins.load.paths ?? []).filter(p => !p.endsWith('plugins/jarvis') && !p.endsWith('plugins\\jarvis')), pluginPath])];
@@ -35,6 +37,7 @@ export function applyPolicy(config, profileDir, pluginPath = path.join(repo, 'pl
   const prepared = applyGui(applyQuick(applyWork(config)),guiNode);
   if(workersEnabled)applyWorkers(prepared);
   if (codexEnabled) { prepared.plugins.allow.push('codex'); separateCodexTools(prepared, profileDir); }
+  if(nativeAutomations){prepared.plugins.entries.jarvis.config.nativeAutomations=true;applyAutomations(prepared);}
   return prepared;
 }
 export function assertPolicy(config, profileDir) {

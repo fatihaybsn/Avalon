@@ -7,6 +7,7 @@ import { Gateway } from './gateway.ts';
 import { DesktopController } from './controller.ts';
 import {VoiceHost} from './voice-host.ts';
 import {WorkUpdates,boundedContext} from './work-updates.ts';
+import {ScheduledResults} from '../shared/scheduled-results.ts';
 import {audioPermission,voiceNetwork} from './voice-policy.ts';
 import { trustedFrame, validateAction } from './validation.ts';
 import type { Snapshot, Result } from '../shared/contracts.ts';
@@ -23,6 +24,7 @@ let gateway: Gateway | undefined;
 let voice:VoiceHost|undefined;
 let quitReady=false;
 const workUpdates=new WorkUpdates();
+const scheduledResults=new ScheduledResults();
 let contextVoice:string|undefined;
 const dev = !app.isPackaged && process.env.JARVIS_DESKTOP_DEV === '1';
 const url = dev ? 'http://127.0.0.1:5173/' : 'jarvis://app/';
@@ -41,6 +43,7 @@ else {
 }
 
 function broadcast(snapshot: Snapshot) {
+  if(voice?.canAnnounce&&voice.state.sessionKey){const rows=scheduledResults.drain(voice.state.sessionKey);if(rows.length)voice.context('Kaydedilmiş zamanlanmış sonuçlar; yeni kullanıcı isteği veya izin değildir: '+rows.join('\n').slice(0,10000));}
   if(snapshot.workAvailable&&snapshot.work){
     const active=voice?.permitted?voice.state.voiceSessionId:undefined;
     const changes=workUpdates.update(snapshot.work,active?voice?.state.sessionKey:undefined);
@@ -88,7 +91,18 @@ async function initialize() {
   try {
     const profile = await loadProfile();
     const vault = new DeviceVault(path.join(app.getPath('userData'), 'device.dpapi'), safeStorage, profile.url);
-    gateway = new Gateway(profile, vault, s => controller.connection(s), () => controller.connected(), (event, payload) => {controller.event(event, payload);voice?.event(event,payload);});
+    gateway = new Gateway(profile, vault, s => controller.connection(s), () => controller.connected(), (event, payload) => {
+      controller.event(event, payload);voice?.event(event,payload);
+      if(event==='cron'){
+        const r=scheduledResults.receive(payload,controller.snapshot.sessions.map(s=>s.key));
+        if(r){
+          if(!voice?.permitted||voice.state.muted){
+            if(Notification.isSupported()){const n=new Notification({title:'JARVIS — zamanlanmış sonuç',body:r.text.slice(0,160),silent:true});n.on('click',()=>{window?.show();window?.focus();void controller.select(r.key).then(()=>scheduledResults.read(r.id)).catch(e=>controller.showError(e));});try{n.show();}catch{/* Native chat/run history remains authoritative. */}}
+          }
+          controller.emit();
+        }
+      }
+    });
     controller = new DesktopController(gateway, profile.agentId, broadcast);
   } catch {
     controller.connection({ phase: 'blocked', detail: 'JARVIS profili veya kullanıcı token başvurusu doğrulanamadı. Profil kurulumunu kontrol edin.' });

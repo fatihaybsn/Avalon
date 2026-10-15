@@ -24,6 +24,8 @@ import { createQuickTools, preserveFile, configureNativeRoot, localCall } from '
 import { QUICK_TOOLS, operationHash } from './quick-policy.ts';
 import { runBeforeToolCallHook, runAgentHarnessAfterToolCallHook } from 'openclaw/plugin-sdk/agent-harness-runtime';
 import { dispatchGatewayMethod } from 'openclaw/plugin-sdk/gateway-method-runtime';
+import {AUTOMATION_GUIDANCE} from './automations.ts';
+import {scheduledTaskScope,consumeScheduledAdmission} from './scheduled-task.ts';
 const scopeMetadata = (scope: Scope) => { const {quick: _quick, ...metadata}=scope; return metadata; };
 
 export default definePluginEntry({
@@ -78,11 +80,14 @@ export default definePluginEntry({
     }, { priority: 10000, eligibleTriggers: ['cron'] });
     // Ephemeral retained host authority only. OpenClaw owns run metadata,
     // transcripts and durable approvals; this is not a second registry/DB.
-    const authorities = new Map<string, { scope: Scope; assertCurrent: () => void; release: () => void; signal: AbortSignal }>();
+    const authorities = new Map<string, { scope: Scope; assertCurrent: () => void; release: () => void; signal: AbortSignal; scheduledTools?: string[] }>();
     const localAttempts=new Set<string>();
     const localScopes=new Set<string>();
+    // Cleanup index only: native run scratch owns the consumed fact and the
+    // native occurrence owns lifetime. No grants or task state live here.
+    const scheduledCleanup=new Map<string,()=>void>();
     const hasTavilyKey = () => /^tvly-\S+$/.test(process.env.TAVILY_API_KEY ?? '');
-    const drop = (runId: string) => { const old = authorities.get(runId); authorities.delete(runId); api.runContext.clearRunContext({ runId }); old?.release(); work?.release(runId); guiObservations.release(runId); for(const key of localAttempts)if(key.startsWith(runId+':'))localAttempts.delete(key); };
+    const drop = (runId: string) => { const old = authorities.get(runId); authorities.delete(runId); api.runContext.clearRunContext({ runId, namespace:'scope' }); old?.release(); work?.release(runId); guiObservations.release(runId); for(const key of localAttempts)if(key.startsWith(runId+':'))localAttempts.delete(key); };
     const live = (runId?: string) => {
       if (!runId) return undefined;
       const binding = authorities.get(runId);
@@ -93,7 +98,30 @@ export default definePluginEntry({
       } catch { drop(runId); return undefined; }
     };
     const workspace = () => api.runtime.agent.resolveAgentWorkspaceDir(api.config, 'main');
+    api.on('before_prompt_build',async(_event,ctx)=>{
+      await admitScheduled(ctx);
+      return ctx.agentId==='main'&&api.pluginConfig?.nativeAutomations===true?{appendSystemContext:AUTOMATION_GUIDANCE}:undefined;
+    });
     const work = typeof api.runtime?.state?.openKeyedStore === 'function' && typeof api.agent?.events?.registerAgentEventSubscription === 'function' ? installWork(api, live) : undefined;
+    const admitScheduled=async(ctx:{runId?:string;agentId?:string;sessionId?:string;sessionKey?:string})=>{
+      for(const [id,current] of scheduledCleanup){try{current();}catch{scheduledCleanup.delete(id);api.runContext.clearRunContext({runId:id,namespace:'scheduled-admission'});}}
+      if(!ctx.runId||ctx.agentId!=='main'||live(ctx.runId)||!work||stopped)return;
+      const sdk=await import('openclaw/plugin-sdk/gateway-method-runtime');
+      const read=(sdk as unknown as {readSessionAutomationExecution?:(runId:string)=>Promise<any>}).readSessionAutomationExecution;
+      if(!read)return;
+      const admission=await read(ctx.runId);if(!admission)return;
+      if(admission.sessionId!==ctx.sessionId||admission.sessionKey!==ctx.sessionKey)throw new Error('Scheduled occurrence session changed');
+      const admitted=await scheduledTaskScope(admission);if(!admitted)return;
+      admission.assertCurrent();if(stopped)throw new Error('Gateway stopping');
+      const {scope,tools}=admitted;
+      // Native run scratch owns this one-use marker until run teardown. Dropping
+      // the task/permission must not allow a later tool to rehydrate that grant.
+      consumeScheduledAdmission(api.runContext,scope.runId);
+      scheduledCleanup.set(scope.runId,admission.assertCurrent);
+      authorities.set(scope.runId,{scope,assertCurrent:admission.assertCurrent,signal:admission.signal,release:()=>{},scheduledTools:tools});
+      api.runContext.setRunContext({runId:scope.runId,namespace:'scope',value:scopeMetadata(scope)});
+      try{await work.ensureLocal(scope);admission.assertCurrent();}catch(e){drop(scope.runId);throw e;}
+    };
     const decisions=installDecisions(api,()=>[...authorities.values()],async s=>(await work!.ledger.get(s.userId,s.taskId)).revision,drop);
     if (!work) api.logger?.warn?.('JARVIS stage 06 unavailable: native retained state/events required');
     const codex = work && api.config.plugins?.entries?.codex?.enabled === true ? installCodex(api, live, work.ledger, undefined, work.owners) : undefined;
@@ -385,7 +413,9 @@ export default definePluginEntry({
           const p=r.payload as any;if((Array.isArray(p)?p:p.questions??[]).length)return {block:true,blockReason:'Human decision pending; model GUI input cannot operate an approval control'};
         }}catch{return {block:true,blockReason:'Human decision control isolation unavailable; GUI input blocked'};}
       }
+      try{await admitScheduled(ctx);}catch(e){return {block:true,blockReason:e instanceof Error?e.message:'Native scheduled task admission failed'};}
       const binding = live(ctx.runId);
+      if(binding?.scheduledTools&&!binding.scheduledTools.includes(event.toolName))return {block:true,blockReason:'Tool outside this occurrence native task cap; fresh human admission required'};
       const decision = await evaluate(event, ctx, binding?.scope);
       if (binding && !('block' in decision)) {
         if([...QUICK_TOOLS,'browser'].includes(event.toolName)||isGuiTool(event.toolName)) {
@@ -464,7 +494,7 @@ export default definePluginEntry({
       if (ctx.agentId !== 'research' || !['tavily_search', 'web_fetch'].includes(event.toolName ?? '') || event.message.role !== 'toolResult') return;
       return { message: { ...event.message, content: event.message.content.map(part => part.type === 'text' ? { ...part, text: JSON.stringify({ kind: 'external-data', tool: event.toolName, trust: 'untrusted', authority: 'none', content: part.text }) } : part) } };
     });
-    api.on('agent_end', (event, ctx) => { const runId = event.runId ?? ctx.runId; if (runId&&!opencode?.has(runId)&&!codex?.has(runId)) drop(runId); });
-    api.on('gateway_stop', () => { stopped = true;forgetService.stop(); for (const runId of authorities.keys()) drop(runId); });
+    api.on('agent_end', (event, ctx) => { const runId = event.runId ?? ctx.runId; if (runId&&!opencode?.has(runId)&&!codex?.has(runId)) {drop(runId);if(!scheduledCleanup.has(runId))api.runContext.clearRunContext({runId});} });
+    api.on('gateway_stop', () => { stopped = true;forgetService.stop(); for (const runId of authorities.keys()) drop(runId);for(const runId of scheduledCleanup.keys())api.runContext.clearRunContext({runId});scheduledCleanup.clear(); });
   }
 });

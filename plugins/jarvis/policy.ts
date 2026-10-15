@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { MEMORY_TOOLS, memoryParams } from './notes.ts';
 import { QUICK_TOOLS, quickDecision, quickGrants, type QuickGrant } from './quick-policy.ts';
 import {isGuiTool,guiDecision} from './gui-policy.ts';
+import {automationParams} from './automations.ts';
 
 export type Scope = {
   runId: string; sessionKey: string; sessionId: string; agentId: string;
@@ -141,6 +142,7 @@ export async function evaluate(event: {toolName: string; params: Record<string, 
       return { params: { url: publicUrl(event.params.url), extractMode: 'text', maxChars: 20000 } };
     }
     if (!event.toolKind && MEMORY_TOOLS.includes(event.toolName)) return { params: memoryParams(event.toolName, event.params) };
+    if(!event.toolKind&&['automations','cron'].includes(event.toolName))return {params:automationParams(event.params,scope)};
     if(!event.toolKind&&event.toolName==='jarvis_send')return {params:structuredClone(event.params)};
     if (!event.toolKind && WORK_TOOLS.includes(event.toolName)) {
       if (event.toolName === 'jarvis_work_read') { exactKeys(event.params, []); return { params: {} }; }

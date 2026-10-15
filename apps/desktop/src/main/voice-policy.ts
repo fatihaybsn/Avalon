@@ -47,7 +47,7 @@ export class VoiceRpc {
       const result=await this.rpc.request(method,{sessionKey:this.key,voiceSessionId:this.voiceId},true);this.voiceId=undefined;return result;
     }
     if(method==='talk.client.toolCall'){
-      const narrow=typeof p.name==='string'&&/^jarvis_(context|output|memory_search|memory_read|note_save|app_status|app_open|app_focus|app_minimize|app_restore|source_open|audio_status|volume|research|task_start|task_steer|task_cancel|permissions|permission_revoke|screen)$/.test(p.name);
+      const narrow=typeof p.name==='string'&&p.name.startsWith('jarvis_');
       if(!this.allowed||!this.voiceId||p.sessionKey!==this.key||p.voiceSessionId!==this.voiceId||(!narrow&&p.name!=='openclaw_agent_consult')||!id(p.callId)||Object.keys(p).some(k=>!['sessionKey','voiceSessionId','callId','name','args'].includes(k)))throw new Error('Dar ses aracı kapsamı dışında');
       if(narrow)this.narrowCalls.add(p.callId);
       let result:any;
