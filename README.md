@@ -2,7 +2,7 @@
 
 Windows 11'de doğrudan çalışan, OpenClaw merkezli kişisel asistan projesi.
 Tek merkez **OpenClaw Gateway**, konuşma tarafı **Gemini Live**, ağır görev
-modeli **Space Bunny Free**'dir. Mevcut durum: **15'e kadar kaynak bağlantıları uygulandı; 14–15 native paket üretildi ve proje yereline kuruldu, ancak 11–15 canlı kabul tamamlanmadı. Codex/OpenCode üç promptlu ortak canlı kabul de bekliyor.**
+modeli **Space Bunny Free**'dir. Mevcut durum: **16'ya kadar kaynak bağlantıları uygulandı; 14–15 native paket üretilip kuruldu ve 16 kurulabilir Windows installer'ı üretildi, ancak 11–16 canlı kabul tamamlanmadı. Codex/OpenCode üç promptlu ortak canlı kabul de bekliyor.**
 (Gateway, görev izinleri, salt okunur araştırma, yerel GUI node'u ve sade Electron/Vite/Lit arayüzü).
 05 ile tek yerel hafıza, kontrollü kısa not araçları, yetkili ortak erişim ve
 Gemini ile altı saatlik native Dreaming düzenlemesi eklendi.
@@ -1067,13 +1067,15 @@ için yeni kurulumlarda Adım 14'ün otomatik bakımını hazır varsaymayın.
 etkinleştirmez.
 
 Backend runtime derlemesi tamamlandı; pnpm başlatıcısı engeli mevcut pnpm'nin
-Node girişiyle aşıldı. Son SDK declaration derlemesi ise üç kaynak dosyasındaki
-eksik import/undefined kontrollerinde durdu; düzeltme ve paket kurulumu bekliyor.
-Bu nedenle uçtan uca doğrulanmış native kurulum tarifi henüz yoktur; 4i'deki
-hazırlık komutları bu engeli çözmez. Yerel geliştirme makinesinde sanal bellek
-4 GB'tan 8 GB'a çıkarılıp yeniden başlatıldı ve son deneme bellek hatası vermedi.
-Bu, tüm kurulumlar için sabit 8/16 GB gereksinimi değildir; Windows ayarını
-körü körüne değiştirmeyin. Güncel engel ve devam sırası:
+Node girişiyle aşıldı. Kalan SDK declaration kaynak hataları giderildi ve tutarlı
+native paket üretildi: normal tarball denetimini geçti ve proje yereline kuruldu.
+**Yeni GitHub kurulumu için:** paket bu depoya eklenmediği için siz de 4i'deki
+kaynak/patch/derleme/paketleme/kurulum sırasını kendi makinenizde uygulamalısınız.
+`node scripts/jarvis-stage14-config.mjs` tek başına bu özelliği kurmaz veya
+etkinleştirmez.
+
+Bu, tüm kurulumlar için sabit bir sanal bellek gereksinimi değildir; Windows
+ayarını körü körüne değiştirmeyin. Güncel engel ve devam sırası:
 [güncel geliştirme durumu](docs/GELISTIRME_DURUMU.md).
 Unutma önizlemesi ile gerçek bakımın kapsamı ve kalan engeller:
 [14 uygulama kaydı](docs/14_UNUTMA_VE_HAM_KAYIT_BAKIMI.md).
@@ -1101,21 +1103,69 @@ PC sesinin kapalı kaldığını ayrıca doğrulayın. Bu kabul henüz yapılmad
 çevrimdışı testler gerçek telefon/hesap erişiminin kanıtı değildir.
 Ayrıntılar: [15 otomasyon ve telefon](docs/15_OTOMASYON_VE_TELEFON.md).
 
-### 8) Windows çalıştırılabilir klasörünü oluşturun ve kontrolleri çalıştırın
+### 8) Windows installer'ını üretin ve uygulamayı açın
 
 Depo kökünde:
 
 ```powershell
 npm run desktop:pack:win
-.\apps\desktop\release\win-unpacked\JARVIS.exe
 ```
 
-Bu çıktı native Windows **x64** geliştirme paketidir; yönetici/UAC istemez.
-Yalnız `JARVIS.exe` dosyasını ayırıp taşımayın: `win-unpacked` klasöründeki
-DLL, kaynak ve diğer dosyalar birlikte gereklidir. Her bilgisayarda yukarıdaki
-Gateway/profil/hesap kurulumunu kendi kullanıcı kaydıyla tamamlayın; EXE
-Gateway'i kurmaz veya başlatmaz. İmzalı installer, otomatik güncelleme ve
-tam günlük dağıtım 16. adımda yapılacak.
+Bu iki çıktı üretir:
+
+- `apps/desktop/release/JARVIS Setup 0.4.0.exe` — **kurulum paketi (installer)**
+- `apps/desktop/release/win-unpacked/` — paketlenmiş uygulama klasörü
+
+Installer **kullanıcı bazlı** kurar: yönetici/UAC istemez, kurulum dizinini
+seçebilirsiniz, masaüstü ve Başlat menüsü kısayollarını oluşturur. Kurulum
+sonrası `Başlat menüsü → JARVIS` ile açılır. İsterseniz installer'ı
+çalıştırmadan `win-unpacked\JARVIS.exe` ile de açabilirsiniz; yalnız `JARVIS.exe`
+dosyasını ayırıp taşımayın, yanındaki dosyalar gereklidir.
+
+**Kurulum yeri ile kullanıcı verisi ayrıdır.** Uygulama hiçbir şeyi kurulum
+klasörüne yazmaz. Profil, hafıza, model, tarayıcı ve auth dosyaları
+`%USERPROFILE%\.openclaw-jarvis` altında; cihaz kimliği (DPAPI ile şifreli) ve
+uygulama ayarları `%APPDATA%\jarvis-desktop` altında kalır. Bu yüzden:
+
+- Uygulamayı güncellemek veya yeniden kurmak **kullanıcı verinizi silmez**.
+- **Uninstall kullanıcı verisini otomatik silmez.** Tamamen kaldırmak isterseniz
+  bu iki klasörü kendiniz silersiniz.
+- Kurulum, mevcut sır dosyalarınızı örnek dosyayla ezmez.
+
+Installer yalnız Electron uygulamasını paketler; **OpenClaw/Gateway'i kurmaz,
+başlatmaz veya güncellemez.** Gateway, 4i'de kurduğunuz proje-yerel pakete
+aittir ve mevcut OpenClaw service/CLI sahibi tarafından yönetilir; uygulama için
+ikinci bir başlatma/izleme motoru yoktur. Her bilgisayarda 4i'deki Gateway/profil/
+hesap kurulumunu kendi kullanıcı kaydınızla tamamlayın.
+
+Uygulama açılışta Gateway'e bağlanmayı dener. Gateway kapalıysa **pencere yine
+açılır** ve durumu dürüstçe `offline` ("Gateway erişilemiyor veya yeniden
+başlıyor") olarak gösterir; yazmaları otomatik tekrar göndermez. Bağlantı
+kurulana kadar sohbet ve görev listesi boş görünür.
+
+**Günlük kullanım:**
+
+- Pencereyi **X** ile kapatmak onu **tepsiye gizler**; görev iptali değildir.
+- Tepsi menüsü: "JARVIS'i göster" ve "Uygulamadan çık".
+- **Uygulamadan çık** mikrofon/oynatma/provider akışını düzgün kapatır ve
+  uygulamanın kendi süreçlerini sonlandırır. Bu, Gateway'de kabul edilmiş
+  işlerin iptali **değildir**; onlar kendi kuralıyla sürer.
+- Aynı anda ikinci kopyayı açmak uygulamayı ikinci kez başlatmaz; mevcut pencere
+  öne getirilir.
+
+Kurulumu doğrulamak için:
+
+```powershell
+npm --prefix apps/desktop run test:packaged
+```
+
+Bu test installer'dan çıkan gerçek `JARVIS.exe`'yi başlatır ve Electron sandbox,
+dar IPC, gezinme/popup engeli, X→tepsi ve renderer yeniden yükleme ömrünü
+sınar. Gateway kapalıyken kabuk kontrolleri geçer, ancak test canlı bağlantı
+olmadığı için **farklı bir çıkış kodu** döndürür; bu bir hata değil, canlı
+kabulün henüz yapılmadığının işaretidir.
+
+İmzalı installer, otomatik güncelleme ve kurumsal dağıtım bu sürümde yoktur.
 
 Yerel tip ve sınır kontrolleri:
 

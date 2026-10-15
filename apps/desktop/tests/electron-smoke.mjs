@@ -11,7 +11,8 @@ let server;
 if (dev) { server = await createServer(); await server.listen(); env.JARVIS_DESKTOP_DEV = '1'; }
 const application = await electron.launch({ ...(packaged ? { executablePath: path.resolve('release/win-unpacked/JARVIS.exe') } : {}), args: packaged ? ['--enable-logging=stderr'] : ['.', '--enable-logging=stderr'], env });
 try {
-  const page = await application.firstWindow();
+  // The hidden voice window is created first; wait for the main window that owns the bridge.
+  const page = await (async () => { for (let i = 0; i < 300; i++) { const w = application.windows().find(x => !x.url().endsWith('voice.html')); if (w) return w; await new Promise(r => setTimeout(r, 100)); } throw new Error('Main window did not open'); })();
   await page.waitForFunction(() => !!window.jarvis);
   await page.waitForFunction(() => ['connected', 'pairing', 'auth', 'blocked'].includes(document.querySelector('jarvis-app')?.data?.connection?.phase), undefined, { timeout: 60000 });
   // Authentication is published before the asynchronous native record read.
@@ -32,16 +33,16 @@ try {
   }
   assert.equal(await page.evaluate(() => typeof window.require), 'undefined');
   assert.equal(await page.evaluate(() => typeof window.process), 'undefined');
-  const prefs = await application.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.getLastWebPreferences());
+  const prefs = await application.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find(w => !w.webContents.getURL().endsWith('voice.html')).webContents.getLastWebPreferences());
   assert.equal(prefs.sandbox, true); assert.equal(prefs.contextIsolation, true); assert.equal(prefs.nodeIntegration, false);
   const reject = await page.evaluate(() => window.jarvis.action({ type: 'rpc', method: 'approval.resolve' }));
   assert.equal(reject.ok, false);
   const before = page.url();
   await page.evaluate(() => { window.open('https://example.com'); location.href = 'https://example.com'; });
-  await page.waitForTimeout(300); assert.equal(page.url(), before); assert.equal(application.windows().length, 1);
-  await application.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].close());
-  assert.equal(await application.evaluate(({ BrowserWindow }) => ({ count: BrowserWindow.getAllWindows().length, visible: BrowserWindow.getAllWindows()[0].isVisible() } )).then(v => v.count === 1 && !v.visible), true);
-  await application.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].show());
+  await page.waitForTimeout(300); assert.equal(page.url(), before); assert.equal(application.windows().filter(w => !w.url().endsWith('voice.html')).length, 1);
+  await application.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find(w => !w.webContents.getURL().endsWith('voice.html')).close());
+  assert.equal(await application.evaluate(({ BrowserWindow }) => { const main = BrowserWindow.getAllWindows().filter(w => !w.webContents.getURL().endsWith('voice.html')); return { count: main.length, visible: main[0].isVisible() }; }).then(v => v.count === 1 && !v.visible), true);
+  await application.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find(w => !w.webContents.getURL().endsWith('voice.html')).show());
   await page.reload(); await page.waitForFunction(() => !!document.querySelector('jarvis-app')?.data);
   const after = await page.evaluate(async () => (await window.jarvis.action({ type: 'snapshot' })).snapshot);
   assert.equal(after.connection.deviceId, snapshot.connection.deviceId);

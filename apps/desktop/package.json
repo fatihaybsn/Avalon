@@ -11,7 +11,7 @@
     "check": "tsc --noEmit",
     "build": "node scripts/build.mjs",
     "start": "electron .",
-    "pack:win": "npm run build && electron-builder --win --x64 --dir",
+    "pack:win": "npm run build && electron-builder --win --x64",
     "test": "node --experimental-transform-types --test tests/*.test.ts",
     "test:voice": "node --experimental-transform-types --test tests/voice.test.mjs",
     "test:electron": "node tests/electron-smoke.mjs",
@@ -37,6 +37,15 @@
     "asar": true,
     "directories": { "output": "release" },
     "files": ["dist/**/*", "vendor/openclaw/LICENSE", "vendor/openclaw/SOURCE.json", "THIRD_PARTY_NOTICES.md", "package.json"],
-    "win": { "target": "dir", "requestedExecutionLevel": "asInvoker", "signAndEditExecutable": false }
+    "win": { "target": "nsis", "requestedExecutionLevel": "asInvoker", "signAndEditExecutable": false },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "JARVIS",
+      "deleteAppDataOnUninstall": false
+    }
   }
 }
