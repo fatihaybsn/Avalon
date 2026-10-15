@@ -2,7 +2,7 @@
 
 Windows 11'de doğrudan çalışan, OpenClaw merkezli kişisel asistan projesi.
 Tek merkez **OpenClaw Gateway**, konuşma tarafı **Gemini Live**, ağır görev
-modeli **Space Bunny Free**'dir. Mevcut durum: **15'e kadar kaynak bağlantıları uygulandı; 14–15 native paket kurulumu ve 11–15 canlı kabul tamamlanmadı. Codex/OpenCode üç promptlu ortak canlı kabul de bekliyor.**
+modeli **Space Bunny Free**'dir. Mevcut durum: **15'e kadar kaynak bağlantıları uygulandı; 14–15 native paket üretildi ve proje yereline kuruldu, ancak 11–15 canlı kabul tamamlanmadı. Codex/OpenCode üç promptlu ortak canlı kabul de bekliyor.**
 (Gateway, görev izinleri, salt okunur araştırma, yerel GUI node'u ve sade Electron/Vite/Lit arayüzü).
 05 ile tek yerel hafıza, kontrollü kısa not araçları, yetkili ortak erişim ve
 Gemini ile altı saatlik native Dreaming düzenlemesi eklendi.
@@ -32,8 +32,9 @@ karar sesle açılamaz; ödeme entegrasyonu hazır değildir. Tam kurulabilir da
 16'dadır. 15 ile native otomasyon yönetimi, desteklenen araçlı proje işinin
 zamanlanmış yürütme bağlantısı, kalıcı sohbet sonucu/bildirim ve aynı web
 Control UI üzerinden özel Tailscale telefon erişimi kaynakta eklendi.
-Native SDK derlemesindeki kaynak hataları nedeniyle yeni paket henüz kurulmadı;
-`npm ci` bu kaynak değişikliklerini içeren bir dağıtım kurmaz.
+Native SDK derlemesindeki kaynak hataları giderildi; tutarlı native paket üretildi,
+normal tarball denetimini geçti ve proje yereline kuruldu. `npm ci` hâlâ bu kaynak
+değişikliklerini içeren bir dağıtım kurmaz; 4i'yi uygulayın.
 
 Ayrıntılı mimari: `docs/KESIN_MIMARI.md` · Aşama durumu: `docs/GELISTIRME_DURUMU.md`
 
@@ -581,20 +582,89 @@ atlamayın. Hesap/kanal bağlantısı ve sesli kullanım aşağıdaki 7b'dedir.
 
 ### 4i) Native otomasyon ve özel telefon erişimini hazırlayın (15)
 
-**Bu aşamanın kaynak paketi henüz kurulabilir olarak doğrulanmadı.** `npm ci`
-stok OpenClaw `2026.10.2` kurar; yalnız aşağıdaki config komutları 14–15'in
-native SDK/Control UI değişikliklerini kurmaz. Hazır arşiv/release bu repoda yoktur.
-Kaynak düzeltmeleri ve paket denetimi bitmeden 15'i günlük kullanım için açmayın.
-Geliştirici için sabit kaynak commit'i
-`b8952d477f0c932d8ddc6da5c89cab5a169b6ff1`; önce
+**Bu bölüm native paketi kendi bilgisayarınızda üretip kurar.** `npm ci` stok
+OpenClaw `2026.10.2` kurar ve 14–15'in native SDK/Control UI değişikliklerini
+getirmez; aşağıdaki config komutları da yalnız config yazar. Hazır arşiv bu
+repoda yoktur, bu yüzden 15'i günlük kullanmadan önce paketi kendi makinenizde
+üretip kurmanız gerekir. Uyarı: yeniden `npm ci` veya temiz kurulum yerel native
+paketi stok sürüme döndürür; bu bölümü tekrarlamanız gerekir.
+
+**1) Kaynak checkout ve patch'ler.** Geliştirici için sabit kaynak commit'i
+`b8952d477f0c932d8ddc6da5c89cab5a169b6ff1` (OpenClaw `2026.10.2`). Kaynağı
+kopyalayın, bağımlılıklarını kurun ve önce
 `native/openclaw-v2026.10.2-stage14.patch`, ardından
-`native/openclaw-v2026.10.2-stage15.patch` uygulanır. Kaynak hazırlama,
-SDK/runtime/worker üretimi, paket içerik denetimi ve proje-yerel kurulumun
-kalan sırası [güncel geliştirme durumunda](docs/GELISTIRME_DURUMU.md) bulunur.
-Oradaki yerel Windows/pnpm yollarını kendi makinenize uyarlayın; başka kişinin
-profilini/kimliğini taşımayın. `scripts/pack-native-windows.mjs` eksik SDK
-dosyalarını üretmez; aynı kaynağa ait doğrulanmış build/worker gerektirir.
-Yeniden `npm ci` çalıştırmak yerel native paketi stok sürüme döndürür.
+`native/openclaw-v2026.10.2-stage15.patch` dosyasını uygulayın. Stage15
+overlay'ini yeniden üretmek isterseniz `node scripts/prepare-stage15-native.mjs
+--export-patch` çalıştırın; stage14 düzeltmesini stage15 patch'ine karıştırmayın.
+Aşağıdaki 2–5. komutların tümü **kaynak checkout dizininde** çalışır.
+
+**2) Bellek bütçesi.** Tam derleme ~4,3 GB Node heap ister. 16 GB RAM'li bir
+makinede ayrı bir diskte (örn. `E:\pagefile.sys`) en az **8 GB** pagefile
+açık olmalıdır; Windows'ta otomatik yönetim kapalıysa boyutu kendiniz
+büyütüp bilgisayarı yeniden başlatmanız gerekir. Aşağıdaki ortam ayarları
+olmadan SDK üretimi Windows commit sınırına (`errno=1455`) takılır.
+
+**3) SDK declaration üretimi** (native kaynak tip denetimi):
+
+```powershell
+$env:OPENCLAW_RUN_NODE_SKIP_DTS_BUILD='0'
+$env:OPENCLAW_TSDOWN_MAX_OLD_SPACE_MB='3072'
+$env:RAYON_NUM_THREADS='1'
+$env:GOMAXPROCS='1'
+$env:GOMEMLIMIT='2GiB'
+$env:GOGC='25'
+node --import ./scripts/tsx.mjs scripts/write-plugin-sdk-entry-dts.ts
+```
+
+**4) Tutarlı runtime/worker derlemesi** (DTS kapalı, tek eşzamanlı iş):
+
+```powershell
+$env:OPENCLAW_RUN_NODE_SKIP_DTS_BUILD='1'
+$env:OPENCLAW_TSDOWN_MAX_OLD_SPACE_MB='3072'
+$env:RAYON_NUM_THREADS='1'
+node --import ./scripts/tsx.mjs scripts/tsdown-build.mts --config tsdown.config.ts --filter openclaw-unified --concurrency 1
+node --import ./scripts/tsx.mjs scripts/runtime-postbuild.mts
+```
+
+**5) Native paket.** `scripts/pack-native-windows.mjs` Windows'taki pahalı POSIX
+mode yeniden paketlemesini atlar, normal tarball denetimini
+(`check-openclaw-package-tarball.mjs --require-bundled-workspace-deps`) korur ve
+sealed worker'ı **her zaman taze kaynaktan** üretir; daha önceki bir arşivden
+worker almaz. Betik kaynak checkout dizininde çalışmalıdır ve kaynak
+`package.json` içindeki `version` `2026.10.2`, `jarvisNative.upstreamCommit` ise
+seçili commit ile eşleşmelidir. Kurulu pnpm'ın `.CMD` yolu bozuksa yeni/global
+pnpm kurmayın; mevcut pnpm'nin gerçek Node girişini `npm_execpath` ile bağlayın:
+
+```powershell
+$env:COREPACK_ENABLE_NETWORK='0'
+$env:npm_execpath='C:\Users\<siz>\AppData\Local\pnpm\.tools\@pnpm+exe\<sürüm>\node_modules\@pnpm\exe\bin\pnpm.mjs'
+node --import ./scripts/tsx.mjs scripts/pack-native-windows.mjs
+```
+
+`tsx` yükleyicisi zorunludur; paket sahibi `.mts` kaynak ağacını yükler ve
+düz Node çalıştırmak `ERR_MODULE_NOT_FOUND` ile durur. Başarılı çıktı
+`tmp/stage15-native-windows-package/openclaw-2026.10.2.tgz` üzerine yazılır ve
+`OpenClaw package tarball integrity passed` yazar. Bu mesajı görmeden
+kuruluma geçmeyin.
+
+**6) Proje-yerel kurulum.** Depo kökünde:
+
+```powershell
+npm install --no-save --package-lock=false --prefer-offline --no-audit --no-fund tmp/stage15-native-windows-package/openclaw-2026.10.2.tgz
+```
+
+Kök `package.json` ve `package-lock.json` kasıtlı olarak değişmez. npm 11
+`allowScripts` kapısı openclaw dahil bazı kurulum script'lerini atlayabilir;
+`postinstall-bundled-plugins.mjs` yalnız paket yaşam döngüsü temizlik/prune
+adımıdır ve çalışma zamanı onarımının sahibi Doctor'dur.
+
+**Doğrulama (RPC/model çağrısı değildir):** kurulumdan sonra
+`node_modules/openclaw/package.json` içinde `version` `2026.10.2` ve
+`jarvisNative.upstreamCommit` seçili commit olmalı;
+`node_modules/openclaw/dist/plugin-sdk/gateway-method-runtime.d.ts` içinde
+`dispatchSessionAutomation` ve `readSessionAutomationExecution` bildirimleri
+bulunmalıdır. Bu yalnız metadata/import kontrolüdür, canlı kullanıma hazır
+kanıtı değildir; gerçek kabul 7d'de çalışan Gateway ile yapılır.
 
 Doğrulanmış native paket kurulduktan, 4–4h tamamlandıktan sonra Gateway'i
 kendi terminalinde normal `Ctrl+C` ile durdurup depo kökünde:

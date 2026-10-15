@@ -1254,13 +1254,13 @@ diff --git a/src/config/sessions/session-cold-storage-worker.ts b/src/config/ses
 index 0d0ad01c..25bcecb4 100644
 --- a/src/config/sessions/session-cold-storage-worker.ts
 +++ b/src/config/sessions/session-cold-storage-worker.ts
-@@ -29,8 +29,8 @@ import {
+@@ -29,8 +29,9 @@ import {
  import type { SessionStateDeleteSnapshot } from "./session-accessor.sqlite-delete-snapshot.types.js";
  import {
    readVerifiedSessionColdArchive,
 +  decodeSessionColdRecords,
    resolveSessionColdArchivePath,
--  sessionColdRecordSchema,
+   sessionColdRecordSchema,
    type SessionColdRecord,
  } from "./session-cold-storage-codec.js";
  import { readSessionColdStorageProtection } from "./session-cold-storage-eligibility.js";

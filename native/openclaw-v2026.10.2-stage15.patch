@@ -12,7 +12,7 @@ index 9b89f1d9..fbd5f137 100644
                },
                {
 diff --git a/src/gateway/server-methods/cron-caller-scope.ts b/src/gateway/server-methods/cron-caller-scope.ts
-index f4c11c12..4fa81417 100644
+index f4c11c12..78ce91c2 100644
 --- a/src/gateway/server-methods/cron-caller-scope.ts
 +++ b/src/gateway/server-methods/cron-caller-scope.ts
 @@ -1,3 +1,4 @@
@@ -44,7 +44,7 @@ index f4c11c12..4fa81417 100644
    client: GatewayClient | null | undefined,
  ): CronCallerScope | undefined {
 +  const admitted=authenticatedCronCaller.getStore();
-+  if(admitted?.client===client)return admitted.scope;
++  if(admitted&&admitted.client===client)return admitted.scope;
    const identity = client?.internal?.agentRuntimeIdentity;
    if (!identity?.agentId) {
      return undefined;
@@ -591,7 +591,7 @@ diff --git a/src/plugin-sdk/session-automation-runtime.ts b/src/plugin-sdk/sessi
 new file mode 100644
 --- /dev/null
 +++ b/src/plugin-sdk/session-automation-runtime.ts
-@@ -0,0 +1,60 @@
+@@ -0,0 +1,67 @@
 +import { randomUUID } from "node:crypto";
 +import { getPluginRuntimeGatewayRequestScope } from "../plugins/runtime/gateway-request-scope.js";
 +import { prepareGatewaySessionAccessAuthority } from "../gateway/session-access-authority.js";
@@ -608,16 +608,22 @@ new file mode 100644
 + */
 +export function readSessionAutomationExecution(runId:string) {
 +  const context=getAgentRunContext(runId);
-+  if(!context?.sessionKey||!context.sessionId||!context.agentId||context.cronRunsByJobId?.size!==1)return undefined;
-+  const [jobId,entry]=[...context.cronRunsByJobId][0];
++  if(!context?.sessionKey||!context.sessionId||!context.agentId)return undefined;
++  const sessionKey=context.sessionKey,sessionId=context.sessionId,agentId=context.agentId;
++  const lifecycleGeneration=context.lifecycleGeneration;
++  const occurrences=context.cronRunsByJobId;
++  if(!lifecycleGeneration||occurrences?.size!==1)return undefined;
++  const first=[...occurrences][0];
++  if(!first)return undefined;
++  const [jobId,entry]=first;
 +  const execution=entry.execution;if(!execution)return undefined;
 +  const assertCurrent=()=>{
 +    execution.signal.throwIfAborted();
 +    if(getAgentRunContext(runId)!==context||context.cronRunsByJobId?.get(jobId)?.execution!==execution)throw new Error('Scheduled execution owner ended');
-+    assertAgentRunLifecycleGenerationCurrent(context.lifecycleGeneration);
++    assertAgentRunLifecycleGenerationCurrent(lifecycleGeneration);
 +  };
 +  assertCurrent();
-+  return {jobId,runId,sessionKey:context.sessionKey,sessionId:context.sessionId,agentId:context.agentId,job:structuredClone(execution.job),signal:execution.signal,assertCurrent};
++  return {jobId,runId,sessionKey,sessionId,agentId,job:structuredClone(execution.job),signal:execution.signal,assertCurrent};
 +}
 +
 +/** Native cron entry for an authenticated plugin's human-owned session.
@@ -648,7 +654,8 @@ new file mode 100644
 +    if(['update','remove'].includes(input.action)&&!input.expectedConfigRevision)throw new Error('Read current native config revision first');
 +    let response:GatewayMethodDispatchResponse|undefined;
 +    const options:GatewayRequestHandlerOptions={req:{type:'req',id:randomUUID(),method,params},params,context,client,isWebchatConnect:request.isWebchatConnect,signal:request.signal,hasCurrentClientAuthority:request.hasCurrentClientAuthority,sessionMutationCommitGuard:current,sessionAccessAuthority:access,respond(ok,payload,error){response={ok,...payload!==undefined?{payload}:{},...error?{error}:{}};}};
-+    await withAuthenticatedCronCallerScope(client,{kind:'agentTool',agentId:target.agentId,sessionKey:target.sessionKey,accountId:'default',ownSessionOnly:true,expectedConfigRevision:input.expectedConfigRevision},()=>cronHandlers[method](options));
++    const handler=cronHandlers[method];if(!handler)throw new Error('Native automation handler unavailable; inspect state before retry');
++    await withAuthenticatedCronCallerScope(client,{kind:'agentTool',agentId:target.agentId,sessionKey:target.sessionKey,accountId:'default',ownSessionOnly:true,expectedConfigRevision:input.expectedConfigRevision},()=>handler(options));
 +    current();if(!response)throw new Error('Native automation response unavailable; inspect state before retry');return response;
 +  }finally{access.release();}
 +}
@@ -696,7 +703,7 @@ new file mode 100644
 + expect(readSessionAutomationExecution('run')).toBeUndefined();
 + const cancel=new AbortController();
 + const job={description:'original',payload:{kind:'agentTurn',toolsAllow:['read']}};
-+ execution.context={agentId:'main',sessionKey:'private',sessionId:'sid',cronRunsByJobId:new Map([['job',{pacingEnabled:false,execution:{job:structuredClone(job),signal:cancel.signal}}]])};
++ execution.context={agentId:'main',sessionKey:'private',sessionId:'sid',lifecycleGeneration:'gen1',cronRunsByJobId:new Map([['job',{pacingEnabled:false,execution:{job:structuredClone(job),signal:cancel.signal}}]])};
 + const admitted=readSessionAutomationExecution('run')!;
 + job.description='edited';expect(admitted.job.description).toBe('original');
 + admitted.job.description='caller copy';expect(readSessionAutomationExecution('run')!.job.description).toBe('original');
