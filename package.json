@@ -22,6 +22,7 @@
     "desktop:start": "npm --prefix apps/desktop start",
     "desktop:pack:win": "npm --prefix apps/desktop run pack:win",
     "test:desktop": "npm --prefix apps/desktop test",
+    "test:maintenance": "node --max-semi-space-size=4 --experimental-transform-types --test --test-concurrency=1 tests/maintenance.test.mjs tests/memory.test.mjs tests/codex-worker.test.mjs",
     "test:decisions": "node --max-semi-space-size=4 --experimental-transform-types --test --test-concurrency=1 tests/decisions.test.mjs tests/codex-worker.test.mjs tests/opencode-worker.test.mjs tests/opencode-gui.test.mjs apps/desktop/tests/decisions.test.mjs",
     "test:live": "node scripts/extend-talk.mjs && node apps/desktop/scripts/vendor-talk.mjs && node --experimental-transform-types --test tests/live.test.mjs tests/codex-worker.test.mjs apps/desktop/tests/live.test.mjs",
     "test:desktop:electron": "npm --prefix apps/desktop run test:electron"

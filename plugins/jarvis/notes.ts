@@ -3,7 +3,7 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { exactKeys, text, type Scope, within } from './policy.ts';
 
-export const NOTE_TOOLS = ['jarvis_note_read', 'jarvis_note_write'];
+export const NOTE_TOOLS = ['jarvis_note_read', 'jarvis_note_write', 'jarvis_note_forget_preview', 'jarvis_note_forget'];
 export const MEMORY_TOOLS = ['jarvis_memory_search', 'jarvis_memory_get', ...NOTE_TOOLS];
 export type Origin = { kind: 'user' | 'model' | 'web'; userId: string; taskId: string; projectId: string; sessionId: string; sessionKey: string; runId: string; deviceId: string; userInputHash?: string };
 type Reference = { id: string; revision: number };
@@ -73,6 +73,7 @@ export function refreshNoteView(workspace: string, id: string, assertCurrent: ()
 }
 export function readNote(workspace: string, id: unknown, wanted?: number): Note {
   const valid = idCheck(id);
+  if (noteForgetState(workspace,valid)) throw new Error('NOTE_FORGET_PENDING_OR_DONE: source is excluded; inspect maintenance outcome');
   const folder = checked(workspace, `memory/records/${valid}`);
   const names = fs.readdirSync(folder).filter(n => /^r\d{8}\.md$/.test(n)).sort();
   if (!names.length) throw Object.assign(new Error('Record missing'), { code: 'ENOENT' });
@@ -82,6 +83,21 @@ export function readNote(workspace: string, id: unknown, wanted?: number): Note 
   const note = JSON.parse(first.slice('<!-- jarvis-note '.length, -' -->'.length)) as Note;
   if (!first.startsWith('<!-- jarvis-note ') || note.id !== valid || revName(note.revision) !== filename) throw new Error('Corrupt note; no overwrite');
   return note;
+}
+export function noteForgetState(workspace:string,id:string):'pending'|'applied'|undefined {
+  const file=checked(workspace,`memory/records/${idCheck(id)}/.forgotten.json`);
+  if(!fs.existsSync(file))return undefined;
+  const state=JSON.parse(fs.readFileSync(file,'utf8'));
+  if(state.id!==id||!['pending','applied'].includes(state.state))throw new Error('Corrupt forget receipt; source withheld');
+  return state.state;
+}
+// Content-free local projection of the native source tombstone. It also closes
+// the controlled synchronous note writer while native purge is awaiting I/O.
+export function markNoteForgotten(workspace:string,id:string,snapshot:string,state:'pending'|'applied',current:()=>void){
+  const file=checked(workspace,`memory/records/${idCheck(id)}/.forgotten.json`);
+  const lock=checked(workspace,`memory/records/${id}/.publish.lock`),fd=fs.openSync(lock,'wx');
+  try{current();fs.writeFileSync(file,JSON.stringify({id,snapshot,state,at:new Date().toISOString()}),{flag:state==='pending'?'wx':'w'});}
+  finally{fs.closeSync(fd);fs.unlinkSync(lock);}
 }
 export function writeNote(workspace: string, input: Record<string, unknown>, origin: Origin, assertCurrent: () => void, root?: string): { note: Note; path: string; dreaming: { viewPath?: string; error?: string; eligible: boolean } } {
   exactKeys(input, ['id', 'expectedRevision', 'category', 'content', 'sources', 'derivedFrom', 'artifacts']);
@@ -157,6 +173,8 @@ export function memoryParams(name: string, params: Record<string, unknown>) {
     return { path: p, from, lines };
   }
   if (name === 'jarvis_note_read') { exactKeys(params, ['id']); return { id: idCheck(params.id) }; }
+  if (name === 'jarvis_note_forget_preview') { exactKeys(params, ['id', 'expectedRevision']); return { id: idCheck(params.id), expectedRevision: revision(params.expectedRevision) }; }
+  if (name === 'jarvis_note_forget') { exactKeys(params, ['planId']); return {planId:idCheck(params.planId)}; }
   if (name === 'jarvis_note_write') { exactKeys(params, ['id', 'expectedRevision', 'category', 'content', 'source', 'sources', 'derivedFrom', 'artifacts']); if (params.source !== undefined && params.source !== 'user' && params.source !== 'task') throw new Error('Invalid source'); return structuredClone(params); }
   throw new Error('Unknown memory tool');
 }

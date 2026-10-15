@@ -118,7 +118,20 @@ test('admitted operator writes user notes, different authorized chat reads, revo
   const preference = await write.execute('call', { source: 'user', expectedRevision: 0, category: 'preference', content: userInput });
   assert.equal(preference.details.note.origin.kind, 'user'); assert.ok(preference.details.note.origin.userInputHash); assert.equal(preference.details.note.content, userInput);
   assert.equal(readNote(workspace, preference.details.note.id).revision, 1);
+  const forget=tools.find(t=>t.name==='jarvis_note_forget_preview');
+  const previewArgs={id:preference.details.note.id,expectedRevision:1};
+  const preview=await forget.execute('forget-preview',previewArgs);
+  assert.equal(preview.details.canApply,false);assert.equal(preview.details.sourceChanged,false);
+  assert.equal(preview.details.graphComplete,false); // unrelated earlier hardlink stays unsafe and untouched
+  const previewRequest={params:{runId:'other-run',...previewArgs},client,sessionAccessAuthority:{...authority,target:other},respond};
+  await methods['jarvis.memory.forget.preview'](previewRequest);assert.equal(result[0],true);assert.equal(result[1].state,'blocked');
+  for(const foreignClient of [{...client,authenticatedUserId:'another-user'},{...client,connect:{...client.connect,device:{id:'another-device'}}}]){
+    await methods['jarvis.memory.forget.preview']({...previewRequest,client:foreignClient});assert.equal(result[0],false);
+  }
+  assert.equal(methods['jarvis.memory.forget.apply'],undefined);
   current = false; await assert.rejects(read.execute('call', { id }), /revoked/);
+  await assert.rejects(forget.execute('cancelled-preview',previewArgs),/revoked/);
+  await methods['jarvis.memory.forget.preview'](previewRequest);assert.equal(result[0],false);
   hooks.gateway_stop();
 });
 test.after(() => { assert.ok(scratch.startsWith(path.resolve('tmp') + path.sep)); fs.rmSync(scratch, { recursive: true }); });

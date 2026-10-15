@@ -2,11 +2,12 @@ import {randomUUID} from 'node:crypto';
 import type {OpenClawPluginApi} from 'openclaw/plugin-sdk/plugin-entry';
 import {dispatchGatewayMethod} from 'openclaw/plugin-sdk/gateway-method-runtime';
 import {getMemoryCapabilityRegistration} from 'openclaw/plugin-sdk/memory-host-core';
-import {canonicalUserStatement, exactKeys, text, publicUrl, fingerprint, makeScope, evaluate} from './policy.ts';
+import {canonicalUserStatement, exactKeys, text, publicUrl, fingerprint, makeScope, evaluate,type Scope} from './policy.ts';
 import {readNote,writeNote,originFor,memoryParams,currentDerivedText} from './notes.ts';
 import {APPS} from './quick-policy.ts';
 import {resolvePinnedHostnameWithPolicy} from 'openclaw/plugin-sdk/ssrf-runtime';
 import type {WorkLedger} from './work.ts';
+import {previewForget} from './forget.ts';
 type Request=Parameters<Parameters<OpenClawPluginApi['registerGatewayMethod']>[1]>[0];
 const str=(max=256)=>({type:'string',maxLength:max});
 const tool=(name:string,description:string,properties:Record<string,unknown>,required:string[]=Object.keys(properties))=>({type:'function',name,description,parameters:{type:'object',properties,required,additionalProperties:false}});
@@ -16,6 +17,7 @@ export const LIVE_TOOLS=[
   tool('jarvis_memory_search','Search relevant current source notes; results keep provenance.',{query:str()}),
   tool('jarvis_memory_read','Read a selected current memory note or bounded source reference.',{id:str(128),path:str(512),from:{type:'integer',minimum:1},lines:{type:'integer',minimum:1,maximum:80}},[]),
   tool('jarvis_note_save','Save/correct only the complete latest user request as a short sourced note. Findings are never user preferences.',{id:str(128),expectedRevision:{type:'integer',minimum:0},category:{type:'string',enum:['preference','decision','correction']}},['expectedRevision','category']),
+  tool('jarvis_forget_preview','Preview a selected note and its controlled derivatives only. No deletion occurs in Live. For forgetting, end this Talk call and continue in the same OpenClaw chat with the written preview/approval flow; raw chat copies and cloud data are not removed by note forget. Ask about mixed facts; never delete the session.',{id:str(128),expectedRevision:{type:'integer',minimum:1}}),
   tool('jarvis_app_status','Observe a small host-known application; no shell.',{app:{type:'string',enum:APPS}}),
   tool('jarvis_app_open','Open only an application explicitly requested by the user.',{app:{type:'string',enum:APPS}}),
   ...['focus','minimize','restore'].map(action=>tool('jarvis_app_'+action,'Use only a fresh host-observed window reference and an explicit matching user request.',{windowRef:str(128)})),
@@ -46,7 +48,7 @@ export function validateLiveArgs(name:string,input:unknown){
 }
 type Operation={abort:AbortController;scopes:string[]};
 type Call={user:string;device:string;conn:string;key:string;sid:string;root?:string;statement?:string;entryId?:string;seen:Set<string>;used:Set<string>;tasks:Map<string,any>;started:Map<string,string>;pending:Map<string,Operation>;prepared:Map<string,{id:string;key:string;message:string;operation:Operation}>;windows:Map<string,{app:string;window:any;at:number}>;sources:Map<string,string>;abort:AbortController;current:()=>void;release:()=>void};
-export function installLive(api:OpenClawPluginApi,workspace:()=>string,index:()=>Promise<unknown>,search:(query:string,signal:AbortSignal)=>Promise<any>,dispatch=dispatchGatewayMethod,dropScope:(id:string)=>void=()=>{},ledger?:WorkLedger){
+export function installLive(api:OpenClawPluginApi,workspace:()=>string,index:()=>Promise<unknown>,search:(query:string,signal:AbortSignal)=>Promise<any>,dispatch=dispatchGatewayMethod,dropScope:(id:string)=>void=()=>{},ledger?:WorkLedger,previewNativeForget?:(scope:Scope,current:()=>void,signal:AbortSignal,id:string,revision:number)=>Promise<unknown>){
   const calls=new Map<string,Call>();
   const request=async(method:string,params:Record<string,unknown>)=>{const r=await dispatch(method,params,{expectFinal:true,timeoutMs:65000});if(!r.ok)throw new Error(r.error?.message??'Native request refused');return r.payload as any;};
   const cancelStarted=async(c:Call,onlyId?:string)=>{for(const [id,key]of c.started){if(onlyId&&id!==onlyId)continue;try{const r=await request('jarvis.work.status',{sessionKey:key,agentId:'main',taskId:id});if(r.record&&!['ended','failed'].includes(r.record.state))await request('jarvis.work.cancel',{sessionKey:key,agentId:'main',taskId:id,expectedRevision:r.record.revision});}catch{api.logger.warn('Voice task cancellation outcome unknown; inspect the existing task record');}}};
@@ -88,6 +90,11 @@ export function installLive(api:OpenClawPluginApi,workspace:()=>string,index:()=
           if(name==='jarvis_memory_search'){const hits=await manager.search(String(args.query),{sessionKey:c.key,maxResults:6});result={results:hits.flatMap(hit=>{try{memoryParams('jarvis_memory_get',{path:hit.path});const match=/^memory\/records\/([^/]+)\/r(\d{8})\.md$/.exec(hit.path);if(!match)return [];const note=readNote(workspace(),match[1]);return note.origin.userId===c.user&&note.revision===Number(match[2])?[{...hit,sourceRecord:note}]:[];}catch{return [];}})};}
           else {const p=memoryParams('jarvis_memory_get',args);const match=/^memory\/records\/([^/]+)\/r(\d{8})\.md$/.exec(String(p.path));if(!match)throw new Error('Selected source record required');const note=readNote(workspace(),match[1]);if(note.origin.userId!==c.user||note.revision!==Number(match[2]))throw new Error('Stale/foreign note');result=await manager.readFile({relPath:String(p.path),from:Number(p.from??1),lines:Number(p.lines??80)});if(!currentDerivedText(workspace(),result.text))throw new Error('Superseded source');}
         }
+      }
+      else if(name==='jarvis_forget_preview'){
+        if(!statement||!/(?:unut|forget)/iu.test(statement))throw new Error('Explicit user forget request required');
+        const scope=await makeScope({...base,runId:callId,taskId:callId,projectId:c.key,role:'memory',userInput:statement},{...base,sessionId:c.sid,userId:c.user,deviceId:c.device});
+        result=previewNativeForget?await previewNativeForget(scope,current,signal,String(args.id),Number(args.expectedRevision)):previewForget(workspace(),c.user,String(args.id),Number(args.expectedRevision),current);
       }
       else if(name==='jarvis_note_save'){
         if(!/kaydet|hatırla|not al|düzelt/i.test(statement!))throw new Error('Explicit note request required');
@@ -144,4 +151,5 @@ export function installLive(api:OpenClawPluginApi,workspace:()=>string,index:()=
   };
   for(const [name,handler] of Object.entries(methods))api.registerGatewayMethod('jarvis.live.'+name,async o=>{try{o.respond(true,await handler(o));}catch(e){o.respond(false,undefined,{code:'INVALID_REQUEST',message:e instanceof Error?e.message:'Live boundary refused'});}},{scope:name==='catalog'?'operator.talk':'operator.write',profileAccess:'required',sessionAccess:{mode:'write'}});
   api.on('gateway_stop',()=>{for(const id of calls.keys())close(id);});
+  return {isBusy:()=>calls.size>0};
 }

@@ -22,6 +22,8 @@
       "jarvis_memory_get",
       "jarvis_note_read",
       "jarvis_note_write",
+      "jarvis_note_forget_preview",
+      "jarvis_note_forget",
       "jarvis_work_note",
       "jarvis_work_read",
       "jarvis_windows",

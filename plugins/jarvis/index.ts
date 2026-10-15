@@ -18,6 +18,8 @@ import {installLive} from './live.ts';
 import {shortResearch} from './live-reader.ts';
 import {installDecisions} from './decisions.ts';
 import {installSending} from './sending.ts';
+import {installMaintenance} from './maintenance.ts';
+import {createForgetService} from './forget-native.ts';
 import { createQuickTools, preserveFile, configureNativeRoot, localCall } from './quick.ts';
 import { QUICK_TOOLS, operationHash } from './quick-policy.ts';
 import { runBeforeToolCallHook, runAgentHarnessAfterToolCallHook } from 'openclaw/plugin-sdk/agent-harness-runtime';
@@ -108,7 +110,20 @@ export default definePluginEntry({
         return { ready: true };
       } catch (e) { return { ready: false, error: e instanceof Error ? e.message : 'Index unavailable', sourceCommitted: true }; }
     };
-    installLive(api,workspace,indexCommittedNote,(query,signal)=>shortResearch(api,query,signal),dispatchGatewayMethod,drop,work?.ledger);
+    let voice: ReturnType<typeof installLive> | undefined;
+    const forgetService=createForgetService(api,workspace,run=>stopped||dreamingActive||Boolean(voice?.isBusy())||[...authorities.keys()].some(id=>id!==run&&Boolean(live(id))),work?.ledger,decisions.authorize);
+    voice=installLive(api,workspace,indexCommittedNote,(query,signal)=>shortResearch(api,query,signal),dispatchGatewayMethod,drop,work?.ledger,(scope,current,signal,id,revision)=>forgetService.preview({scope,assertCurrent:current,signal},id,revision,false));
+    const maintenance=installMaintenance(api,()=>stopped||dreamingActive||Boolean(voice?.isBusy())||[...authorities.keys()].some(id=>Boolean(live(id))),async copy=>{
+      if(!work)return false;
+      try{const r=await work.ledger.get(copy.userId,copy.taskId);return ['ended','failed','cancelled'].includes(r.state)||Boolean(r.acceptedPlan&&r.model?.nextStep);}
+      catch{return false;}
+    },async window=>{
+      if(!work?.ledger.store.entriesInKeyRange)return false;
+      const rows=await work.ledger.store.entriesInKeyRange({keyStartInclusive:'u:',keyEndExclusive:'u;',limit:51,order:'asc'});
+      if(rows.length>50)return false;
+      return rows.filter(({value:r})=>r.sessionKey===window.sessionKey).every(({value:r})=>['ended','failed','cancelled'].includes(r.state)||Boolean(r.acceptedPlan&&r.model?.nextStep));
+    });
+    api.registerGatewayMethod('jarvis.memory.maintenance.status',({respond})=>respond(true,maintenance.status()),{scope:'operator.read',profileAccess:'required'});
     const admitCommittedNote = async (result: { note: { id: string }; dreaming: { eligible: boolean } }, index: { ready: boolean }, assertCurrent: () => void, sessionKey: string, verify = false) => {
       if (!result.dreaming.eligible || !index.ready) return { eligible: result.dreaming.eligible, requested: 0 };
       try { return await admitDreamingNotes(api, assertCurrent, [result.note.id], sessionKey, verify ? () => readNativeDreaming(api) : undefined); }
@@ -172,14 +187,22 @@ export default definePluginEntry({
         jarvis_memory_search: { query: { type: 'string', maxLength: 256 } },
         jarvis_memory_get: { path: { type: 'string' }, from: { type: 'integer', minimum: 1 }, lines: { type: 'integer', minimum: 1, maximum: 80 } },
         jarvis_note_read: { id: { type: 'string' } },
+        jarvis_note_forget_preview: { id: { type: 'string' }, expectedRevision: { type: 'integer', minimum: 1 } },
+        jarvis_note_forget: {planId:{type:'string'}},
         jarvis_note_write: { id: { type: 'string' }, expectedRevision: { type: 'integer', minimum: 0 }, source: { type: 'string', enum: ['task', 'user'] }, category: { type: 'string', enum: ['preference', 'decision', 'correction', 'finding', 'inference'] }, content: { type: 'string', maxLength: 1800 }, sources: { type: 'array', items: { type: 'string' }, maxItems: 8 }, derivedFrom: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, revision: { type: 'integer', minimum: 1 } }, required: ['id', 'revision'], additionalProperties: false }, maxItems: 8 }, artifacts: { type: 'array', items: { type: 'string' }, maxItems: 8 } }
       };
-      return MEMORY_TOOLS.map(name => ({ name, label: name, description: name === 'jarvis_note_write' ? 'Save important preferences/decisions/corrections immediately: source=user requires the complete current operator message, whitespace normalized, with no paraphrase. Otherwise source=task stores only findings/inferences as model/web data. CAS revision required; never save every chat turn. Admitted operator jarvis.memory.write also supports human note edits.' : 'Read shared source notes for the authorized JARVIS workspace; current record revisions only. No raw conversation recall.', parameters: { type: 'object' as const, properties: schemas[name], required: name === 'jarvis_note_write' ? ['expectedRevision', 'category', 'content'] : name === 'jarvis_note_read' ? ['id'] : name === 'jarvis_memory_get' ? ['path'] : ['query'], additionalProperties: false }, async execute(_callId: string, args: Record<string, unknown>) {
+      return MEMORY_TOOLS.map(name => ({ name, label: name, description: name === 'jarvis_note_forget' ? 'Apply only an own current preview after native exact human approval, when voice/other work is idle. Returns explicit partial scope; never claim full deletion of raw/cloud/untracked copies. Never replace with session forget.' : name === 'jarvis_note_forget_preview' ? 'Preview one current note, its revisions and controlled derivatives for selective forgetting. No deletion occurs in preview. Clarify mixed notes and report native blockers; never replace with session forget.' : name === 'jarvis_note_write' ? 'Save important preferences/decisions/corrections immediately: source=user requires the complete current operator message, whitespace normalized, with no paraphrase. Otherwise source=task stores only findings/inferences as model/web data. CAS revision required; never save every chat turn. Admitted operator jarvis.memory.write also supports human note edits.' : 'Read shared source notes for the authorized JARVIS workspace; current record revisions only. No raw conversation recall.', parameters: { type: 'object' as const, properties: schemas[name], required: name === 'jarvis_note_forget' ? ['planId'] : name === 'jarvis_note_forget_preview' ? ['id','expectedRevision'] : name === 'jarvis_note_write' ? ['expectedRevision', 'category', 'content'] : name === 'jarvis_note_read' ? ['id'] : name === 'jarvis_memory_get' ? ['path'] : ['query'], additionalProperties: false }, async execute(_callId: string, args: Record<string, unknown>) {
         const binding = toolScope(ctx); const scope = binding.scope;
         const assertCurrent = () => { ctx.assertInvocationCurrent(); binding.assertCurrent(); if (!live(scope.runId)) throw new Error('Task authority expired'); ctx.assertInputCommitAllowed?.(); };
         const p = memoryParams(name, args);
         let value: unknown;
-        if (name === 'jarvis_note_write') {
+        if(name==='jarvis_note_forget'){value=await forgetService.apply({...binding,assertCurrent},String(p.planId),_callId);}
+        else if (name === 'jarvis_note_forget_preview') {
+          const preview=await forgetService.preview({...binding,assertCurrent},String(p.id),Number(p.expectedRevision));
+          if(work)await work.ledger.change(scope.userId,scope.taskId,`forget-preview:${_callId}`,'forget-preview',{id:p.id,revision:p.expectedRevision,snapshot:preview.snapshot,state:preview.state},()=>{},assertCurrent);
+          assertCurrent();value=preview;
+        }
+        else if (name === 'jarvis_note_write') {
           const { source, ...input } = p;
           if (source === 'user') {
             if (!scope.userStatement || input.content !== scope.userStatement || !['preference', 'decision', 'correction'].includes(String(input.category))) throw new Error('User source requires exact complete current admitted input; no model paraphrase');
@@ -228,6 +251,19 @@ export default definePluginEntry({
     } }, { names: MEMORY_TOOLS });
     // Human operator ingress only: identity and source are admitted host fields.
     // Gemini tool bridging is deliberately deferred to stage 12.
+    api.registerGatewayMethod('jarvis.memory.forget.preview',async o=>{
+      try{
+        const {client,sessionAccessAuthority:access,params}=o,binding=live(String(params.runId));
+        const user=client?.authenticatedUserProfile?.profileId??client?.authenticatedUserId;
+        if(!binding||!access||!user||!client||client.invalidated||client.connect.role!=='operator'||!client.connect.scopes?.includes('operator.write')||!client.connect.device?.id||api.config.gateway?.controlUi?.dangerouslyDisableDeviceAuth||binding.scope.role==='research'||binding.scope.userId!==user||binding.scope.deviceId!==client.connect.device.id||binding.scope.sessionId!==access.target.sessionId||binding.scope.sessionKey!==access.target.sessionKey||access.target.agentId!=='main')throw new Error('Current original operator/device/session task required');
+        const {sessionKey:_key,agentId:_agent,runId:_run,...args}=params;
+        const p=memoryParams('jarvis_note_forget_preview',args);
+        const current=()=>{access.assertCurrent();binding.assertCurrent();if(!live(binding.scope.runId))throw new Error('Task ended');};
+        const preview=await forgetService.preview({...binding,assertCurrent:current},String(p.id),Number(p.expectedRevision));
+        if(work)await work.ledger.change(user,binding.scope.taskId,`forget-preview:${preview.snapshot}`,'forget-preview',{id:p.id,revision:p.expectedRevision,snapshot:preview.snapshot,state:preview.state},()=>{},current);
+        current();o.respond(true,preview);
+      }catch(e){o.respond(false,undefined,{code:'INVALID_REQUEST',message:e instanceof Error?e.message:'Forget preview refused'});}
+    },{scope:'operator.write',profileAccess:'required',sessionAccess:{mode:'write'}});
     api.registerGatewayMethod('jarvis.memory.write', async options => {
       try {
         const { client, sessionAccessAuthority, params } = options;
@@ -429,6 +465,6 @@ export default definePluginEntry({
       return { message: { ...event.message, content: event.message.content.map(part => part.type === 'text' ? { ...part, text: JSON.stringify({ kind: 'external-data', tool: event.toolName, trust: 'untrusted', authority: 'none', content: part.text }) } : part) } };
     });
     api.on('agent_end', (event, ctx) => { const runId = event.runId ?? ctx.runId; if (runId&&!opencode?.has(runId)&&!codex?.has(runId)) drop(runId); });
-    api.on('gateway_stop', () => { stopped = true; for (const runId of authorities.keys()) drop(runId); });
+    api.on('gateway_stop', () => { stopped = true;forgetService.stop(); for (const runId of authorities.keys()) drop(runId); });
   }
 });

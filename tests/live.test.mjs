@@ -3,11 +3,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import {createHash} from 'node:crypto';
 import {installLive,LIVE_TOOLS,validateLiveArgs} from '../plugins/jarvis/live.ts';
 import {routeTalkExtension} from '../native/openclaw/talk-extension.mjs';
-import {extendTalk} from '../scripts/extend-talk.mjs';
-import {pathToFileURL} from 'node:url';
+import {supportsNativeTalkPackage} from '../scripts/extend-talk.mjs';
 import {WorkLedger} from '../plugins/jarvis/work.ts';
 const key='agent:main:live',work={taskId:'existing',projectId:key,sessionKey:key,agentId:'main',sessionId:'sid',runId:'existing',revision:2,state:'running',result:'unverified',model:{finding:'12 kaynak; özgün sayı',sources:['https://example.com/']}};
 function fixture(workspace,search=async()=>({details:{results:[]}})){
@@ -76,8 +74,9 @@ test('pending reader cancellation stops publication; closed call ID cannot cance
   let started,release;const begin=new Promise(r=>started=r);const f=fixture('unused',async(_q,signal)=>{started();await new Promise(r=>release=r);signal.throwIfAborted();return{details:{results:[]}};});await f.open();await f.say('araştır: açık bilgi');
   const pending=f.tool('jarvis_research',{query:'açık bilgi'},'pending');await begin;assert.equal((await f.invoke('cancelCall',{voiceSessionId:'voice',callId:'pending'})).ok,true);release();assert.equal((await pending).ok,false);assert.equal((await f.invoke('cancelCall',{voiceSessionId:'voice',callId:'pending'})).ok,false);
 });
-test('declared native patch round-trips pinned source and binds voice before starting work',async()=>{
-  const manifest=JSON.parse(await fs.readFile('node_modules/openclaw/dist/jarvis-talk-extension.json','utf8'));const installed=await fs.readFile('node_modules/openclaw/dist/'+manifest.file,'utf8');let original=installed.slice(manifest.header.length);for(const[a,b]of [...manifest.pairs].reverse())original=original.replace(b,a);
-  assert.equal(createHash('sha256').update(original).digest('hex'),manifest.originalSha256);assert.equal(extendTalk(original,pathToFileURL(path.resolve('native/openclaw/talk-extension.mjs')).href),installed);
-  assert.ok(installed.indexOf('registerClientVoiceConsultRun({agentId:target.agentId')<installed.indexOf('jarvisTalk(request,"startPrepared"'));
+test('native Talk requires the pinned source-built package receipt and rejects stock npm package',()=>{
+  const receipt={apiVersion:1,upstreamCommit:'b8952d477f0c932d8ddc6da5c89cab5a169b6ff1',features:['controlled-source-forget','hot-raw-retention','source-talk']};
+  assert.equal(supportsNativeTalkPackage({version:'2026.10.2',jarvisNative:receipt}),true);
+  assert.equal(supportsNativeTalkPackage({version:'2026.10.2'}),false);
+  assert.equal(supportsNativeTalkPackage({version:'2026.10.3',jarvisNative:receipt}),false);
 });

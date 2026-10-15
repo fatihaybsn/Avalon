@@ -529,14 +529,11 @@ Gateway'i başlatmadan önce depo kökünde:
 node scripts/extend-talk.mjs
 ```
 
-Bu komut yalnız proje-yerel, sabit OpenClaw `2026.10.2` Talk dosyasına JARVIS'in
-dar katalog/dispatch bağlantısını ekler. Kaynak sürümü/SHA256 uyuşmazsa durur;
-`node_modules` dosyalarını elle değiştirmeyin veya kontrolü atlamayın. Kurulum
-makbuzu, bu bilgisayara ait yollarla `node_modules/openclaw/dist/jarvis-talk-extension.json`
-içinde oluşur ve Git'e girmez. Kaynak manifest başka bilgisayarın yolu/token'ını taşımaz.
-`npm ci` sonrasında komutu tekrar çalıştırın; 5. adımdaki normal Gateway betiği de
-aynı kontrolü otomatik yapar. Çalışan Gateway yeni dosyaları otomatik devralmış sayılmaz;
-eski kurulumu güncellediyseniz normal kapatma/başlatma sırasında yeni kod yüklenir.
+Bu komut yalnız onaylanmış aynı sürüm kaynak derlemesinin paket makbuzunu doğrular;
+stok npm paketi ya da uyumsuz sürümde durur. Talk bağlantısı artık kaynakta derlenir;
+kurulu `dist` dosyalarına yamalama yapılmaz. `npm ci` stok paketi getirir ve bu
+doğrulamadan geçmez; Gateway'i başlatmadan önce onaylı yerel kaynak paketi kurulu
+olmalıdır. Çalışan Gateway yeni dosyaları otomatik devralmış sayılmaz.
 
 Yeni ses framework'ü, ikinci backend veya ayrı bildirim servisi kurulmaz.
 Talk'ın 25 sabit upstream kaynak dosyası repoda korunur; browser bundle'ı 7. adımda
@@ -911,6 +908,28 @@ işçi sorusu ve sizin kanal hesabınızın gönderimi henüz canlı kabul edilm
 değildir. Bilinen Gateway health/RPC sorunu sürerken bu yolları hazır
 varsaymayın veya aynı dış işlemi yeniden denemeyin. Güncel kanıt ve eksikler:
 [13 uygulama kaydı](docs/GELISTIRME_DURUMU.md#13--uygulama-ve-dar-doğrulama-15-ekim-2026).
+
+### 7c) Seçici unutma ve 30 günlük ham kayıt bakımı (14)
+
+Seçici unutma önizlemesi `jarvis_note_forget_preview` / Live
+`jarvis_forget_preview` araçlarıyla seçilen notun güncel sürümünü ve kontrollü
+türevlerini gösterir. Önizleme tek başına **hiçbir bilgiyi silmez**; belirsiz
+kapsamı genel session forget'e genişletmez.
+
+**Yeni GitHub kurulumu için önemli:** `npm ci` stok OpenClaw paketini kurar ve
+30 günlük fiziksel transcript/arşiv temizliğini etkinleştirmez. Bu depodaki
+`native/openclaw-v2026.10.2-stage14.patch` kaynak değişikliği ile aynı sürüm
+OpenClaw kaynak derlemesi gerekir; derlenmiş paket henüz bu depoya eklenmediği
+için yeni kurulumlarda Adım 14'ün otomatik bakımını hazır varsaymayın.
+`node scripts/jarvis-stage14-config.mjs` tek başına bu özelliği kurmaz veya
+etkinleştirmez.
+
+Bu çalışma alanında kaynak derlemesi `native-protocol` adımını geçti; ardından
+`plugins:assets:build`, yerel pnpm çalıştırıcısı açılamadığı için durdu. Bu bir
+RAM hatası değildir. Bu nedenle doğrulanmış kaynak kurulum komutu henüz yoktur;
+bu adım tamamlandığında README'ye test edilmiş kurulum sırası eklenecektir.
+Unutma önizlemesi ile gerçek bakımın kapsamı ve kalan engeller:
+[14 uygulama kaydı](docs/14_UNUTMA_VE_HAM_KAYIT_BAKIMI.md).
 
 ### 8) Windows çalıştırılabilir klasörünü oluşturun ve kontrolleri çalıştırın
 

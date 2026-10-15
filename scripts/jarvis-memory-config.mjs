@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-export const memoryTools = ['jarvis_memory_search', 'jarvis_memory_get', 'jarvis_note_read', 'jarvis_note_write'];
+export const memoryTools = ['jarvis_memory_search', 'jarvis_memory_get', 'jarvis_note_read', 'jarvis_note_write', 'jarvis_note_forget_preview','jarvis_note_forget'];
 // User-selected Dreaming model only; the primary agent and Live model stay separate.
 export const dreamingModels = ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
 export const dreamingModel = `jarvis-dream-google/${dreamingModels[0]}`;

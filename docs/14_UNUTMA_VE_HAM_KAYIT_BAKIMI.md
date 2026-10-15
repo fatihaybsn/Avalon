@@ -1,0 +1,23 @@
+# 14 — Seçici unutma ve ham kayıt bakımı
+
+15 Ekim 2026. **Durum: kaynakta kısmi uygulama; paket kurulum ve canlı kabul engelli.** Gateway health/RPC sorunu bu adımda araştırılmadı veya onarılmadı.
+
+## Uygulanan kapsam
+
+- Seçici unutma 05'in kontrollü not kimliği/revizyon/provenance kayıtlarını kullanır. Önizleme ilgili revizyonları ve türevleri gösterir; karma veya eksik kökenli kaydı otomatik genişletmez. Onaydan sonra Memory Core kaynak/tombstone ve Dreaming/index/cache türevlerini kendi public sahibi üzerinden uzlaştırır. İlgisiz notlar korunur. Tek Memory Core kullanılır.
+- Kaynak OpenClaw bakımı `agentId: main` için aktif transcript, cold history, retained/deleted/reset lifecycle arşivleri ve kaynak yeniden yazımından kalan hash-kayıtlı dışa aktarım dosyalarını küçük gruplarla işler. Gerçek mesaj zamanı 30 günlük eşiği belirler; yeni mesaj eski satırın yaşını yenilemez. Tombstone, FTS temizliği ve arşiv/index invalidation eski içeriğin yeniden öğrenilmesini önler. Retained 06 WorkLedger ve kalıcı notlar bu TTL'den ayrıdır.
+- Yeni compaction ve branch-summary kayıtları kaynak transcript entry kimliklerini ve en eski özgün kaynak zamanını taşır. Özet metni de kaynak mesajın 30 günlük yaşı dolduğunda aynı tombstone/indeks uzlaştırmasıyla kaldırılır; özetin yeni yazılma zamanı eski içeriğin ömrünü uzatmaz. Kaynak listesi sınırı aşan veya içindeki eski özeti izleyemeyen kayıt `complete: false` olur ve otomatik silinmez.
+- Codex'in `jarvis-codex` deposu ve OpenCode server'ın kendi session verisi kullanıcının seçtiği saklama kapsamı dışındadır; kod bunları taramaz veya silmeye çalışmaz. İşçi çıktısı ana JARVIS sohbetine yazılmışsa o ana sohbetin OpenClaw kaydı kapsam içindedir.
+- JARVIS tarafında ikinci bir konuşma dökümü, worker transcript'i veya ham cache üreticisi yoktur. OpenCode'un JARVIS tarafından yaratılan geçici turn klasörleri yapılandırma/guard dosyaları içerir ve turn sonunda temizlenir; server'ın kendi kayıtları yukarıdaki dış kapsamdır. `jarvis-undo` ise proje dosyasının geri alma sürümüdür, sohbet/worker ham kopyası değildir; mevcut kullanıcı çıktısı ve sürüm geçmişi TTL kapsamı dışındadır. Bu ayrım nedeniyle olmayan bir ham kopya için yeni kopya üreticisi veya ikinci kayıt deposu eklenmedi.
+- Bakım uygunluğu modelsiz 60 saniyelik servis döngüsünde kontrol edilir; native API kilit, abort, konuşma/yazma boşluğu ve sınırlı batch kapılarını kullanır. Native `pruneAfter` tek başına fiziksel kaldırma sayılmaz. Yerel kaldırma provider'a daha önce gönderilen kopyaları silmez; dosya/SQLite kaldırma adli izsiz silme değildir.
+
+## Açık engeller ve dürüst sınırlar
+
+- Eski provenance'sız compaction/branch-summary kayıtları `summary-without-source-provenance`, diğer sınıflandırılmamış custom/control event'leri `unclassified-custom-control-raw-payloads` olarak korunur ve engel raporlanır. Kaynak ID'leri özetin hangi entry'lerden türediğini gösterir; özet içindeki tek tek cümlelerin hangi olgudan geldiğini göstermez. Karışık bir özetin içinden tek olguyu koruyarak ayırma otomatik yapılmaz; bu daha dar seçici türev silme kapsamı hâlâ engellidir. Yeni, izlenebilir özetlerin 30 günlük kaynak yaşına göre kaldırılması uygulanmıştır.
+- Seçici unutma, devam eden Live çağrısında yalnız önizleme yapar. Kullanıcı çağrıyı kapattıktan sonra aynı OpenClaw sohbet kimliğinde onaylı apply akışını sürdürebilir; yeni Talk çağrısı yeni geçici provider bağlamı açar. Ana sohbet dökümündeki eski metin 30 günlük ham kayıt kuralına kadar kalabilir. Bulut tarafındaki veri bu işlemle silinmez.
+- `RawCopyMaintenance` host-içi yardımcıdır; üretimde ona kaydedilmiş bir JARVIS ham sohbet kopyası yoktur. Bu yardımcı, Codex/OpenCode oturumlarını veya rastgele klasörleri keşfetmez. Mevcut kaynak envanterinde ek JARVIS transcript/log/cache kopyası üreten bir yol bulunmadı.
+- Root seçici forget/maintenance/Live testleri 29/29, son bakım assertion'ı 14/14 geçti. Native session raw-retention kernel/archive/inventory ve özet provenance testleri 10/10 geçti. Codex bağlantısı değişmedi; önceki 12/12 sınır testi tekrarlanmadı. Windows derleme hatası anlık sistem commit sınırından kaynaklandı; 16 GiB fiziksel RAM veya 4 GiB GPU VRAM miktarı tek başına kullanılabilir commit'i belirlemez. Derleme/kurulum sonucu aşağıdaki durum raporunda güncel tutulur. Gateway yeniden başlatılmadı ve fiziksel kullanıcı transcript'i temizlenmedi.
+
+## Doğrulama sınırı
+
+Yalnız 14'e ait seçici unutma/retention ve uygun Codex worker izin-sandbox-kimlik-iptal regresyonları çalıştırılır. Son doğrulamada Gateway health/RPC yanıt vermediğinden canlı kabul yapılmadı; Gateway sorunu kapsam dışı ve bilinen engel olarak kalır. Canlı kabul ancak kullanıcı Gateway'i ayrıca hazır hale getirdiğinde yapılabilir.
