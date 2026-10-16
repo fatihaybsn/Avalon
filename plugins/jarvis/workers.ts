@@ -50,7 +50,9 @@ export function installWorkers(api:OpenClawPluginApi,live:(run?:string)=>WorkerB
  api.registerGatewayMethod('jarvis.worker.requests',async({params,client,sessionAccessAuthority:access,respond})=>{
   try{const b=live(String(params.runId));if(!b||!access||!client||client.invalidated||client.connect.role!=='operator'||!client.connect.scopes?.includes('operator.approvals')||(client.authenticatedUserProfile?.profileId??client.authenticatedUserId)!==b.scope.userId||!client.connect.device?.id||access.target.sessionId!==b.scope.sessionId||access.target.sessionKey!==b.scope.sessionKey)throw new Error('Original human decision authority required');access.assertCurrent();const choice=selectedWorker(b.scope);respond(true,{requests:choice==='opencode'?await opencode.decisions(b):await codex?.decisions(b)??[]});}
   catch(e){respond(false,undefined,{code:'INVALID_REQUEST',message:e instanceof Error?e.message:'Worker requests unavailable'});}
- },{scope:'operator.approvals',profileAccess:'required',sessionAccess:{mode:'write'}});
+  // Session-scoped methods must declare operator.write; the handler still
+  // requires operator.approvals on the client, so the real gate is stricter.
+  },{scope:'operator.write',profileAccess:'required',sessionAccess:{mode:'write'}});
  api.on('before_prompt_build',(_e,ctx)=>ctx.agentId==='main'?{appendSystemContext:WORKER_GUIDANCE}:undefined);
  return {control};
 }

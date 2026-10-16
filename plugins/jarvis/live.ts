@@ -166,7 +166,9 @@ export function installLive(api:OpenClawPluginApi,workspace:()=>string,index:()=
       } finally {c.pending.delete(callId);}
     }
   };
-  for(const [name,handler] of Object.entries(methods))api.registerGatewayMethod('jarvis.live.'+name,async o=>{try{o.respond(true,await handler(o));}catch(e){o.respond(false,undefined,{code:'INVALID_REQUEST',message:e instanceof Error?e.message:'Live boundary refused'});}},{scope:name==='catalog'?'operator.talk':'operator.write',profileAccess:'required',sessionAccess:{mode:'write'}});
+  for(const [name,handler] of Object.entries(methods))api.registerGatewayMethod('jarvis.live.'+name,async o=>{try{o.respond(true,await handler(o));}catch(e){o.respond(false,undefined,{code:'INVALID_REQUEST',message:e instanceof Error?e.message:'Live boundary refused'});}// Host requires operator.write for every session-scoped method. The catalog
+// handler still verifies operator.talk through identity(), so nothing widens.
+},{scope:'operator.write',profileAccess:'required',sessionAccess:{mode:'write'}});
   api.on('gateway_stop',()=>{for(const id of calls.keys())close(id);});
   return {isBusy:()=>calls.size>0};
 }

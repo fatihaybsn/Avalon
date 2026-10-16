@@ -716,6 +716,18 @@ giderilmeden gerçek telefon/cron kabulü tamamlanmış sayılmaz.
 
 ### 5) Gateway'i başlatın
 
+Başlamadan önce profilin geçerli olduğunu tek komutla doğrulayın. Bu kapı
+geçmezse Gateway açılışı yarıda, kaynağı zor görünen bir hatayla durur:
+
+```powershell
+.\node_modules\.bin\openclaw.cmd --profile jarvis config validate --json
+```
+
+Çıktıda `"valid": true` görünmelidir. `false` ise hatanın gösterdiği alanı
+düzeltin; `jarvis-gateway.ps1` bu hatayı kendi hâlinde geçmez.
+
+Sonra Gateway'i başlatın:
+
 ```powershell
 .\scripts\jarvis-gateway.ps1
 ```
@@ -724,9 +736,23 @@ Bu pencere açık kalır. Profil `%USERPROFILE%\.openclaw-jarvis` içindedir;
 başlangıç mevcut ayarları ezmez. Önce 4. adımı tamamlayın; başlangıç 03
 politikasını ve token kimliğini doğrulayamazsa durur. Port doluysa yabancı
 süreci kapatmaz, hatayla durur. Kapatmak için `Ctrl+C`.
-İlk başlangıç bu makinedeki testte yaklaşık üç dakika sürdü; `ready`/listening
-kaydı ve gerçek sağlık kontrolü gelmeden ikinci Gateway başlatmayın. Yalnız açık
-port görülmesi, doğru JARVIS Gateway'ine bağlandığınız anlamına gelmez.
+`ready`/listening kaydı ve gerçek sağlık kontrolü gelmeden ikinci Gateway
+başlatmayın. Yalnız açık port görülmesi, doğru JARVIS Gateway'ine bağlandığınız
+anlamına gelmez.
+
+**Açılış süresi beklentisi (16 Ekim 2026 ölçümü, bu depodaki yapı):**
+
+| Durum | Süre |
+|---|---|
+| Sıcak başlangıç (bilgisayar açıktan beri bir kez açıldı) | ~3 dakika |
+| İlk başlangıç, bilgisayar yeni açılmışken | 5–9 dakika |
+
+Sürenin tamamı tek bir yerde geçer: OpenClaw'in eklenti yükleyicisi. Modül
+çözümlemesi ölçülmüş olarak 4,7 saniyedir (açılışın %2,5'i); JARVIS'in kendi
+kodu 7,2 saniyedir. Bu, bu depodan düzeltilemeyen bir maliyettir ve 3 dakikalık
+beklenti bilinçli olarak kabul edilmiştir. İlk açılışta 9 dakika beklemek
+**hata değildir** — pencerede takılı kaldı sanmayıp `ready` kaydını bekleyin.
+`jarvis-status.ps1` aracılığıyla ilerlemeyi izleyebilirsiniz.
 
 İkinci pencerede sağlık kontrolü:
 
@@ -841,6 +867,59 @@ mesaj, otomasyon ve başka ajanla erişim genişletme bu rolde kapalıdır.
 URL/query ve özel ağ sınırları host'tadır; fetch yönlendirmeleri kapalıdır.
 Kota/erişim hatası aynı araştırma run'ını durdurur. Yeni kullanıcı isteği
 kendi kapsamıyla değerlendirilir. [Tavily ayrıntıları](docs/TAVILY_KURULUM.md).
+
+### 6a) Doctor temizligini dogrulayin (16 Ekim 2026)
+
+`doctor --fix` cikis kodu `0` vermelidir. Sifir degilse Gateway'i baslatmayin.
+
+```powershell
+.\node_modules\.bin\openclaw.cmd --profile jarvis doctor --fix
+Write-Output "doctor cikis kodu: $LASTEXITCODE"
+```
+
+Doctor profilde kullanilmayan bir `openai` provider kaydi ekleyebilir. Space Bunny
+tek yoldan (OpenCode iscisi) erisildigi icin bu kayit kapatilmalidir; acik
+birakilirsa JARVIS'in kullanici erisimi genisler. Kapatma degeri profile elle
+yazilir (`plugins.entries.openai.enabled = false`), sonra politika denetlenir:
+
+```powershell
+node scripts/jarvis-policy-config.mjs --check "$env:USERPROFILE\.openclaw-jarvis\openclaw.json"
+```
+
+`--check` politikayi yeniden yazmadan denetler.
+
+### 6b) Bu depoda 16 Ekim 2026'da duzeltilen acilis engelleri (onbir sorun)
+
+Sifirdan kurulumda Gateway'in acilmasini engelleyen on bir ayri sorun bulundu ve
+duzeltildi. **Dokuzu bu depoda kod olarak duzeltildi**; README adimlarini
+izleyen yeni bir kullanici bunlarla karsilasilmaz:
+
+| Duzeltilen engel | Duzeltildigi yer |
+|---|---|
+| Politika JARVIS'e `jarvis_send` aracini vermiyordu | `scripts/jarvis-policy-config.mjs` |
+| Profilde `jarvis_note_forget` araci eksikti | `scripts/jarvis-policy-config.mjs` |
+| Politika idempotent degildi (`deny: undefined`) | `scripts/jarvis-automation-config.mjs` |
+| Gecersiz anahtar `gateway.tailscale.resetOnExit` | `scripts/jarvis-mobile-config.mjs` |
+| Politika 13. asama kararlarini uygulamiyordu | `scripts/jarvis-policy-config.mjs` |
+| Eklenti kayit sozlesmesi eksikti (`scope:'operator.write'`) | `plugins/jarvis/decisions.ts`, `live.ts`, `workers.ts` |
+| Zamanlanmis gorev hatasi (instruction isolation bildirimi yok) | `plugins/jarvis/opencode-gui.ts` |
+| `gemini-dreaming.ts` icinde 12 tip hatasi | `plugins/jarvis/gemini-dreaming.ts` |
+| Model katalogu 3 dakikada bir sonsuz dongu kuruyordu | `plugins/jarvis/openclaw.plugin.json` |
+
+Son satir ayri onemlidir. `plugins/jarvis/openclaw.plugin.json` icindeki
+`providers` bildirimi **kaldirildi**: model katalogu iscisi `providers` listesi
+bos olmayan JARVIS'i seciyor, 180 saniyelik zaman asimina takiliyor ve Gateway
+surekli bir cekirdek CPU tuketiyordu (olculdu: %93,2 -> %26,1, bellek artmiyor).
+**Bu bildirimi "eksik" sanip geri eklemeyin.** Ruya (Dreaming) modeli bu
+bildirimden degil, `models.providers.*` config girdisinden gelir ve
+etkilenmez; dogrulamasi 5. adimdaki `gateway call
+jarvis.memory.dreaming.status --json` cagrisidir.
+
+Kalan iki sorun **makine durumuydu** ve yalniz yukseltmede ortaya cikar: bayat
+lease kayitlari ve agent veritabanlarinda eksik olan
+`session_transcript_raw_retention_files` tablosu. Doctor bu tabloyu kendisi
+uygulamiyor; sifirdan kurulumda gerekmez. Yukseltmede ayni belirti cikarsa
+`docs/GELISTIRME_DURUMU.md` icindeki 16 Ekim kaydina bakin.
 
 ### 7) Masaüstü istemcisini derleyin ve bağlayın
 

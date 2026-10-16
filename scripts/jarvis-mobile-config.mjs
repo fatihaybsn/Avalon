@@ -19,7 +19,10 @@ export function prepareMobile(config, status, serve) {
   if(!Array.isArray(origins)||origins.some(o=>typeof o!=='string'||o.includes('*')))throw new Error('Geniş/belirsiz origin listesi var; otomatik değiştirilmedi.');
   g.auth.allowTailscale=false;
   g.controlUi={...g.controlUi,allowedOrigins:[...new Set([...origins,origin])]};
-  g.tailscale={...g.tailscale,mode:'serve',resetOnExit:false};
+  // `resetOnExit` is a Gateway run flag, not a config key. Writing it here made
+  // the whole config fail validation and blocked every Gateway startup. The
+  // native Gateway owns its own Serve path on shutdown, so config keeps mode only.
+  g.tailscale={...g.tailscale,mode:'serve'};
   return {config:c,origin};
 }
 

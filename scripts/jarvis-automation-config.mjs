@@ -5,7 +5,9 @@ export function applyAutomations(c){
  if(c.plugins?.entries?.jarvis?.config?.nativeAutomations!==true)return c;
  for(const tools of [c.agents.entries.main.tools,c.tools]){
   tools.allow=[...new Set([...(tools.allow??[]),'automations'])];
-  tools.deny=tools.deny?.filter(t=>!['automations','cron'].includes(t));
+  // Only rewrite an existing deny list. Assigning undefined would create an own
+  // key that JSON drops on write, so apply and check could never converge.
+  if(Array.isArray(tools.deny))tools.deny=tools.deny.filter(t=>!['automations','cron'].includes(t));
  }
  return c;
 }

@@ -26,7 +26,9 @@ export function installDecisions(api:OpenClawPluginApi,bindings:()=>Array<{scope
    }
    o.sessionAccessAuthority!.assertCurrent();o.respond(true,{requests:results});
   }catch(e){o.respond(false,undefined,{code:'INVALID_REQUEST',message:e instanceof Error?e.message:'Decision unavailable'});}
- },{scope:'operator.approvals',profileAccess:'required',sessionAccess:{mode:'write'}});
+  // Session-scoped methods must declare operator.write; the handler still
+  // requires operator.approvals on the client, so the real gate is stricter.
+  },{scope:'operator.write',profileAccess:'required',sessionAccess:{mode:'write'}});
  api.on('gateway_stop',()=>previews.clear());
  return {
   async authorize(callId:string,tool:string,params:Record<string,unknown>,scope:Scope,approval:any,signal?:AbortSignal){

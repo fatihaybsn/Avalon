@@ -1,6 +1,12 @@
-import type { OpenClawPluginApi } from 'openclaw/plugin-sdk/plugin-entry';
-import type { StreamFn, AssistantMessage, AssistantMessageEvent } from '@openclaw/ai/types';
+// The installed package exposes no StreamFn / AssistantMessage /
+// AssistantMessageEvent through any plugin-sdk subpath: they live in
+// @openclaw/ai and @openclaw/llm-core. ProviderWrapStreamFnContext is public
+// and carries the same StreamFn the host hands us, so derive the contract from
+// there instead of importing an unreachable module or widening to any.
+import type { OpenClawPluginApi, ProviderWrapStreamFnContext } from 'openclaw/plugin-sdk/plugin-entry';
 import { selectDreamContext, selectDiaryContext, validateDreamDecision } from './dreaming-context.ts';
+
+type DreamStreamFn = NonNullable<ProviderWrapStreamFnContext['streamFn']>;
 
 export const DREAM_PROVIDER = 'jarvis-dream-google';
 // Official standard text free-tier models, strongest Flash family first.
@@ -15,7 +21,7 @@ export type DreamEvidence = ReturnType<typeof validateDreamDecision> & { modelId
 function unavailable(message: string): boolean {
   return /\b(429|500|502|503|504|RESOURCE_EXHAUSTED|UNAVAILABLE|INTERNAL)\b/.test(message) && !/timeout|timed out|abort|cancel/i.test(message);
 }
-export function guardedDreamStream(inner: StreamFn, workspace: string, onDecision: (e: DreamEvidence) => void, onFailure: (message: string) => void): StreamFn {
+export function guardedDreamStream(inner: DreamStreamFn, workspace: string, onDecision: (e: DreamEvidence) => void, onFailure: (message: string) => void): DreamStreamFn {
   const single = guardedSingleDreamStream(inner, workspace, onDecision);
   return async (model, context, options) => {
     try {
@@ -36,7 +42,7 @@ export function guardedDreamStream(inner: StreamFn, workspace: string, onDecisio
     }
   };
 }
-function guardedSingleDreamStream(inner: StreamFn, workspace: string, onDecision: (e: DreamEvidence) => void): StreamFn {
+function guardedSingleDreamStream(inner: DreamStreamFn, workspace: string, onDecision: (e: DreamEvidence) => void): DreamStreamFn {
   return async (model, context, options) => {
     try {
       if (!DREAM_MODELS.some(id => id === model.id) || context.tools?.length || context.messages.length !== 1 || context.messages[0].role !== 'user' || typeof context.messages[0].content !== 'string') throw new Error('Unexpected Dreaming request; cloud withheld');
@@ -75,9 +81,9 @@ function guardedSingleDreamStream(inner: StreamFn, workspace: string, onDecision
       // StreamFn publicly accepts a read-only AsyncIterable + result(). Avoid
       // loading the external ESM stream constructor through the synchronous
       // TS plugin loader at the successful-response boundary.
-      const message: AssistantMessage = { ...result, content: [{ type: 'text', text }] };
+      const message = { ...result, content: [{ type: 'text' as const, text }] };
       return {
-        async *[Symbol.asyncIterator](): AsyncGenerator<AssistantMessageEvent> { yield { type: 'done', reason: 'stop', message }; },
+        async *[Symbol.asyncIterator]() { yield { type: 'done' as const, reason: 'stop' as const, message }; },
         result: async () => message
       };
     } catch (error) {

@@ -10,9 +10,6 @@
     "jarvis-opencode-gui",
     "jarvis-opencode-main"
   ],
-  "providers": [
-    "jarvis-dream-google"
-  ],
   "contracts": {
     "gatewayMethodDispatch": [
       "authenticated-request"

@@ -9,6 +9,11 @@ import {applyGui} from './jarvis-gui-config.mjs';
 import { separateCodexTools } from './codex-worker-policy.mjs';
 import {applyWorkers} from './jarvis-worker-config.mjs';
 import {applyAutomations} from './jarvis-automation-config.mjs';
+// Stage 13 grants the narrow send tool through its own owner. Keeping that grant
+// inside this composition is what lets assertPolicy accept a stage-13 profile;
+// a standalone stage script that mutates the profile outside this composition
+// would make every Gateway startup refuse.
+import {applyDecisions} from './jarvis-stage13-config.mjs';
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export function applyPolicy(config, profileDir, pluginPath = path.join(repo, 'plugins', 'jarvis')) {
@@ -34,7 +39,7 @@ export function applyPolicy(config, profileDir, pluginPath = path.join(repo, 'pl
   config.tools = { ...config.tools, allow: ['read', 'write', 'edit', 'tavily_search', 'web_fetch'], deny: ['exec', 'process', 'apply_patch', 'code_execution', 'browser', 'computer', 'nodes', 'message', 'sessions_spawn', 'sessions_send', 'subagents', 'gateway', 'plugins', 'openclaw', 'cron', 'automations', 'web_search', 'tavily_extract', 'jarvis_web_fetch', 'memory_search', 'memory_get'], elevated: { enabled: false }, exec: { security: 'deny', ask: 'always' }, web: { search: { enabled: false, provider: 'tavily', cacheTtlMinutes: 0 }, fetch: { enabled: true, readability: true, maxChars: 20000, maxCharsCap: 20000, maxResponseBytes: 262144, timeoutSeconds: 10, cacheTtlMinutes: 0, maxRedirects: 0, useTrustedEnvProxy: false, ssrfPolicy: { dangerouslyAllowPrivateNetwork: false, allowRfc2544BenchmarkRange: false, allowIpv6UniqueLocalRange: false } } } };
   delete config.tools.alsoAllow;
   applyMemory(config);
-  const prepared = applyGui(applyQuick(applyWork(config)),guiNode);
+  const prepared = applyDecisions(applyGui(applyQuick(applyWork(config)),guiNode));
   if(workersEnabled)applyWorkers(prepared);
   if (codexEnabled) { prepared.plugins.allow.push('codex'); separateCodexTools(prepared, profileDir); }
   if(nativeAutomations){prepared.plugins.entries.jarvis.config.nativeAutomations=true;applyAutomations(prepared);}

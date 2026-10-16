@@ -1,6 +1,6 @@
 # JARVIS — geliştirme durumu
 
-Son güncelleme: 15 Ekim 2026. Yetkili karar kaynağı [kaynak proje kaydı](source/JARVIS_Proje_Kaydi.md), kısa seçilmiş mimari [KESIN_MIMARI.md](KESIN_MIMARI.md), uygulama sırası ise bu klasördeki tek [geliştirme planıdır](JARVIS_Gelistirme_Plani_ve_Codex_Promptlari.md). Son 2/3/4 düzeltmeleri kapsamdadır: Gemini'nin araştırma/eylem sınırı, host olaylarından görev durumu kaydı, ses kısayolu/isteğe bağlı boşta kapanma/ses kapalıyken bildirim ve kullanıcı isteğiyle tek kare ekran açıklaması.
+Son güncelleme: 16 Ekim 2026. Yetkili karar kaynağı [kaynak proje kaydı](source/JARVIS_Proje_Kaydi.md), kısa seçilmiş mimari [KESIN_MIMARI.md](KESIN_MIMARI.md), uygulama sırası ise bu klasördeki tek [geliştirme planıdır](JARVIS_Gelistirme_Plani_ve_Codex_Promptlari.md). Son 2/3/4 düzeltmeleri kapsamdadır: Gemini'nin araştırma/eylem sınırı, host olaylarından görev durumu kaydı, ses kısayolu/isteğe bağlı boşta kapanma/ses kapalıyken bildirim ve kullanıcı isteğiyle tek kare ekran açıklaması.
 
 | Adım | İş | Durum | Gerçek engel / ön koşul |
 |---|---|---|---|
@@ -20,6 +20,65 @@ Son güncelleme: 15 Ekim 2026. Yetkili karar kaynağı [kaynak proje kaydı](sou
 | 14 | Seçici unutma ve ham kayıt ömrü | **Kısmi — seçici not unutma ve `main` transcript bakımı kaynakta; paket kurulumu/canlı kabul bekliyor** | Codex/OpenCode native kayıtları saklama politikasının dışındadır. Yeni compaction/branch summary kaynak ID'leri ve en eski kaynak zamanı ile 30 güne bağlandı. Kaynağı eksik eski özetler ve sınıflandırılmamış custom/control kayıtları engel olarak korunur; karışık özette tek olguyu ayıklama henüz yoktur. JARVIS ek ham kopya üreticisi bulunmadı; `.jarvis-undo` kullanıcı çıktısı sınıfıdır. Canlı Gateway kabulü yapılmadı. [Gerçek kapsam](14_UNUTMA_VE_HAM_KAYIT_BAKIMI.md). |
 | 15 | Otomasyon, bildirim ve telefonda aynı JARVIS | **Kaynak düzeltmeleri, SDK declaration, tutarlı native paket ve proje yerel kurulum tamamlandı — canlı kabul bekliyor** | Native cron occurrence snapshot'ı aynı JARVIS proje/araç kapsamına bağlandı; dosya okuma/yazma/düzenleme ve kayıt okuma desteklenir. Eski kullanıcı isteği/onayı, dış gönderim/ödeme veya Full access işçi yetkisi taşınmaz. Üç kaynak tip hatası giderildi; dar testler, SDK declaration, runtime/worker derlemesi ve native paketleme exit 0. Tutarlı arşiv normal tarball denetimini geçti ve `node_modules/openclaw` içine kuruldu; kök `package.json`/`package-lock.json` byte-byte değişmedi. Kurulu paket metadata/import düzeyinde doğrulandı. **Açık kalan:** kurulum sırasında npm `allowScripts` kapısı openclaw postinstall'ını çalıştırmadı (paket yaşam döngüsü temizlik/prune adımı; Doctor çalışma zamanı onarımının sahibidir) ve Gateway'nin bilinen health/RPC sorunu onarılmadı. Gateway/Serve/model çağrısı yok; canlı kabul bekliyor. [Gerçek kapsam](15_OTOMASYON_VE_TELEFON.md). |
 | 16 | Windows paketi ve günlük çalışma düzeni | **Kurulabilir installer üretildi ve paketlenmiş uygulama doğrulandı — canlı Gateway kabulü bekliyor** | Electron hedefi `dir` → `nsis` olarak değiştirildi; `JARVIS Setup 0.4.0.exe` (106,6 MB) üretildi. Kullanıcı bazlı kurulum, UAC yok, `deleteAppDataOnUninstall: false`; kullanıcı verisi kurulum dışında (`%USERPROFILE%\.openclaw-jarvis`, `%APPDATA%\jarvis-desktop`). Tek instance, X→tepsi, düzgün kapanış ve ayrı Gateway sahipliği kodda zaten vardı, yeniden yazılmadı. `test:packaged` paketlenmiş exe'de sandbox/dar IPC/gezinme engeli/X→tepsi/yeniden yükleme ömrünü geçti. Canlı kabul Gateway engelinde bekliyor. [Gerçek kapsam](15_OTOMASYON_VE_TELEFON.md). |
+
+## 16 Ekim 2026 - Gateway açılış engelleri çözüldü; kalan performans ölçüldü
+
+**Gerçek sonuç:** 15 Ekim'de belgelenen "Gateway 35 dakika açılmıyor / RPC yanıt vermiyor" engeli **çözüldü**. Gateway açılıyor, `gateway health` OK dönüyor, 9 eklenti yükleniyor ve Space Bunny işçi yolundan gerçekten yanıt veriyor. Bu bir aşama kapanışı değil; canlı kabul (15/16 listesi) hâlâ denenmedi.
+
+**Çözülen 11 açılış engeli (sırayla, ölçümle):**
+1. Politika JARVIS'e `jarvis_send` aracını vermiyordu (13. aşama kapsamı).
+2. Profilde `jarvis_note_forget` aracı eksikti (14. aşama kapsamı).
+3. Politika idempotent değildi (`deny: undefined` yazılıyordu) → `scripts/jarvis-automation-config.mjs` içinde `Array.isArray(tools.deny)` koruması.
+4. Geçersiz anahtar `gateway.tailscale.resetOnExit` → `scripts/jarvis-mobile-config.mjs` artık yazmıyor.
+5. 14 Ekim'den 4 bayat lease (3 `agent_database_leases` + 1 `state_leases`, PID 3104). Kullanıcı onayıyla hedefli silindi.
+6. 3 agent DB'sinde `session_transcript_raw_retention_files` tablosu eksikti; Doctor kendisi uygulamadığı için kullanıcı onayıyla DDL elle uygulandı.
+7. `doctor --fix` exit 0; 3 DB temiz kapandı (clean-close receipt yazıldı).
+8. Doctor'in eklediği `openai` provider izni kapatıldı (`plugins.entries.openai={enabled:false}`, `plugins.allow`'dan çıkarıldı). Kullanıcı onayladı. Gerekçe: Space Bunny yalnızca OpenCode işçi yolundan erişilebilir.
+9. Eklenti kayıt sözleşmesi 3 yerde eksikti; `scope:'operator.write'` eklendi (`plugins/jarvis/decisions.ts`, `live.ts`, `workers.ts`).
+10. **JARVIS'in kendi OpenCode işçi sunucusu kapalıydı** (port 18791 kapalı; `server.json` 14 Ekim'den kalma PID 10136 gösteriyordu). `scripts/jarvis-opencode-server.ps1 -Action Start` ile başlatıldı.
+11. `scripts/jarvis-policy-config.mjs` artık stage13 `applyDecisions` kararlarını da uyguluyor.
+
+**Doğrulama:** `gateway health` OK; `startup phase: ready total=188933 ms` (3 dk 9 sn); `jarvis.worker.setup` → `authenticated:true, loopback:true, mainModel=opencode/space-bunny-free`; `cli synthetic turn: provider=jarvis-opencode-main requestedModel=space-bunny-free durationMs=996` → **Space Bunny işçi yolunda gerçekten çalışıyor.**
+
+**Yanlış anlaşılan nokta düzeltildi:** "403 = Space Bunny yetkisiz" sanılmıştı. OpenClaw'ın gömülü `opencode` provider'ı aslında **OpenCode Zen**'dir (`OPENCODE_ZEN_BASE_URL`/`OPENCODE_ZEN_API_KEY`) — uzak, anahtarlı servis; anahtar yok. Yerel sunucu `/api/info` ile sağlıklı (200, 2.0.28) ama OpenAI-uyumlu `/v1` yüzeyi **yoktur**; bu yüzden Space Bunny orada "model çağrısı" olarak değil, OpenCode SDK oturumu olarak kullanılır.
+
+**Zamanlanmış görev (cron) hatası çözüldü:** `CLI backend "jarvis-opencode-main" does not declare instruction isolation with exact tools` (16 Ekim 00:01:58'de 5 kez). `plugins/jarvis/opencode-gui.ts` → `buildGuiBackend(manager=true)` artık `isolatesInstructionsWithExactTools: true` bildiriyor. Bayrağın doğruluğu ayrıca doğrulandı: manager her çalıştırmada scratch `opencode.json` + scratch cwd + `cleanWorkerEnv` + açık session permissions + yalnız host MCP bridge kullanıyor, dolayısıyla ambient instruction/skill/hook/plugin oluşmuyor. GUI backend için aynı bayrak **konulmadı** (rooted çalışma kanıtı yok). Canlı cron kabulü Gateway hazır olduğunda yapılacak.
+
+**Kalan performans ölçümleri (kullanıcı 3 dakikalık açılışı kabul etti):** açılış 190 saniye. Per-plugin `startup trace` ölçümü: `plugins.runtime-post-bind` 129,4 sn; bunun 97,8 sn'i **jarvis** eklentisinin modül yüklenmesi (`registerMs` yalnız 6-8 ms, yani sorun kayıtta değil yüklemede). `config.auth.secrets-activate` 27,9 sn ikinci kalem. Beş şüphe ölçülerek elendi: TS derlemesi 423 ms, yükleyici kancaları 2,65 sn, dosya sistemi 0,009 ms/işlem, uzak katalog 594 ms, bayatl Control UI fazı 7-20 ms. **Açık soru:** aynı eklenti Gateway dışında 2,65-3,2 sn'de yükleniyor, içinde 97,8 sn; bu fark henüz kesin ölçülmedi. Mevcut yol statik SDK importlarını (16 adet) tembel yaparak ölçmektir; uygulanmadı.
+
+**Model kataloğu döngüsü:** `model catalog worker` 180 sn'de zaman aşımına uğrayıp 3 dakikada bir yeniden deniyor; Gateway sürekli bir çekirdek CPU tüketiyordu (%93, 1,4 GB). Koddan doğrulandı: zaman aşımı sabit (`PREPARED_MODEL_CATALOG_WORKER_TIMEOUT_MS=180_000`, yapılandırılamaz), işçi **aynı** eklenti yükleyicisini kullanıyor ve `plugin.origin!=="bundled" && plugin.providers.length>0` koşuluyla eklenti seçiyor. Yani bu döngü ile 97,8 sn'lik yükleme **aynı kök neden**. Kapatacak bir config anahtarı bulunamadı (`models` config yalnız `mode`+`providers`). `plugins/jarvis/openclaw.plugin.json` içinden `providers:["jarvis-dream-google"]` bildirimi kaldırılarak işçinin JARVIS'i seçmemesi denendi; `config validate` geçti ve kalıcı kayıt `fresh`; **deneyin sonucu ölçüldü: BAŞARILI.** 16 Ekim 10:38:10–10:52:53 arasında (14,7 dakika) `model catalog worker failed` **0 kez** oluştu; önceki çalıştırmada bu sürede ~3 dakikada bir hata vardı. Gateway ortalama CPU'su **%93,2 → %26,1**, bellek 1444 MB → 1415 MB ve artmıyor (önceki her işçi thread'i başına ~200 MB birikiyordu). `gateway health` OK (25 ms). Rüya sağlayıcısı bozulmadı: `models list` `jarvis-dream-google/*` modellerini göstermeye devam etti ve `jarvis.memory.dreaming.status` başarıyla yanıt verdi (`shortTermCount=1`, `promotedTotal=5`); provider `models.providers.*` üzerinden config'ten tanımlıdır, manifest bildirimi yalnızca eklenti sahipliği bilgisidir. `config validate` geçti ve kalıcı eklenti kaydı `fresh`. Geri alma koşulu: rüya/Google taşı çalışmazsa veya `jarvis-dream-google` kaybolursa bu manifest değişikliği geri alınmalıdır.
+
+**ÖNEMLİ DÜZELTME — 16 Ekim 2026, ikinci oturum (kullanıcı madde 1'i araştırmayı seçti):** Daha önce kaydedilen "açılışın kök nedeni ≈1 milyon `realpath` çağrısı" **bulgusu yanlıştı ve geri alındı.** Çıkarım CPU profilinden geliyordu; profil, sistem çağrısında *bekleyen* iş parçacığını o çağrının kendi çerçevesine yazdığı için sistem çağrı süreleri şişik görünüyor. Doğrudan sayım yapıldı — proje dosyasına dokunmadan, `NODE_OPTIONS=--import` ile yüklenen ve `Module.registerHooks` zincirinin **en başına** kendi sayacını koyan bir ölçüm modülü (`tmp/resolveprobe.mjs`, kalıcı kod değil):
+
+```
+resolve : 51.151 adet /  1,96 sn
+load    :  9.290 adet /  2,76 sn
+TOPLAM              4,72 sn      ← 188 sn'lik açılışın %2,5'i
+```
+
+**Sonuç: modül çözümlemesi sorun değildir.** Daha önce yazılan "47 sn realpath / 960.000 çağrı" tırnak hesabı geçersizdir — çağrı sayısı hiç ölçülmemişti. Aynı gün "yavaş ölçüm sırasında Windows Defender taraması bitmiş" yönündeki açıklama da **yanlıştı** (tarama 10:51'de bitmişti, yavaş koşu 15:04'teydi).
+
+**Gerçek faz dağılımı** (`OPENCLAW_GATEWAY_STARTUP_TRACE=1`, sıcak koşu, toplam 188,1 sn):
+
+| Faz | Süre | Pay |
+|---|---|---|
+| `plugins.runtime-post-bind` | 130,5 sn | %69 |
+| `config.auth.secrets-activate` | 28,6 sn | %15 |
+| `cli.command.config-ready` | 12,6 sn | %7 |
+| `cli.main.gateway-run-select-environment` | 3,1 sn | %2 |
+| `sidecars` toplam | 2,3 sn | %1 |
+
+**Yönlendirici kanıt:** liveness uyarısı `eventLoopDelayP99Ms=128.379`, `eventLoopUtilization=0,997`, `cpuCoreRatio=0,372` → olay döngüsü **bloklu** ama çekirdek **boşta**. Yani 130 sn hesaplama değil, **bekleme**. Modül çözümlemesi değil (4,7 sn), bizim eklenti kodumuz da değil (tek başına 7,2 sn, `--experimental-transform-types` ile). **130,5 sn içinde neyin bloklandığı hâlâ bilinmiyor.** Bu, OpenClaw'in `loadStartupPlugins()` çağrısının içindedir ve düzeltmesi bu proje dışındadır.
+
+**Soğuk/sıcak farkı ölçüldü (aynı gün 3 koşu):** PC yeni açılmışken 528,8 sn; sıcak 184,2 sn; sıcak 188,1 sn. Aynı kod, aynı config, ~2,8 kat. En olası açıklama işletim sisteminin dosya/önbellek durumu; kodla çözülemez, belgelenmiş bir sınırdır.
+
+**JARVIS eklentisi derlenmiş JS olarak dağıtılmıyor:** `plugins/jarvis/dist` yok, yani her açılışta Node'un yerleşik tip dönüştürmesi çalışıyor. Sıcak ölçüm: 7,2 sn. Bu 130,5 sn'yi tek başına açıklamıyor (18 kat fark) ama gerçek ve kaldırılabilir bir maliyettir; ileride değerlendirilebilir.
+
+**Derleme klasörü devrimi (silinmedi, karar bekliyor):** `tmp/openclaw-stage14-source` = **241.821 dosya / 4,1 GB**, yani projenin dosyalarının %82'si; runtime'da gerekmiyor. İçindeki 74 değişikliğin 69'su repodaki `native/*.patch` dosyalarında yakalı, **5 dosya hiçbir yamada yok** (98 satır ekleme, oturum/transkript yönetimi): `src/agents/embedded-agent-runner/transcript-rewrite.ts`, `src/agents/sessions/agent-session-tree.ts`, `session-manager-entries.ts`, `session-manager-provenance-compaction.test.ts`, `session-manager-types.ts`. Bu klasör **silinmedi**; silinirse bu 5 dosyadaki iş kaybolur.
+
+**Yanlış anlaşılan ikinci nokta düzeltildi:** not dosyasındaki eski "1 milyon realpath" ölçüm bloğu geçersiz olduğu için düzeltme metniyle değiştirildi; `C:\Users\Fatih\Desktop\JARVIS - COZULMESI GEREKENLER.txt` artık gerçek ölçümü ve bu düzeltmeyi içeriyor.
+
+**Açık kalan:** canlı kabul (gerçek cron, kalıcı sonuç/bildirim, telefon erişimi, PC sesi kapalı testi) denenmedi; `gemini-dreaming.ts` içinde 12 tip hatası var (`@openclaw/ai/types` çözümlenemiyor) ve bu [DUZELT 1] ile ilişkili olabilir; 1 GB bayat `tmp` temizliği ve ikon/kod imzası/otomatik güncelleme ayrı kalem. Tüm bu ölçüm ve kararlar `C:\Users\Fatih\Desktop\JARVIS - COZULMESI GEREKENLER.txt` dosyasına işlendi. Dokuz dosyada commit edilmemiş değişiklik var (`plugins/jarvis/*`, `scripts/jarvis-*`, `docs/GELISTIRME_DURUMU.md`); kullanıcı commit/push istemediği için yapılmadı.
 
 ## 16 — Kurulabilir Windows installer ve günlük çalışma yaşamı, 15 Ekim 2026
 
