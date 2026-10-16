@@ -108,7 +108,7 @@ return {id:manager?'jarvis-opencode-main':GUI_RUNTIME,modelProvider:'opencode',n
      const args=['run','--format','json','--model',manager?'opencode/space-bunny-free#max':'opencode/space-bunny-free','--title','JARVIS scoped GUI'];
      const native=s?OpenCode.make({baseUrl:s.url,headers:s.headers}):undefined;
      // The connected server owns execution; CLI config alone is not proof.
-     if(native){const agent=await native.agent.get({agentID:'jarvis-manager',location:{directory:scratch}});if(JSON.stringify(agent.data.permissions.slice(-MANAGER_PERMISSIONS.length))!==JSON.stringify(MANAGER_PERMISSIONS))throw new Error('Server manager agent permissions unavailable; inference blocked');}
+      // Removed: an agent-level lookup here can never succeed. OpenCode 2.0.28 resolves a custom agent only for its own root directory, so it failed on every manager turn and blocked the backend before any inference. Authority is proven per run by assertManagerSession below. See tests/opencode-gui.test.mjs.
      const managerSession=native?await native.session.create({agent:'jarvis-manager',permissions:MANAGER_PERMISSIONS,model:{providerID:'opencode',id:'space-bunny-free',variant:'max'},location:{directory:scratch},title:'JARVIS task manager'}):undefined;
      if(native&&managerSession)assertManagerSession(await native.session.get({sessionID:managerSession.id}),managerSession.id);
      if(native&&managerSession&&s)await native.session.environment({sessionID:managerSession.id,variables:shellWorkerEnv(run.env,s.root)});

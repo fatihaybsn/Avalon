@@ -24,3 +24,29 @@ test('manager failures preserve only safe auth/status classification',()=>{
  assert.doesNotMatch(error,/private provider response|secret response/);
  assert.match(safeManagerFailure({type:'provider.rate_limit',status:429}),/provider rate limit \(HTTP 429\)/);
 });
+// Live acceptance 16 Ekim: this manager turn path had no coverage at all, and the
+// first real run failed on a server call that can never succeed. OpenCode 2.0.28
+// resolves a custom agent only for its own root directory, never for a run's
+// scratch path, so native.agent.get must not appear here again.
+test('the manager backend proves authority on the run session and never looks the agent up by scratch path',async()=>{
+  const source=await fs.readFile('plugins/jarvis/opencode-gui.ts','utf8');
+  assert.doesNotMatch(source,/native\.agent\.get\(/,'agent-level lookup cannot resolve at the scratch path');
+  assert.match(source,/assertManagerSession\(await native\.session\.get/,'authority must be proven per run on the running session');
+});
+test('manager prepareExecution writes an isolated scratch config and cleans it up',async()=>{
+  const backend=buildGuiBackend(true);
+  assert.equal(backend.isolatesInstructionsWithExactTools,true);
+  const prepared=await backend.prepareExecution({modelId:'space-bunny-free',toolAvailability:{openClaw:['read']}});
+  assert.equal(prepared.toolAvailabilityEnforced,true);
+  assert.equal(typeof prepared.execute,'function');
+  await prepared.cleanup();
+});
+test('assertManagerSession accepts only the exact manager session',async()=>{
+  const {MANAGER_PERMISSIONS,assertManagerSession}=await import('../scripts/manager-permissions.mjs');
+  const good={id:'s1',agent:'jarvis-manager',permissions:MANAGER_PERMISSIONS};
+  assert.doesNotThrow(()=>assertManagerSession(good,'s1'));
+  assert.throws(()=>assertManagerSession(good,'other'),/permissions not proven/);
+  assert.throws(()=>assertManagerSession({...good,agent:'build'},'s1'),/permissions not proven/);
+  assert.throws(()=>assertManagerSession({...good,permissions:[{action:'*',resource:'*',effect:'allow'}]},'s1'),/permissions not proven/);
+  assert.throws(()=>assertManagerSession({...good,permissions:[...MANAGER_PERMISSIONS,{action:'shell',resource:'*',effect:'allow'}]},'s1'),/permissions not proven/);
+});
