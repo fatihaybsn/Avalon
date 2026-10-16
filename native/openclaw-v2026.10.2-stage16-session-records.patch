@@ -1,0 +1,254 @@
+# JARVIS stage16 - oturum/transkript yonetimi yamasi (16 Ekim 2026)
+# stage14 + stage15 yamalarinda KAPSAM DISI kalan 5 dosyanin degisikligi.
+# Kaynak: OpenClaw 2026.10.2, commit b8952d477f0c932d8ddc6da5c89cab5a169b6ff1
+# Uygulama: git apply bu-yama  (temiz kaynak checkout uzerinde)
+diff --git a/src/agents/embedded-agent-runner/transcript-rewrite.ts b/src/agents/embedded-agent-runner/transcript-rewrite.ts
+index 22424554..79ff4af1 100644
+--- a/src/agents/embedded-agent-runner/transcript-rewrite.ts
++++ b/src/agents/embedded-agent-runner/transcript-rewrite.ts
+@@ -115,6 +115,7 @@ async function appendBranchEntry(params: {
+       entry.summary,
+       entry.details,
+       entry.fromHook,
++      entry.rawSourceProvenance?.sourceEntryIds.map((id) => remapEntryId(id, rewrittenEntryIds) ?? id),
+     );
+   }
+   return sessionManager.appendLabelChangeAsync(
+diff --git a/src/agents/sessions/agent-session-tree.ts b/src/agents/sessions/agent-session-tree.ts
+index 99cde948..390bf117 100644
+--- a/src/agents/sessions/agent-session-tree.ts
++++ b/src/agents/sessions/agent-session-tree.ts
+@@ -180,6 +180,7 @@ export abstract class AgentSessionTree extends AgentSessionExecution {
+               summaryText,
+               summaryDetails,
+               fromExtension,
++              entriesToSummarize.map((entry) => entry.id),
+             );
+             summaryEntry = this.sessionManager.getEntry(summaryId) as BranchSummaryEntry;
+             if (label) {
+diff --git a/src/agents/sessions/session-manager-entries.ts b/src/agents/sessions/session-manager-entries.ts
+index 432272ac..ca9d9d80 100644
+--- a/src/agents/sessions/session-manager-entries.ts
++++ b/src/agents/sessions/session-manager-entries.ts
+@@ -19,10 +19,55 @@ import type {
+   SessionEntry,
+   SessionInfoEntry,
+   SessionLeafControl,
++  RawSourceProvenance,
+ } from "./session-manager-types.js";
+ import { withSessionManagerWrite } from "./session-manager-write-admission.js";
+ import { warnSessionPersistenceDeprecation } from "./session-persistence-deprecation.js";
+ 
++const RAW_SOURCE_PROVENANCE_MAX_ENTRIES = 512;
++
++function timestampMs(value: unknown): number | undefined {
++  const at = typeof value === "string" ? Date.parse(value) : value;
++  return typeof at === "number" && Number.isFinite(at) && at >= 0 ? at : undefined;
++}
++
++function rawSourceProvenance(
++  entries: readonly SessionEntry[],
++  expectedEntryCount = entries.length,
++): RawSourceProvenance {
++  const sourceEntryIds = new Set<string>();
++  let oldestSourceTimestampMs = Number.POSITIVE_INFINITY;
++  let complete = entries.length > 0 && entries.length === expectedEntryCount;
++  for (const entry of entries) {
++    const prior =
++      entry.type === "compaction" || entry.type === "branch_summary"
++        ? entry.rawSourceProvenance
++        : undefined;
++    if (prior) {
++      for (const id of prior.sourceEntryIds) sourceEntryIds.add(id);
++      oldestSourceTimestampMs = Math.min(oldestSourceTimestampMs, prior.oldestSourceTimestampMs);
++      complete &&= prior.version === 1 && prior.complete && prior.sourceEntryIds.length > 0;
++      continue;
++    }
++    if (entry.type === "compaction" || entry.type === "branch_summary") complete = false;
++    sourceEntryIds.add(entry.id);
++    const messageAt = entry.type === "message" ? entry.message.timestamp : undefined;
++    const at = timestampMs(messageAt) ?? timestampMs(entry.timestamp);
++    if (at === undefined) complete = false;
++    else oldestSourceTimestampMs = Math.min(oldestSourceTimestampMs, at);
++  }
++  const ids = [...sourceEntryIds];
++  if (ids.length > RAW_SOURCE_PROVENANCE_MAX_ENTRIES) complete = false;
++  const boundedIds = ids.slice(0, RAW_SOURCE_PROVENANCE_MAX_ENTRIES);
++  if (!Number.isFinite(oldestSourceTimestampMs)) complete = false;
++  return {
++    version: 1,
++    sourceEntryIds: boundedIds,
++    oldestSourceTimestampMs: Number.isFinite(oldestSourceTimestampMs) ? oldestSourceTimestampMs : 0,
++    complete,
++  };
++}
++
+ export class SessionManagerEntries extends SessionManagerAppend {
+   private createEntry<T extends { type: SessionEntry["type"] }>(data: T) {
+     return {
+@@ -42,6 +87,9 @@ export class SessionManagerEntries extends SessionManagerAppend {
+     metadata?: CompactionEntry["__openclaw"],
+     tokensAfter?: number,
+   ): Promise<string> {
++    const branch = this.getBranch();
++    const firstKeptIndex = branch.findIndex((entry) => entry.id === firstKeptEntryId);
++    const sourceProvenance = rawSourceProvenance(firstKeptIndex < 0 ? [] : branch.slice(0, firstKeptIndex));
+     const entry: CompactionEntry = this.createEntry({
+       type: "compaction",
+       summary,
+@@ -50,6 +98,7 @@ export class SessionManagerEntries extends SessionManagerAppend {
+       ...(tokensAfter !== undefined ? { tokensAfter } : {}),
+       details,
+       fromHook,
++      rawSourceProvenance: sourceProvenance,
+       ...(metadata?.runId || metadata?.itemId ? { __openclaw: metadata } : {}),
+     });
+     await this.appendEntryAsync(entry, {
+@@ -69,6 +118,9 @@ export class SessionManagerEntries extends SessionManagerAppend {
+     tokensAfter?: number,
+   ): string {
+     warnSessionPersistenceDeprecation("SessionManager.appendCompaction", "appendCompactionAsync");
++    const branch = this.getBranch();
++    const firstKeptIndex = branch.findIndex((entry) => entry.id === firstKeptEntryId);
++    const sourceProvenance = rawSourceProvenance(firstKeptIndex < 0 ? [] : branch.slice(0, firstKeptIndex));
+     const entry: CompactionEntry = this.createEntry({
+       type: "compaction",
+       summary,
+@@ -77,6 +129,7 @@ export class SessionManagerEntries extends SessionManagerAppend {
+       ...(tokensAfter !== undefined ? { tokensAfter } : {}),
+       details,
+       fromHook,
++      rawSourceProvenance: sourceProvenance,
+       ...(metadata?.runId || metadata?.itemId ? { __openclaw: metadata } : {}),
+     });
+     this.appendEntry(entry, {
+@@ -391,6 +444,7 @@ export class SessionManagerEntries extends SessionManagerAppend {
+     summary: string,
+     details?: unknown,
+     fromHook?: boolean,
++    sourceEntryIds?: string[],
+   ): Promise<string> {
+     return await withSessionManagerWrite(this, async () => {
+       if (branchFromId !== null && !this.byId.has(branchFromId)) {
+@@ -410,6 +464,10 @@ export class SessionManagerEntries extends SessionManagerAppend {
+         summary,
+         details,
+         fromHook,
++        ...(sourceEntryIds ? { rawSourceProvenance: rawSourceProvenance(sourceEntryIds.flatMap((id) => {
++          const source = this.getEntry(id);
++          return source ? [source] : [];
++        }), sourceEntryIds.length) } : {}),
+       };
+       await this.appendEntryAsync(
+         entry,
+@@ -428,6 +486,7 @@ export class SessionManagerEntries extends SessionManagerAppend {
+     summary: string,
+     details?: unknown,
+     fromHook?: boolean,
++    sourceEntryIds?: string[],
+   ): string {
+     warnSessionPersistenceDeprecation("SessionManager.branchWithSummary", "branchWithSummaryAsync");
+     if (branchFromId !== null && !this.byId.has(branchFromId)) {
+@@ -446,6 +505,10 @@ export class SessionManagerEntries extends SessionManagerAppend {
+       summary,
+       details,
+       fromHook,
++      ...(sourceEntryIds ? { rawSourceProvenance: rawSourceProvenance(sourceEntryIds.flatMap((id) => {
++        const source = this.getEntry(id);
++        return source ? [source] : [];
++      }), sourceEntryIds.length) } : {}),
+     };
+     this.appendEntry(entry, {
+       invalidateSerializedPrefixCache: fromHook === true || details !== undefined,
+diff --git a/src/agents/sessions/session-manager-provenance-compaction.test.ts b/src/agents/sessions/session-manager-provenance-compaction.test.ts
+index 2c0c70e7..cc4be8d1 100644
+--- a/src/agents/sessions/session-manager-provenance-compaction.test.ts
++++ b/src/agents/sessions/session-manager-provenance-compaction.test.ts
+@@ -53,6 +53,7 @@ it("persists a generated provenance compaction across reload and branch navigati
+       timestamp: 3,
+     });
+     source.appendMessage({ role: "user", content: "What remains?", timestamp: 4 });
++    const originalMessageIds = source.getBranch().filter((entry) => entry.type === "message").map((entry) => entry.id);
+     const preparation = prepareCompaction(source.getBranch() as SessionTreeEntry[], {
+       enabled: true,
+       reserveTokens: 1_000,
+@@ -89,15 +90,28 @@ it("persists a generated provenance compaction across reload and branch navigati
+     if (!result.ok) {
+       throw result.error;
+     }
+-    source.appendCompaction(
++    const compactionId = source.appendCompaction(
+       result.value.summary,
+       result.value.firstKeptEntryId,
+       result.value.tokensBefore,
+       result.value.details,
+     );
++    const compactionEntry = source.getEntry(compactionId);
++    expect(compactionEntry).toMatchObject({
++      type: "compaction",
++      rawSourceProvenance: {
++        version: 1,
++        complete: true,
++        sourceEntryIds: expect.arrayContaining([originalMessageIds[0]]),
++        oldestSourceTimestampMs: 1,
++      },
++    });
+     const branchSummaryId = source.branchWithSummary(
+       source.getLeafId(),
+       "Branch navigation keeps the provenance summary.",
++      undefined,
++      false,
++      [originalMessageIds[0]],
+     );
+     source.branch(branchSummaryId);
+     source.appendMessage({ role: "user", content: "Branch follow-up.", timestamp: 6 });
+@@ -112,6 +126,12 @@ it("persists a generated provenance compaction across reload and branch navigati
+         type: "branch_summary",
+         id: branchSummaryId,
+         summary: "Branch navigation keeps the provenance summary.",
++        rawSourceProvenance: {
++          version: 1,
++          sourceEntryIds: [originalMessageIds[0]],
++          oldestSourceTimestampMs: 1,
++          complete: true,
++        },
+       }),
+     );
+     const context = SessionManager.openModelContext(scope).buildSessionContext();
+diff --git a/src/agents/sessions/session-manager-types.ts b/src/agents/sessions/session-manager-types.ts
+index 7d9ec03f..c77ca9eb 100644
+--- a/src/agents/sessions/session-manager-types.ts
++++ b/src/agents/sessions/session-manager-types.ts
+@@ -34,6 +34,14 @@ export interface SessionMessageEntry extends SessionEntryBase {
+   message: AgentMessage;
+ }
+ 
++/** Bounded source links for transcript summaries; retained outside model context. */
++export interface RawSourceProvenance {
++  version: 1;
++  sourceEntryIds: string[];
++  oldestSourceTimestampMs: number;
++  complete: boolean;
++}
++
+ export interface ThinkingLevelChangeEntry extends SessionEntryBase {
+   type: "thinking_level_change";
+   thinkingLevel: string;
+@@ -57,6 +65,8 @@ export interface CompactionEntry<T = unknown> extends SessionEntryBase {
+   details?: T;
+   /** True for extension-generated compaction entries. */
+   fromHook?: boolean;
++  /** Original transcript entries summarized by this payload, when fully traceable. */
++  rawSourceProvenance?: RawSourceProvenance;
+ }
+ 
+ export type ResetReason = "new" | "reset" | "idle" | "daily" | "cron-stale";
+@@ -75,6 +85,8 @@ export interface BranchSummaryEntry<T = unknown> extends SessionEntryBase {
+   details?: T;
+   /** True for extension-generated branch summaries. */
+   fromHook?: boolean;
++  /** Original transcript entries summarized by this payload, when fully traceable. */
++  rawSourceProvenance?: RawSourceProvenance;
+ }
+ 
+ /** Extension state that is persisted but excluded from model context. */
