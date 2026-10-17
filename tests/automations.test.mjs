@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {automationParams} from '../plugins/jarvis/automations.ts';
 import {evaluate} from '../plugins/jarvis/policy.ts';
 import {applyAutomations} from '../scripts/jarvis-automation-config.mjs';
+import {separateCodexTools} from '../scripts/codex-worker-policy.mjs';
 import {scheduledTaskScope,consumeScheduledAdmission} from '../plugins/jarvis/scheduled-task.ts';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -38,6 +39,18 @@ test('config opt-in enables only existing main native tool and preserves researc
  const research=structuredClone(c.agents.entries.research);
  const p=applyAutomations(c);assert.deepEqual(p.agents.entries.main.tools.allow,['read','automations']);assert.deepEqual(p.agents.entries.research,research);assert.deepEqual(p.tools.deny,['exec']);
  assert.equal(p.plugins.entries.jarvis.config.operatorAdmin,undefined);
+});
+
+test('automation composition preserves per-agent file/research caps after Codex separation',()=>{
+ const c={plugins:{entries:{jarvis:{config:{nativeAutomations:true}}}},agents:{entries:{main:{tools:{allow:['read','write','edit']}},research:{tools:{allow:['tavily_search','web_fetch']}}}},tools:{allow:['read','write','edit','tavily_search','web_fetch'],deny:['exec','process']}};
+ separateCodexTools(c,'C:/profile');
+ const research=structuredClone(c.agents.entries.research),worker=structuredClone(c.agents.entries['jarvis-codex']);
+ applyAutomations(c);
+ assert.equal(Object.hasOwn(c.tools,'allow'),false);
+ assert.deepEqual(c.agents.entries.main.tools.allow,['read','write','edit','automations']);
+ assert.deepEqual(c.agents.entries.main.tools.deny,['exec','process']);
+ assert.deepEqual(c.agents.entries.research,research);assert.deepEqual(c.agents.entries['jarvis-codex'],worker);
+ const once=structuredClone(c);applyAutomations(c);assert.deepEqual(c,once);
 });
 test('native scheduled project occurrence restores file tools without replaying human decisions',async()=>{
  const root=await fs.mkdtemp(path.resolve('tmp','jarvis-scheduled-'));

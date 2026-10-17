@@ -3,7 +3,9 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 export function applyAutomations(c){
  if(c.plugins?.entries?.jarvis?.config?.nativeAutomations!==true)return c;
- for(const tools of [c.agents.entries.main.tools,c.tools]){
+ // separateCodexTools already moved the global policy into each agent. Do not
+ // recreate a global ['automations'] cap that intersects away main's file tools.
+ for(const tools of [c.agents.entries.main.tools,...(Array.isArray(c.tools.allow)?[c.tools]:[])]){
   tools.allow=[...new Set([...(tools.allow??[]),'automations'])];
   // Only rewrite an existing deny list. Assigning undefined would create an own
   // key that JSON drops on write, so apply and check could never converge.
