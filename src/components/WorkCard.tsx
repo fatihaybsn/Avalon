@@ -90,9 +90,9 @@ export default function WorkCard({
 }) {
   const [localStepsOpen, setLocalStepsOpen] = useState(false);
   const showSteps = onToggleSteps ? stepsOpen : localStepsOpen;
-  const expandable = Boolean(task.output || task.error);
   const status = task.status.toLowerCase();
   const active = !TERMINAL.has(status);
+  const expandable = active || Boolean(task.output || task.error);
   const steps = task.steps ?? [];
   const runningStep = [...steps].reverse().find((step) => step.status === "running");
 
@@ -109,6 +109,12 @@ export default function WorkCard({
       onPointerEnter={onFocus}
       onFocus={onFocus}
       onClick={onOpen}
+      onKeyDown={(event) => {
+        if (expandable && event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) {
+          event.preventDefault();
+          onOpen();
+        }
+      }}
       tabIndex={expandable ? 0 : -1}
     >
       {accepted ? <span className="wcard-accepted">Task submitted</span> : null}

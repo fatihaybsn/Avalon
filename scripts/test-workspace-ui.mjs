@@ -44,6 +44,11 @@ try {
       getConversationHistory: async () => ({ ok: true, sessionId: "ui-test", messages: [] }), listResearch: async () => [task],
       getWindowState: async () => ({ maximized: false }), listResearchSchedules: async () => ({ jobs: [], scheduler: { available: true } }),
       sendMessage: async (input) => { fixture.calls.push({ method: "sendMessage", input }); emit("onSidecarEvent", { type: "transcript", speaker: "you", text: input.text, session_id: "ui-test" }); return { ok: true, id: input.id }; },
+      stopTask: async (id) => {
+        fixture.calls.push({ method: "stopTask", id });
+        if (fixture.stopError) return { status: "error", error: fixture.stopError };
+        return new Promise((resolve) => { fixture.resolveStop = resolve; });
+      },
       searchSources: async () => ({ results: [{ kind: "note", path: "brain:test.md", title: "Toplantı notları", snippet: "Planlama içeriği burada bulunur." }] }),
       readMemoryNote: async () => ({ ok: true, content: "Planlama içeriği. İkinci Planlama eşleşmesi." }), readTaskResult: async () => ({ ok: true, output: task.output }),
       listReminders: async () => fixture.reminders,
@@ -94,6 +99,46 @@ try {
     await page.setViewportSize({ width, height }); await geometry(`desktop ${width}`);
     await page.screenshot({ path: path.join(output, `desktop-${width}.png`) });
   }
+  // A running task with no output must open, cancel once, and wait for the
+  // backend's terminal event. Failures remain retryable; closing isn't cancel.
+  await page.evaluate(() => window.__workspace.emit("onSidecarEvent", {
+    type: "hermes_task_update", run_id: "cancel-test", session_id: "ui-test", task: "İptal testi", status: "running",
+  }));
+  const cancelCard = page.locator('[data-task-id="cancel-test"]');
+  await cancelCard.focus(); await page.keyboard.press("Enter");
+  await page.getByRole("button", { name: "Görevi iptal et", exact: true }).waitFor();
+  await page.setViewportSize({ width: 800, height: 600 });
+  const buttonBounds = await page.locator(".reader-cancel").boundingBox();
+  assert.ok(buttonBounds && buttonBounds.y >= 0 && buttonBounds.y + buttonBounds.height <= 600);
+  await page.locator(".reader-card").evaluate((card) => Promise.all(
+    [...card.getAnimations(), ...card.parentElement.getAnimations()].map((animation) => animation.finished),
+  ));
+  await page.screenshot({ path: path.join(output, "desktop-task-cancel.png") });
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.locator(".reader-close").click(); await page.locator(".reader-card").waitFor({ state: "hidden" });
+  assert.equal(await page.evaluate(() => window.__workspace.calls.filter((x) => x.method === "stopTask").length), 0);
+  await cancelCard.click();
+  await page.evaluate(() => { window.__workspace.stopError = "Durdurma bağlantısı kesildi"; });
+  await page.getByRole("button", { name: "Görevi iptal et", exact: true }).click();
+  await page.getByRole("alert").getByText("Durdurma bağlantısı kesildi", { exact: true }).waitFor();
+  assert.equal(await page.locator(".reader-cancel").isEnabled(), true);
+  await page.evaluate(() => { window.__workspace.stopError = null; });
+  await page.locator(".reader-cancel").click();
+  await page.waitForFunction(() => window.__workspace.resolveStop && document.querySelector(".reader-cancel")?.disabled);
+  await page.locator(".reader-cancel").evaluate((button) => button.click());
+  assert.deepEqual(await page.evaluate(() => window.__workspace.calls.filter((x) => x.method === "stopTask").map((x) => x.id)), ["cancel-test", "cancel-test"]);
+  await page.locator(".reader-close").click(); await page.locator(".reader-card").waitFor({ state: "hidden" });
+  await cancelCard.click();
+  assert.equal(await page.getByRole("button", { name: "İptal ediliyor…", exact: true }).isDisabled(), true);
+  await page.evaluate(() => window.__workspace.resolveStop({ status: "stopping" }));
+  assert.equal(await page.locator(".reader-cancel").isDisabled(), true);
+  await page.evaluate(() => window.__workspace.emit("onSidecarEvent", {
+    type: "hermes_task_update", run_id: "cancel-test", session_id: "ui-test", task: "İptal testi", status: "cancelled", output: "Kullanıcı iptal etti.",
+  }));
+  await page.locator(".reader-card .badge").getByText("cancelled", { exact: true }).waitFor();
+  assert.equal(await page.locator(".reader-cancel").count(), 0);
+  await page.locator(".reader-close").click(); await page.locator(".reader-card").waitFor({ state: "hidden" });
+  await page.setViewportSize({ width: 1920, height: 1080 });
   await page.evaluate(() => {
     const emit = window.__workspace.emit;
     emit("onSidecarEvent", { type: "sidecar_status", status: { running: true } });
@@ -103,7 +148,7 @@ try {
   });
   await page.locator(".deck-center .telemetry").waitFor();
   const proportions = await page.evaluate(() => ({ left: document.querySelector(".deck-left").getBoundingClientRect().width, center: document.querySelector(".deck-center").getBoundingClientRect().width, right: document.querySelector(".deck-right").getBoundingClientRect().width }));
-  assert.ok(proportions.left <= 360 && proportions.right <= 400 && proportions.center > proportions.right);
+  assert.ok(proportions.left <= 360 && proportions.right <= 420 && proportions.center > proportions.right);
   await page.locator(".deck-center").getByRole("button", { name: "Mikrofonu sustur", exact: true }).click();
   await page.locator(".deck-center .t-btn.muted").waitFor();
   await page.waitForFunction(() => getComputedStyle(document.querySelector(".deck-center .t-btn.muted")).color === "rgb(245, 176, 74)");

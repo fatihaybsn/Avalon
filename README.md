@@ -2,7 +2,7 @@
 
 **A personal AI workspace for conversation, research, and computer tasks, available on the desktop and an Android phone.**
 
-[Download Avalon 1.0.0 for Windows x64](https://github.com/fatihaybsn/Avalon/releases/tag/v1.0.0). First-time installations also require the runtime and account setup described under [Installation](#installation).
+[Download Avalon 1.1.2 for Windows x64](https://github.com/fatihaybsn/Avalon/releases/tag/v1.1.2). First-time installations also require the runtime and account setup described under [Installation](#installation).
 
 Avalon brings a conversational assistant, background workers, connected notes, research reports, reminders, and a planning workspace into one application. A request can begin as a typed message or a voice conversation, become a reviewed task, and continue in the background while the conversation remains available.
 

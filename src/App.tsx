@@ -62,6 +62,7 @@ export default function App() {
   const [brainProposal, setBrainProposal] = useState<{ id: string; task: string; sessionId: string; resolving?: boolean; error?: string } | null>(null);
   const [, setLogs] = useState<LogLine[]>([]);
   const [tasks, setTasks] = useState<TaskCard[]>([]);
+  const [taskCancellations, setTaskCancellations] = useState<Record<string, { pending: boolean; error?: string }>>({});
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
   // The reader's steps section is independent from the card's steps toggle —
   // opening steps while reading must not also expand the card behind it.
@@ -1514,12 +1515,31 @@ export default function App() {
   }, [sidecarRunning, webSearching, hermesSummarizing, audioState, orbThinking, working, transcript, geminiStatus, autoSlept]);
 
   function openTask(task: TaskCard) {
-    if (!(task.output || task.error)) return;
+    if (!(task.output || task.error) && TERMINAL.has(task.status.toLowerCase())) return;
     if (task.kind) setTasks((current) => current.some((item) => item.id === task.id) ? current : [task, ...current].slice(0, MAX_TASKS_TOTAL));
     setTaskChooser(null);
     setExpandedTaskId(task.id);
     setReaderStepsOpen(false);
     setShowHistory(false);
+  }
+
+  async function cancelTask(task: TaskCard) {
+    if (TERMINAL.has(task.status.toLowerCase()) || taskCancellations[task.id]?.pending) return;
+    setTaskCancellations((current) => ({ ...current, [task.id]: { pending: true } }));
+    try {
+      const result = await window.iris.stopTask(task.id);
+      if (result.error || ["blocked", "error", "failed"].includes(result.status)) {
+        throw new Error(result.error || "Görev iptal edilemedi.");
+      }
+      if (TERMINAL.has(result.status.toLowerCase())) {
+        setTasks((current) => current.map((item) => item.id === task.id && !TERMINAL.has(item.status.toLowerCase())
+          ? { ...item, status: result.status, updatedAt: Date.now() } : item));
+      }
+    } catch (error) {
+      setTaskCancellations((current) => ({ ...current, [task.id]: {
+        pending: false, error: error instanceof Error ? error.message : String(error),
+      } }));
+    }
   }
 
   function closeReader() {
@@ -1721,12 +1741,12 @@ export default function App() {
 
         <footer className="deck-foot">
           <span className="build-meta">
-            AVALON · build {__APP_VERSION__} · by Ashutosh Shrivastava ·{" "}
-            <a href="https://x.com/ai_for_success" target="_blank" rel="noreferrer">
-              X
+            AVALON · build {__APP_VERSION__} · by Fatih Ayıbasan ·{" "}
+            <a href="https://fathaybasn.me/" target="_blank" rel="noreferrer">
+              Web
             </a>{" "}
             ·{" "}
-            <a href="https://github.com/ASHR12/iris" target="_blank" rel="noreferrer">
+            <a href="https://github.com/fatihaybsn/Avalon" target="_blank" rel="noreferrer">
               GitHub
             </a>
           </span>
@@ -1746,7 +1766,11 @@ export default function App() {
 
       {expandedTask ? (
         <ReaderOverlay
+          key={expandedTask.id}
           task={expandedTask}
+          cancelPending={Boolean(taskCancellations[expandedTask.id]?.pending)}
+          cancelError={taskCancellations[expandedTask.id]?.error}
+          onCancel={() => void cancelTask(expandedTask)}
           hand={handControl ? hand : null}
           stepsOpen={readerStepsOpen}
           onToggleSteps={() => setReaderStepsOpen((current) => !current)}

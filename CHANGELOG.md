@@ -6,6 +6,22 @@ as historical release notes.
 This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 and the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [1.1.2](https://github.com/fatihaybsn/Avalon/releases/tag/v1.1.2) — 2026-11-01
+
+### Added
+
+- Open running task cards before output is available, including with Enter or Space.
+- Cancel a running task from its reader, with a pending state, retryable errors,
+  and confirmation from the backend before showing completion.
+- Offline UI regression coverage for task cancellation and keyboard interaction.
+
+### Changed
+
+- Widen the desktop task panel and adjust task/planning control spacing.
+- Update the desktop footer attribution and project links.
+- Set application metadata, desktop/mobile build badges and Windows package
+  version to 1.1.2.
+
 ## [1.0.0](https://github.com/fatihaybsn/Avalon/releases/tag/v1.0.0) — 2026-10-31
 
 The first main Avalon release, superseding the earlier Windows beta.

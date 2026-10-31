@@ -1,6 +1,6 @@
 /* Shared interaction surfaces; never expand the window's fixed chrome. */
 .workspace-nav { display: none; }
-.deck-body { grid-template-columns: clamp(270px,21vw,360px) minmax(0,1fr) clamp(290px,23vw,400px); }
+.deck-body { grid-template-columns: clamp(270px,21vw,360px) minmax(0,1fr) clamp(310px,calc(23vw + 20px),420px); }
 .deck-left, .deck-right, .notes-panel, .comms, .research-workspace { min-width: 0; }
 .left-tabs { flex-shrink: 0; }
 .composer { padding: 12px; flex-shrink: 0; border-top: 1px solid var(--hairline,#294154); background: var(--bg-1,#0c1220); }
@@ -42,6 +42,13 @@
 .new-menu button { display: block; width: 100%; margin: 4px 0; text-align: left; }
 .research-actions { align-items: center; }
 .research-actions select { flex: 1; min-width: 0; }
+/* Inset desktop controls without changing task cards or the mobile workspace. */
+.deck-right .research-workspace[data-view="tasks"] > :is(.research-tabs, .research-actions) { margin-inline: var(--s-4); }
+.deck-right .research-workspace[data-view="schedules"] { padding: 0 var(--s-4) var(--s-4); }
+.deck-right .research-workspace[data-view="schedules"] > .research-actions { flex-wrap: nowrap; }
+.deck-right .research-workspace[data-view="schedules"] > .research-actions > .new-menu { flex-shrink: 0; min-width: 0; }
+.deck-right .research-workspace[data-view="schedules"] > .research-actions > .new-menu > summary { white-space: nowrap; }
+.deck-right .research-schedules { overflow-wrap: anywhere; }
 .scheduled-card header { flex-wrap: wrap; }
 .scheduled-card header strong { min-width: 0; overflow-wrap: anywhere; }
 .scheduled-card header span { white-space: normal; }

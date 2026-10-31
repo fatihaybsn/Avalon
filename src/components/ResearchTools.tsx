@@ -149,7 +149,7 @@ export default function ResearchTools({ children, onOpenTask, initialPlanning = 
     catch (error) { setError(error instanceof Error ? error.message : String(error)); }
     finally { setBusy(""); }
   }
-  return <div className="research-workspace">
+  return <div className="research-workspace" data-view={tab}>
     <div className="research-tabs" role="tablist" aria-label="Görev görünümü">
       <button role="tab" aria-selected={tab === "tasks"} onClick={() => setTab("tasks")}>Çalışmalar</button>
       <button role="tab" aria-selected={tab === "schedules"} onClick={() => setTab("schedules")}>Planlama</button>

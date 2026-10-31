@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { ChevronDown, Wrench, X } from "lucide-react";
 import SearchableContent from "./SearchableContent";
 import type { TaskCard } from "../types";
-import { shortRunId } from "../lib/tasks";
+import { shortRunId, TERMINAL } from "../lib/tasks";
 import type { HandState } from "../hooks/useHandControl";
 import { StepTimeline } from "./WorkCard";
 
@@ -12,12 +12,18 @@ export default function ReaderOverlay({
   stepsOpen = false,
   onToggleSteps,
   onClose,
+  cancelPending = false,
+  cancelError,
+  onCancel,
 }: {
   task: TaskCard;
   hand: HandState | null;
   stepsOpen?: boolean;
   onToggleSteps?: () => void;
   onClose: () => void;
+  cancelPending?: boolean;
+  cancelError?: string;
+  onCancel: () => void;
 }) {
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [readerScale, setReaderScale] = useState(1);
@@ -143,6 +149,10 @@ export default function ReaderOverlay({
   }
 
   const dim = Math.min(1, Math.hypot(offset.x, offset.y) / (CLOSE_DISTANCE * 2));
+  const active = !TERMINAL.has(task.status.toLowerCase());
+  const cancelling = cancelPending || ["cancelling", "canceling", "stopping"].includes(task.status.toLowerCase());
+  const awaitingRun = task.id === "pending" || task.id.startsWith("starting:") || task.id.startsWith("history:");
+  const cancelLabel = cancelling ? "İptal ediliyor…" : awaitingRun ? "Görev başlatılıyor…" : "Görevi iptal et";
 
   return (
     <div
@@ -168,7 +178,7 @@ export default function ReaderOverlay({
           onPointerCancel={endDrag}
         >
           <div className="reader-grip" />
-          <span className={`badge ${task.status.toLowerCase()}`}>{task.status}</span>
+          <span className={`badge ${task.status.toLowerCase()}`}>{active && cancelling ? "İptal ediliyor…" : task.status}</span>
           <code title={task.id}>{shortRunId(task.id)}</code>
           <button
             className="reader-close"
@@ -201,6 +211,7 @@ export default function ReaderOverlay({
         <div className="reader-body" ref={bodyRef}>
           <div className={`markdown-body ${task.error ? "error" : ""}`}>
             <SearchableContent text={task.kind ? task.output || task.error : task.error || task.output} />
+            {active && !(task.output || task.error) ? <p className="reader-waiting">Görev çalışıyor. Etkinlikler burada görünecek.</p> : null}
           </div>
         </div>
         <div className="reader-hint">
@@ -208,6 +219,23 @@ export default function ReaderOverlay({
             ? "Open palm — hold high/low to scroll · Two open palms resize · Fist to close"
             : "Scroll to read · Esc or × to close"}
         </div>
+        {active ? (
+          <div className="reader-cancel-area">
+            {cancelError ? <p className="reader-cancel-error" role="alert">{cancelError}</p> : null}
+            <button
+              type="button"
+              className={`reader-cancel ${cancelling ? "pending" : ""}`}
+              onClick={onCancel}
+              disabled={cancelling || awaitingRun}
+              title={cancelLabel}
+              aria-label={cancelLabel}
+              aria-busy={cancelling}
+            >
+              <X size={20} strokeWidth={1.8} aria-hidden="true" />
+            </button>
+            <span className="reader-cancel-caption" role="status">{cancelling ? cancelLabel : ""}</span>
+          </div>
+        ) : null}
       </article>
     </div>
   );
