@@ -1,0 +1,10 @@
+{
+  "ok": true,
+  "realPythonWorker": true,
+  "syntheticWorker": false,
+  "observationOnly": true,
+  "stopFileWritten": true,
+  "workerTerminated": true,
+  "status": "aborted",
+  "stopReason": "host request cancelled"
+}

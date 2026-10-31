@@ -1,0 +1,112 @@
+{
+  "platform": "win32",
+  "testHome": "C:\\Users\\Fatih\\AppData\\Local\\Temp\\Avalon package tests e9tp73gd\\Hermes \u00e7 test",
+  "results": [
+    {
+      "test": "__main__.WindowsPackage.test_01_source_and_runtime_workspace",
+      "status": "passed"
+    },
+    {
+      "test": "__main__.WindowsPackage.test_02_windows_51_idempotence_and_key_preservation",
+      "status": "passed"
+    },
+    {
+      "test": "__main__.WindowsPackage.test_03_powershell7_reentry",
+      "status": "passed"
+    },
+    {
+      "test": "__main__.WindowsPackage.test_04_authenticated_websocket_ready",
+      "status": "passed"
+    },
+    {
+      "test": "__main__.WindowsPackage.test_05_independent_updates_are_blocked",
+      "status": "passed"
+    },
+    {
+      "test": "__main__.WindowsPackage.test_06_guard_file_tamper_is_blocked",
+      "status": "passed"
+    },
+    {
+      "test": "__main__.WindowsPackage.test_07_partial_patch_is_refused_and_preserved",
+      "status": "passed"
+    },
+    {
+      "test": "__main__.WindowsPackage.test_08_unrelated_source_change_is_blocked",
+      "status": "passed"
+    },
+    {
+      "test": "__main__.WindowsPackage.test_09_workspace_mismatch_is_blocked",
+      "status": "passed"
+    },
+    {
+      "test": "__main__.WindowsPackage.test_10_unknown_destination_is_preserved",
+      "status": "passed"
+    },
+    {
+      "test": "__main__.WindowsPackage.test_11_wrong_head_is_refused",
+      "status": "passed"
+    },
+    {
+      "test": "__main__.WindowsPackage.test_12_application_env_is_merged_without_erasing_keys",
+      "status": "passed"
+    },
+    {
+      "test": "__main__.WindowsPackage.test_13_actual_avalon_gateway_client",
+      "status": "passed"
+    },
+    {
+      "test": "__main__.WindowsPackage.test_14_guard_alias_uses_same_runtime",
+      "status": "passed"
+    },
+    {
+      "test": "__main__.WindowsPackage.test_15_final_verification_after_restoration",
+      "status": "passed"
+    },
+    {
+      "test": "__main__.WindowsPackage.test_16_windows_native_argument_quoting",
+      "status": "passed"
+    },
+    {
+      "test": "__main__.WindowsPackage.test_17_guarded_application_start_environment",
+      "status": "passed"
+    },
+    {
+      "test": "__main__.WindowsPackage.test_18_actual_avalon_http_client_and_saved_configuration",
+      "status": "passed"
+    },
+    {
+      "test": "__main__.WindowsPackage.test_19_relative_application_root_after_set_location",
+      "status": "passed"
+    }
+  ],
+  "providerRequests": 0,
+  "applicationFixture": "C:\\Users\\Fatih\\AppData\\Local\\Temp\\Avalon package tests e9tp73gd\\Avalon app fixture",
+  "actualAvalonClient": [
+    {
+      "ok": true,
+      "actualAvalonGatewayClient": true,
+      "contractVersions": [
+        1,
+        2
+      ],
+      "startupMilliseconds": 7444,
+      "providerRequests": 0
+    },
+    {
+      "gatewayClosedWithoutOrphan": true
+    }
+  ],
+  "actualAvalonHttpClient": {
+    "ok": true,
+    "actualAvalonHttpClient": true,
+    "configurationKey": "API_SERVER_KEY",
+    "providerRequests": 0
+  },
+  "ok": true,
+  "seconds": 1648.56,
+  "testsRun": 19,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "workDirectory": "C:\\Users\\Fatih\\AppData\\Local\\Temp\\Avalon package tests e9tp73gd"
+}

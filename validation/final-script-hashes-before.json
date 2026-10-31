@@ -1,0 +1,7 @@
+{
+  "scripts/Avalon.Hermes.Common.psm1": "f87b7c3adfb70e47c65bbaa99ab49f9bc850f9e78718f3c8a75ec959dca16060",
+  "scripts/hermes-runtime.py": "a0a6571483e600d3fc73e5310bf9eff4b2257ff7db6e45d150897c6bdaa1ea12",
+  "scripts/setup-hermes.ps1": "6a6859331783b2540c526f727ee18df26348ee5b5f9aaa3b9c6c74270b0ba023",
+  "scripts/start-avalon.ps1": "c76ab897ecf749c547be15d760fc76f310dd1e48773b8d114210c494dc1cc3f6",
+  "scripts/verify-hermes.ps1": "fded1f91eed5c2c3c709065ece5c293d8b6ce673b8436e5421be26db27289607"
+}

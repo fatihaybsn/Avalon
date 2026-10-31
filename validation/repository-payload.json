@@ -1,0 +1,19 @@
+{
+  "date": "2026-10-31",
+  "authoritativePublicationFolder": "C:\\Users\\Fatih\\Desktop\\iris-main\\iris-main",
+  "hermesRuntimeAssetsVerified": 5,
+  "hermesPatchAndBootstrapVerified": true,
+  "jevSourceFilesVerified": 72,
+  "jevLockCheckedOffline": true,
+  "documentationLocalLinksVerified": [
+    "README.md",
+    "INSTALL-WINDOWS.md",
+    "docs/JEV-WINDOWS.md",
+    "docs/jev/windows-task-routing.md",
+    "validation/RESULTS.md"
+  ],
+  "credentialsOrExistingEnvironmentsBundled": false,
+  "liveHermesProfileChanged": false,
+  "newColdInstallPerformed": false,
+  "realHermesJevVoiceChainVerified": false
+}

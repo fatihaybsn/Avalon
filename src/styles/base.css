@@ -1,0 +1,293 @@
+/* ===== Base: reset, body canvas, ambient layers, shared primitives ===== */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+/* The window itself is transparent (frameless, HUD-capable); the deck paints
+   its own rounded background instead of the body. */
+body {
+  margin: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: var(--t-base);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  background: transparent;
+}
+
+.fatal-boundary {
+  display: grid;
+  place-content: center;
+  min-height: 100vh;
+  gap: var(--s-3);
+  padding: var(--s-7);
+  text-align: center;
+  color: var(--text);
+  background: var(--bg);
+}
+
+.fatal-boundary h1,
+.fatal-boundary p {
+  margin: 0;
+}
+
+.fatal-boundary button {
+  justify-self: center;
+  padding: var(--s-2) var(--s-4);
+  border-radius: var(--r-sm);
+  color: var(--cyan-bright);
+  background: rgba(var(--cyan-rgb), 0.1);
+  box-shadow: inset 0 0 0 1px rgba(var(--cyan-rgb), 0.25);
+}
+
+::selection {
+  background: rgba(var(--cyan-rgb), 0.28);
+}
+
+button {
+  font-family: var(--font-ui);
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+  color: inherit;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid rgba(var(--cyan-rgb), 0.55);
+  outline-offset: 2px;
+}
+
+/* ===== No ambient layer =====
+   The deck background is a single flat fill, and that is the design, not a
+   placeholder. It has held, in order: an aurora of six blurred colour washes on
+   two drifting plates plus a full-window vignette (read as unrelated purple and
+   cyan smudges, and caused all the banding), and then one 340px glow behind the
+   reactor. That glow had to go too: once the background is flat, the only
+   brightness variation left IS the glow, so a bright centre falling off to dark
+   corners is precisely what vignetting looks like. Any single soft light on a
+   flat dark field will do the same thing.
+
+   The reactor canvas draws its own light, which is the focal point the room
+   needs. Two rules to keep this calm: gradients on dark surfaces must be small
+   and steep, and depth comes from a step of fill tone plus spacing rather than
+   from washes or outlines. */
+
+/* ===== Shared scrollbars ===== */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: var(--r-pill);
+  background: rgba(148, 196, 255, 0.14);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 196, 255, 0.24);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* ===== Panel header =====
+   Was 10px tracked-out uppercase mono, same as every other label in the app.
+   Now it speaks in the UI font at a legible size: the instrument voice is
+   rationed to real readouts (telemetry, run ids, boot log) so that when
+   something IS mono-tracked, it means something. */
+.col-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-4) var(--s-4) var(--s-3);
+  font-size: var(--t-sm);
+  font-weight: var(--w-semi);
+  letter-spacing: var(--tr-snug);
+  color: var(--text-soft);
+}
+
+.col-head svg {
+  color: rgba(var(--accent-rgb), 0.8);
+  transition: color var(--accent-ease);
+}
+
+.col-head .count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 var(--s-2);
+  border-radius: var(--r-pill);
+  font-family: var(--font-mono);
+  font-size: var(--t-2xs);
+  font-weight: var(--w-medium);
+  letter-spacing: 0;
+  color: var(--cyan-bright);
+  background: rgba(var(--cyan-rgb), 0.12);
+  box-shadow: inset 0 0 0 1px rgba(var(--cyan-rgb), 0.2);
+}
+
+.col-head .head-state {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: var(--t-2xs);
+  font-weight: var(--w-medium);
+  letter-spacing: var(--tr-caps);
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.col-head .view-all {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  margin-left: var(--s-2);
+  font-size: var(--t-xs);
+  font-weight: var(--w-medium);
+  letter-spacing: 0;
+  color: var(--text-soft);
+  transition: color var(--dur-fast) ease;
+}
+
+.col-head .count + .view-all,
+.col-head span + .view-all {
+  margin-left: auto;
+}
+
+.col-head .view-all + .view-all {
+  margin-left: var(--s-3);
+}
+
+.col-head .view-all:hover {
+  color: var(--cyan-bright);
+}
+
+/* ===== Shared empty state =====
+   The first thing a new user sees in both columns, so it gets a real
+   structure: a soft accent-ringed icon, a lead line, then a quieter hint. */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-3);
+  margin: auto;
+  padding: var(--s-7) var(--s-5);
+  text-align: center;
+  color: var(--muted);
+}
+
+.empty-icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: var(--r-pill);
+  color: rgba(var(--accent-rgb), 0.85);
+  background: radial-gradient(circle, rgba(var(--accent-rgb), 0.14), transparent 72%);
+  box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.2);
+  transition: color var(--accent-ease), box-shadow var(--accent-ease);
+}
+
+.empty p {
+  margin: 0;
+  max-width: 25ch;
+  font-size: var(--t-md);
+  font-weight: var(--w-medium);
+  line-height: var(--lh-snug);
+  color: var(--text-soft);
+}
+
+.empty small {
+  display: block;
+  max-width: 28ch;
+  font-size: var(--t-sm);
+  line-height: var(--lh-body);
+  color: var(--muted);
+}
+
+.demo-load {
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-pill);
+  color: var(--cyan-bright);
+  background: rgba(var(--cyan-rgb), 0.08);
+  box-shadow: inset 0 0 0 1px rgba(var(--cyan-rgb), 0.22);
+  font-size: var(--t-xs);
+  font-weight: var(--w-medium);
+  letter-spacing: 0;
+  transition: background var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
+}
+
+.demo-load:hover {
+  background: rgba(var(--cyan-rgb), 0.15);
+  box-shadow: inset 0 0 0 1px rgba(var(--cyan-rgb), 0.36);
+}
+
+/* ===== Shared status badge (dot + mono uppercase, no filled pill) =====
+   Status IS a genuine readout, so this keeps the instrument voice — but at a
+   legible 10px floor instead of 9.5px. */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-family: var(--font-mono);
+  font-size: var(--t-2xs);
+  font-weight: var(--w-semi);
+  letter-spacing: var(--tr-wide);
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+.badge::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 9px currentColor;
+}
+
+.badge.completed { color: var(--mint); }
+.badge.working,
+.badge.started,
+.badge.running,
+.badge.pending { color: var(--amber); }
+.badge.failed,
+.badge.error,
+.badge.cancelled,
+.badge.canceled { color: var(--coral); }
+
+.badge.working::before,
+.badge.started::before,
+.badge.running::before {
+  animation: badge-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes badge-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .badge.working::before,
+  .badge.started::before,
+  .badge.running::before {
+    animation: none;
+  }
+}

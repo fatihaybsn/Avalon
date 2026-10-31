@@ -1,0 +1,10 @@
+# These release assets are verified by raw SHA-256. Preserve their exact bytes
+# on every checkout, including Git for Windows with core.autocrlf enabled.
+/compat/hermes/** -text
+/compat/jev/** -text
+/scripts/Avalon.Hermes.Common.psm1 -text
+/scripts/setup-hermes.ps1 -text
+/scripts/verify-hermes.ps1 -text
+/scripts/start-avalon.ps1 -text
+/scripts/hermes-runtime.py -text
+/integrations/jev/** -text

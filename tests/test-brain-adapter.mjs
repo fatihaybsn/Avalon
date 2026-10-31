@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import path from 'node:path';
+import {pathToFileURL} from 'node:url';
+const [root, hermesDirectory] = process.argv.slice(2);
+const {HermesBrainBridge} = await import(pathToFileURL(path.join(root, 'electron/brainModels.mjs')));
+const env = {...process.env};
+for (const key of Object.keys(env)) if (/(?:API_KEY|AUTH_TOKEN|ACCESS_TOKEN)$/.test(key)) delete env[key];
+env.HERMES_HOME = hermesDirectory;
+env.IRIS_HERMES_SOURCE = path.join(hermesDirectory, 'hermes-agent');
+const bridge = new HermesBrainBridge({repoRoot: root, home: () => hermesDirectory, env});
+const info = await bridge.call({action: 'info', provider: 'evren'});
+assert.equal(info.configured, false, 'The fresh fixture should not contain a real Evren credential');
+assert.equal(info.baseUrl, 'https://evren-llmapi.ssyz.org.tr/v1');
+const relative = path.relative(hermesDirectory, bridge.python);
+assert(!relative.startsWith('..') && !path.isAbsolute(relative), 'The adapter fell back to an unrelated system Python');
+console.log(JSON.stringify({ok: true, actualBrainAdapter: true, usesManagedPython: true, credentialRequired: true, providerRequests: 0}));

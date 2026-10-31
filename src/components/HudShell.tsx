@@ -1,0 +1,352 @@
+import { useEffect, useRef, useState, type CSSProperties, type RefObject, type ReactNode } from "react";
+import { BrainCircuit, ChevronDown, Hand, MessageSquare, Mic, MicOff, Minimize2, Power, Terminal } from "lucide-react";
+import ReactorCore, { ORB_ACCENT } from "./ReactorCore";
+import WorkCard from "./WorkCard";
+import { HandSkeleton } from "./CameraDock";
+import type { HandoffTone, ReactorState, TaskCard, TranscriptLine } from "../types";
+import type { HandState } from "../hooks/useHandControl";
+import { acceptedKey } from "../lib/tasks";
+
+function HudCamera({
+  stream,
+  hand,
+  actionLabel,
+  actionTone,
+  error,
+}: {
+  stream: MediaStream | null;
+  hand: HandState;
+  actionLabel: string;
+  actionTone: string;
+  error?: string | null;
+}) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    if (videoRef.current) videoRef.current.srcObject = stream;
+  }, [stream]);
+
+  return (
+    <div className="hud-camera hud-hit">
+      <div className="camera-frame">
+        <video ref={videoRef} autoPlay playsInline muted />
+        <div className="cam-scan" />
+        <HandSkeleton hands={hand.hands} />
+        {error ? <span className="cam-error">{error}</span> : null}
+        <span className="cam-status">
+          <i />
+          {hand.present ? "tracking" : "no hand"}
+        </span>
+        <span className={`gesture-chip ${actionTone}`}>
+          <span className="dot" />
+          {actionLabel}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Glass HUD layout: Avalon floating over the whole desktop. Everything is
+ * pointer-transparent except elements marked `.hud-hit` — the main process
+ * toggles window click-through based on what the pointer is over, so you can
+ * keep working in the apps underneath.
+ */
+export default function HudShell({
+  reactorState,
+  inputLevelRef,
+  outputLevelRef,
+  thinking,
+  wakeKey,
+  rippleKey,
+  orbStageRef,
+  orbFlash,
+  onOrbFlashEnd,
+  awake,
+  caption,
+  captionDim,
+  captionCompact,
+  muted,
+  onToggleMute,
+  onWake,
+  onSleep,
+  onExitHud,
+  tasks,
+  acceptedIds,
+  stepsOpenIds,
+  workScrollRef,
+  onToggleSteps,
+  onFocusTask,
+  onOpenTask,
+  onApproveTask,
+  composer,
+  onOpenPlanning,
+  transcript,
+  commsScrollRef,
+  handControl,
+  onToggleHand,
+  hand,
+  handStream,
+  handError,
+  handActionLabel,
+  handActionTone,
+  brainAvailable,
+  brainOpen,
+  onOpenBrain,
+  autoSlept,
+  brainModelLabel,
+  permissionControl,
+  onOpenSettings,
+}: {
+  reactorState: ReactorState;
+  inputLevelRef: { current: number };
+  outputLevelRef: { current: number };
+  thinking: boolean;
+  wakeKey: number;
+  rippleKey: number;
+  orbStageRef: RefObject<HTMLDivElement | null>;
+  orbFlash: { id: string; tone: HandoffTone } | null;
+  onOrbFlashEnd: () => void;
+  awake: boolean;
+  caption: string;
+  captionDim: boolean;
+  captionCompact: boolean;
+  muted: boolean;
+  onToggleMute: () => void;
+  onWake: () => void;
+  onSleep: () => void;
+  onExitHud: () => void;
+  tasks: TaskCard[];
+  acceptedIds: Record<string, number>;
+  stepsOpenIds: Record<string, boolean>;
+  workScrollRef: RefObject<HTMLDivElement | null>;
+  onToggleSteps: (id: string) => void;
+  onFocusTask: (id: string) => void;
+  onOpenTask: (task: TaskCard) => void;
+  onApproveTask: (
+    task: TaskCard,
+    choice: "once" | "session" | "always" | "deny",
+  ) => void;
+  composer?: ReactNode;
+  onOpenPlanning?: () => void;
+  transcript: TranscriptLine[];
+  commsScrollRef: RefObject<HTMLDivElement | null>;
+  handControl: boolean;
+  onToggleHand: () => void;
+  hand: HandState;
+  handStream: MediaStream | null;
+  handError?: string | null;
+  handActionLabel: string;
+  handActionTone: string;
+  brainAvailable: boolean;
+  brainOpen: boolean;
+  onOpenBrain: () => void;
+  autoSlept: boolean;
+  brainModelLabel?: string;
+  permissionControl?: ReactNode;
+  onOpenSettings?: () => void;
+}) {
+  // Show the full stream (state caps at 20); the column has a fixed max height
+  // and palm-scrolls like Comms.
+  const visibleTasks = tasks;
+  const recentTranscript = transcript.slice(-8);
+  // Comms is glanceable, not essential — collapsed by default (the caption
+  // pill by the orb already shows the latest line). Tasks are the core of the
+  // HUD, so they start open but can be tucked away the same way.
+  const [commsOpen, setCommsOpen] = useState(false);
+  const [workOpen, setWorkOpen] = useState(true);
+
+  // The Neural Map wants the whole sky: opening it tucks the task panel away
+  // (the chip stays for bringing it back); closing the map leaves it as-is.
+  useEffect(() => {
+    if (brainOpen) setWorkOpen(false);
+  }, [brainOpen]);
+
+  // The control column reveals for the hand only when it is actually NEAR
+  // the reactor corner (cluster + the column to its left) — a hand merely
+  // being on camera should not pop UI open across the screen.
+  const clusterRef = useRef<HTMLDivElement | null>(null);
+  const handNearOrb = (() => {
+    if (!hand.present) return false;
+    const rect = clusterRef.current?.getBoundingClientRect();
+    if (!rect) return false;
+    const points = hand.hands.length
+      ? hand.hands.map((item) => item.point)
+      : hand.point
+        ? [hand.point]
+        : [];
+    return points.some(
+      (point) =>
+        point.x >= rect.left - 220 &&
+        point.x <= rect.right + 60 &&
+        point.y >= rect.top - 120 &&
+        point.y <= rect.bottom + 80,
+    );
+  })();
+
+  return (
+    <div
+      className={`hud-shell ${awake ? "awake" : "asleep"}`}
+      /* Lights every HUD island from the reactor's current state (inherited). */
+      style={{ "--orb-accent": ORB_ACCENT[reactorState] } as CSSProperties}
+    >
+      {brainModelLabel ? <button className="brain-model-chip hud-brain-model hud-hit" onClick={onOpenSettings} title={brainModelLabel}>{brainModelLabel}</button> : null}
+      <div className="hud-hit hud-permission-control">{permissionControl}</div>
+      {/* Slim work stream, top-right — collapsible like Comms */}
+      {visibleTasks.length > 0 ? (
+        <div className="hud-right">
+          <button
+            type="button"
+            className={`hud-comms-toggle hud-hit ${workOpen ? "open" : ""}`}
+            onClick={() => setWorkOpen((current) => !current)}
+            title={workOpen ? "Collapse tasks" : "Show tasks"}
+          >
+            <Terminal size={12} />
+            Tasks
+            <span className="count">{visibleTasks.length}</span>
+            <ChevronDown size={12} className="chev" />
+          </button>
+          {workOpen ? (
+            <div className="hud-work hud-hit" ref={workScrollRef}>
+              {visibleTasks.map((task) => (
+                <WorkCard
+                  key={task.id}
+                  task={task}
+                  accepted={Boolean(acceptedIds[acceptedKey(task.task)])}
+                  stepsOpen={Boolean(stepsOpenIds[task.id])}
+                  onToggleSteps={() => onToggleSteps(task.id)}
+                  onFocus={() => onFocusTask(task.id)}
+                  onOpen={() => onOpenTask(task)}
+                  onApprove={(choice) => onApproveTask(task, choice)}
+                />
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {/* Left column, bottom-left: collapsible comms on top, camera at the corner */}
+      <div className="hud-left">
+        {true ? (
+          <>
+            <button
+              type="button"
+              className={`hud-comms-toggle hud-hit ${commsOpen ? "open" : ""}`}
+              onClick={() => setCommsOpen((current) => !current)}
+              title={commsOpen ? "Collapse conversation" : "Show conversation"}
+            >
+              <MessageSquare size={12} />
+              Sohbet
+              <span className="count">{recentTranscript.length}</span>
+              <ChevronDown size={12} className="chev" />
+            </button>
+            {commsOpen ? (
+              <div className="hud-comms hud-hit" ref={commsScrollRef}>
+                {recentTranscript.map((line) => {
+                  const self = /you|user/i.test(line.speaker);
+                  return (
+                    <div className={`bubble ${self ? "self" : "iris"}`} key={line.id}>
+                      <span className="who">{self ? "You" : "Avalon"}</span>
+                      {line.text}
+                    </div>
+                  );
+                })}
+                {composer}
+              </div>
+            ) : null}
+            <button className="hud-btn hud-hit" onClick={onOpenPlanning}>Planlama</button>
+          </>
+        ) : null}
+        {handControl ? (
+          <HudCamera
+            stream={handStream}
+            hand={hand}
+            actionLabel={handActionLabel}
+            actionTone={handActionTone}
+            error={handError}
+          />
+        ) : null}
+      </div>
+
+      {/* Orb cluster, bottom-right */}
+      <div className="hud-orb-cluster hud-hit" ref={clusterRef}>
+        {/* One source of truth: App's caption already covers awake states,
+            asleep hints, and the token-saving nap (with/without Hermes). */}
+        <div className={`hud-caption ${captionDim ? "dim" : ""} ${!awake || captionCompact ? "hint" : ""}`}>
+          {/* State light, matched to the orb's current color. Suppressed on
+              hints — those are instructions, not Avalon speaking. */}
+          {awake && !captionCompact ? <i className="hud-caption-dot" aria-hidden="true" /> : null}
+          <span className="hud-caption-text">{caption}</span>
+        </div>
+        <div
+          className={`orb-stage hud-orb ${autoSlept && !awake ? "napping" : ""}`}
+          ref={orbStageRef}
+          style={{ "--orb-accent": ORB_ACCENT[reactorState] } as CSSProperties}
+        >
+          <span className="orb-ring" />
+          <span className="orb-radar" />
+          <ReactorCore
+            state={reactorState}
+            inputLevelRef={inputLevelRef}
+            outputLevelRef={outputLevelRef}
+            thinking={thinking}
+            wakeKey={wakeKey}
+            rippleKey={rippleKey}
+          />
+          {autoSlept && !awake ? (
+            <span className="nap-zzz" aria-hidden="true">
+              <i>z</i>
+              <i>z</i>
+              <i>z</i>
+            </span>
+          ) : null}
+          {orbFlash ? (
+            <span key={orbFlash.id} className={`orb-flash ${orbFlash.tone}`} onAnimationEnd={onOrbFlashEnd} />
+          ) : null}
+        </div>
+        <div className={`hud-controls ${handNearOrb ? "show" : ""}`}>
+          {awake ? (
+            <>
+              <button
+                className={`hud-btn ${muted ? "muted" : ""}`}
+                onClick={onToggleMute}
+                title={muted ? "Unmute microphone" : "Mute microphone"}
+              >
+                {muted ? <MicOff size={14} /> : <Mic size={14} />}
+              </button>
+              <button className="hud-btn danger" onClick={onSleep} title="Sleep">
+                <Power size={14} />
+              </button>
+            </>
+          ) : (
+            <button className="hud-btn wake" onClick={onWake} title="Wake Avalon">
+              <Power size={14} />
+            </button>
+          )}
+          {brainAvailable ? (
+            <button
+              className={`hud-btn ${brainOpen ? "active" : ""}`}
+              onClick={onOpenBrain}
+              title={brainOpen ? "Close the Neural Map" : "Neural Map — say 'show your brain'"}
+            >
+              <BrainCircuit size={14} />
+            </button>
+          ) : null}
+          <button
+            className={`hud-btn ${handControl ? "active" : ""}`}
+            onClick={onToggleHand}
+            title={handControl ? "Disable hand control" : "Enable hand control (camera)"}
+          >
+            <Hand size={14} />
+          </button>
+          {/* Inward arrows are the conventional "exit fullscreen" glyph;
+              Maximize2's outward arrows read as "make this bigger", the
+              opposite of what this does. */}
+          <button className="hud-btn" onClick={onExitHud} title="Exit Glass HUD — back to the window (⌥H)">
+            <Minimize2 size={14} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

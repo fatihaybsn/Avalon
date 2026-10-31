@@ -1,0 +1,21 @@
+{
+  "ok": true,
+  "seconds": 163.65,
+  "realProviders": true,
+  "simulatedHost": false,
+  "exactFileMatch": true,
+  "workerTools": [
+    "skill_view",
+    "tool_describe",
+    "mcp__jev_windows_pilot__typesafe_windows",
+    "mcp__jev_windows_pilot__typesafe_run",
+    "mcp__jev_windows_pilot__typesafe_respond",
+    "vision_analyze",
+    "tool_call",
+    "terminal"
+  ],
+  "completionPlayback": true,
+  "audioBytes": 103202,
+  "error": null,
+  "detailFile": "C:\\Users\\Fatih\\AppData\\Local\\Temp\\avalon-jev-live-bdyMyP\\result.json"
+}

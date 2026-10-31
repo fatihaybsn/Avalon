@@ -1,0 +1,11 @@
+{
+    "ok":  true,
+    "files":  [
+                  "tests/tui_gateway/test_iris_contract.py",
+                  "tests/tui_gateway/test_iris_reply_repair.py",
+                  "tests/agent/test_final_reply_request.py",
+                  "tests/agent/test_final_reply_policy_persistence.py"
+              ],
+    "canonicalRunner":  "scripts/run_tests.sh",
+    "providerRequests":  0
+}

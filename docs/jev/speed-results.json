@@ -1,0 +1,40 @@
+{
+  "measurement_date": "2026-10-31",
+  "provider": "OpenCode",
+  "model": "jev-1.13-free",
+  "task": "Notepad GUI type exact text and save new UTF-8 file",
+  "old_measurements_rerun": false,
+  "old_saved_seconds": 82.398,
+  "new_successful_trials": 3,
+  "new_initial_failed_trials": 2,
+  "new_save_seconds": [
+    11.451,
+    11.195,
+    11.041
+  ],
+  "new_finish_seconds": [
+    12.661,
+    12.466,
+    12.277
+  ],
+  "median_save_seconds": 11.195,
+  "median_finish_seconds": 12.466,
+  "approx_ratio_vs_old_saved": 7.36,
+  "jev_calls_each": [
+    7,
+    7,
+    7
+  ],
+  "host_help_calls_each": [
+    3,
+    3,
+    3
+  ],
+  "limits": [
+    "New execution starts in prepared blank Notepad; old baseline includes dispatch and app launch.",
+    "New host returns exact supplied strings and verifies files deterministically; Qwen/Avalon voice chain not timed.",
+    "Initial menu attempts failed; successful runs use newly added guarded Ctrl+S action and OCR grouping fix.",
+    "All successful runs stopped on Jev low confidence after saving; independent exact-file check established completion."
+  ],
+  "live_avalon_hermes_integration_applied": false
+}

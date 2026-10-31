@@ -1,0 +1,299 @@
+{
+  "schemaVersion": 1,
+  "component": "Avalon optional Jev Windows pilot",
+  "reviewedDate": "2026-10-31",
+  "upstreamRepository": "https://github.com/kofanlabs/typesafe-computer-use-windows.git",
+  "upstreamBaseCommit": "df0e6a98efe877524567af89ca036e882414e704",
+  "includesLocalPilotChanges": true,
+  "liveIntegrationEnabled": false,
+  "files": [
+    {
+      "path": ".env.example",
+      "sha256": "9df40b706681350ec87f1ed4c0dec6d55e899fe9dc4a157504ce8d0faaa20ec0"
+    },
+    {
+      "path": ".github/workflows/ci.yaml",
+      "sha256": "ce11f853c73c9d4ee80405c7114a6d9bd4c0c25020d535a8b3e4b75f6a399969"
+    },
+    {
+      "path": ".gitignore",
+      "sha256": "4a80f0d3d941dc8d3d80e243a5942621ac6ef8706381305eaa5f03b22ffbc8b8"
+    },
+    {
+      "path": "0-Stop.cmd",
+      "sha256": "b5f02f4b798090e0595564d54f2bd1da80b73d422f8f904a74c9de462fbcc2ee"
+    },
+    {
+      "path": "1-Start.cmd",
+      "sha256": "bf8fd08e43f43e8fdc2319105cd4f5d5e560ea2b10efb18b912baa75d9b81d2a"
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "sha256": "10b3c1a86fe2003e758d2c6835daf0e8c5c8b351bf670da93e25c78406c2368f"
+    },
+    {
+      "path": "Install-Windows.cmd",
+      "sha256": "d40bfc1498c550d98b001aa837433e7cbc6ec04afab0ee3200089a689da84c0e"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "918c82e7fb55b82da2b1945081e05160b583605b21c3d8a004467a62b084a131"
+    },
+    {
+      "path": "README.md",
+      "sha256": "d73c621c58b8977520756681b0ecd802e98ff121ac5a95a7fd3145aca41e1945"
+    },
+    {
+      "path": "SECURITY.md",
+      "sha256": "45f5558aa5349ab2bb8703486e0f0a61942d448554261c6b2ae1947fdd8071e3"
+    },
+    {
+      "path": "SKILL.md",
+      "sha256": "11119548e6a099ff7cefc65a877430aeda6364a52a776be9eb74da6e28f6a066"
+    },
+    {
+      "path": "WINDOWS.md",
+      "sha256": "a641607f389f2eb594cbf550a63996d1a6978c6080002bd1f44dc1bfbed67de3"
+    },
+    {
+      "path": "benchmarks/Build.ps1",
+      "sha256": "3420ef1f9afed4bad5005f7c13c96421f5ee987530b3fbfcd11821ffa752351b"
+    },
+    {
+      "path": "benchmarks/GeneralFixture.cs",
+      "sha256": "4c741babf75c8cc52d4b09301c5075d0097b2167df1b4cb60e4c0e91210cef64"
+    },
+    {
+      "path": "benchmarks/README.md",
+      "sha256": "1fdd9e940f9eed819d70365299444298ef5c967ed48e0bc3c93a1049f0d9434f"
+    },
+    {
+      "path": "benchmarks/summarize.py",
+      "sha256": "8a54be201cbb49b8a38453d5628729c98550d2dd1c0645b18a17de779973400d"
+    },
+    {
+      "path": "docs/banner.svg",
+      "sha256": "c53317712178860247ea7fa8da0484ab21bf1e4d0e7f986af1c3bd38a918b477"
+    },
+    {
+      "path": "docs/upstream-macos-reference.md",
+      "sha256": "06f61a7585973bfb347c0d575c4e401123ac895ed6a2d2f39af81e935fb7f899"
+    },
+    {
+      "path": "mcp-config.example.json",
+      "sha256": "17fa36253c793a3399ca952139bc6ebc75f1820619c90edcbd3a66e0272da225"
+    },
+    {
+      "path": "mcp-runtime.mjs",
+      "sha256": "c0d1728cf57d0e4550ba77254d21e39790222db82f7bccef43d45ea797f80f6c"
+    },
+    {
+      "path": "mcp.mjs",
+      "sha256": "2688eeab4d149aed8814a93ae3a3db27c846dbae403be1dfd4d538a9bd2ac81e"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "9c454cd3ce1af4bb52d78091fb50be3446e3697a7425a0aab34797ce3b907a50"
+    },
+    {
+      "path": "package.json",
+      "sha256": "49f6bdfc947deebdb61d3212c2050c87adb125dce5ab97121e3f0e78cc387912"
+    },
+    {
+      "path": "pyproject.toml",
+      "sha256": "d16d079d826c670e4b06b6e122c679a4c1e83517aea4c39aa86ea1f2866e3250"
+    },
+    {
+      "path": "requirements-windows-verified.txt",
+      "sha256": "d742a7ac76dd6bbde5e5e02c7bfce58164ee08381d95b4de4668cc75f40cc30a"
+    },
+    {
+      "path": "scripts/Generate-McpConfig.ps1",
+      "sha256": "a662b7aa150e8fa81bc81bc9ba0cc7ffe683bc68494e7baade3ded793b82d544"
+    },
+    {
+      "path": "scripts/Install-Windows.ps1",
+      "sha256": "b0802510dcc462d1e96c6bfde86e7a9f13b6ca273f6e01624090f9889fe1b416"
+    },
+    {
+      "path": "scripts/Menu.ps1",
+      "sha256": "62231d50bf5a5c8267786469bb4103dc0d0cad659cf8381aa26854d25ce07ed8"
+    },
+    {
+      "path": "scripts/Read-Key.ps1",
+      "sha256": "58c57f7a388d7a2939d0b7b1a2f9bc120279ae2079f6e6fa3cfd4cb035ce7d8e"
+    },
+    {
+      "path": "scripts/Set-OpenCodeKey.ps1",
+      "sha256": "9ea15588575e1f3f8e58670869dc37eab020d2ac56eeee3a7f53c1d0f0c502db"
+    },
+    {
+      "path": "scripts/Stop.ps1",
+      "sha256": "34b3101b572f9fd4aa0087e272241308f0cbd15f0d0b26504a967fa04523942e"
+    },
+    {
+      "path": "scripts/live-speed.mjs",
+      "sha256": "d985129ca46a7e8ce696c668d36a7db88097c009bead95fa3b226aa9ccedd637"
+    },
+    {
+      "path": "scripts/opencode_check.py",
+      "sha256": "28079cd537841a55c23ca805430e8b504ca3d78e077cf58fce87dfe1a9615e0f"
+    },
+    {
+      "path": "tests/WindowsFixture.cs",
+      "sha256": "8010265311adbd24c767fd760a09afbbe61f5b3e486cad409b910a4dd48048ca"
+    },
+    {
+      "path": "tests/conftest.py",
+      "sha256": "c60e91141ed6b711a2d11906653c586c5411898fd5bb7e3f9b9070673b7a558d"
+    },
+    {
+      "path": "tests/mcp-cancel-fixture.mjs",
+      "sha256": "94bad134a91abde56592ee6cc8c6c5c97f771daca038de149f9156a2e8c82f48"
+    },
+    {
+      "path": "tests/mcp-runtime.test.mjs",
+      "sha256": "a92e3e8be268838900ca8cc80337c3d420bd6c7bc9ed75423e8a117d64d26c62"
+    },
+    {
+      "path": "tests/test_actions.py",
+      "sha256": "3c7f8d47dfd4957938544e2f845aea12f79812d126d420067b0cce5e1c6c2666"
+    },
+    {
+      "path": "tests/test_answer.py",
+      "sha256": "fd14d9803e35a8f5211c31b59293169c13bd9284f12c5d27d41f3d0c7e8d780a"
+    },
+    {
+      "path": "tests/test_ax.py",
+      "sha256": "94038190b4a69be5b7c4fc22ed6463479fcc19e99fd3743a259c070f6845c07d"
+    },
+    {
+      "path": "tests/test_config_and_writer.py",
+      "sha256": "ed40181548c2cdedd62d61efeda7f3917666d7ef286a44a6395a257ff80d3d71"
+    },
+    {
+      "path": "tests/test_dates.py",
+      "sha256": "426e02bcc08f21b15888fefb5d7ad6cf6fe428e3cfd9bc7e31c81cb750e35ed7"
+    },
+    {
+      "path": "tests/test_decide.py",
+      "sha256": "586b9327c00b2c0313514f8ea833ec90401a966e15917c8008234d32e80fa221"
+    },
+    {
+      "path": "tests/test_ocr_cache.py",
+      "sha256": "f5e6a554a28ab7dbe0e3d91b79a232e10151ae06217c54f26b89887a11fc477a"
+    },
+    {
+      "path": "tests/test_opencode.py",
+      "sha256": "552ebfaf08fa299d7401bcb97636b7d1643f1349bcf898a3d62cc764f7aa9255"
+    },
+    {
+      "path": "tests/test_perception.py",
+      "sha256": "e72c1b0a6ba8def661e4af9b711d2f3fc7c1d79ea1b1158a9e1a7f658cf4fbd8"
+    },
+    {
+      "path": "tests/test_timing.py",
+      "sha256": "004286ba55612f2e0e41990c377e370d231200bfea4d5c78a61453d84be87869"
+    },
+    {
+      "path": "tests/test_window_pin.py",
+      "sha256": "411cf47557fcff06a6dddc299cbcf6e06e12f70ff8ea65e328b4b2c0beaade92"
+    },
+    {
+      "path": "tests/test_windows_ocr_groups.py",
+      "sha256": "852a4c59f6e4db646cf731f257c00b5c967453228a74456df231789fb3424691"
+    },
+    {
+      "path": "tests/test_windows_port.py",
+      "sha256": "15aa1fead8733d35c024661e410f800390da4efe3f046691016daa109ee57c98"
+    },
+    {
+      "path": "typesafe_computer_use/__init__.py",
+      "sha256": "9033007fd1380e9dba06ceaafbfb2dba1623602c8935bf17f06a9678fa77807e"
+    },
+    {
+      "path": "typesafe_computer_use/actions.py",
+      "sha256": "4d88266dd5c3a071448ca9161e33effb0e306a885f4d724050f7f4e7537ec08d"
+    },
+    {
+      "path": "typesafe_computer_use/ax_common.py",
+      "sha256": "f901b3367f2b82c9d0712a7beef36eb38f70f3e96471f716b7aabd1ac8c2754d"
+    },
+    {
+      "path": "typesafe_computer_use/cli.py",
+      "sha256": "7c8c7d143b78ca8169c1477d8228343d15cbaba812a3365956866b0d55bc1b55"
+    },
+    {
+      "path": "typesafe_computer_use/config.py",
+      "sha256": "6fc706529ee794e25457ffe06247552413188b27b887daada1855d3bcbd7f1d8"
+    },
+    {
+      "path": "typesafe_computer_use/credentials.py",
+      "sha256": "d53c054fb79d33c06c58cd70041acbc5dea802423cc99e14befb9d86a392c25a"
+    },
+    {
+      "path": "typesafe_computer_use/dates.py",
+      "sha256": "c62851034b84253f81a8ea6cf8e35b775055c15964f3aa470b6998ffaaedeed1"
+    },
+    {
+      "path": "typesafe_computer_use/decide.py",
+      "sha256": "34f29b365792b3b586d03b58293e3571f35e57c617823f4486b647151bb08993"
+    },
+    {
+      "path": "typesafe_computer_use/host_writer.py",
+      "sha256": "a6a2b46b7a9ea7225df1903e3024962ec212192f46e186a3508186566cca7712"
+    },
+    {
+      "path": "typesafe_computer_use/macos.py",
+      "sha256": "42560e2644de50e060761eb97fbd616ba4dd7863b5b1f378fd23f5d02a6cc95b"
+    },
+    {
+      "path": "typesafe_computer_use/macos_native.py",
+      "sha256": "185c02e27795cfed48d428dfaa3d89bdb69f4dda099820b6388270deffb39e3d"
+    },
+    {
+      "path": "typesafe_computer_use/models.py",
+      "sha256": "ddf690c5550d78dbc52f6533f6675e0a504ac6aff909086a14a01ba7d70a862b"
+    },
+    {
+      "path": "typesafe_computer_use/opencode.py",
+      "sha256": "82dda26c7458034936d7aa2117a60e606db07ece3cf94df028fd95636df641ca"
+    },
+    {
+      "path": "typesafe_computer_use/perception.py",
+      "sha256": "78fa40b4140f4b89a215a94846b5d093685cf0d3c46d697e829164febcd69cc6"
+    },
+    {
+      "path": "typesafe_computer_use/report.py",
+      "sha256": "a7ab4beb93e4ddfe09c6aabc6302cd483be7ddfebe3e0d30eadc822514d1974d"
+    },
+    {
+      "path": "typesafe_computer_use/runner.py",
+      "sha256": "274dbaf8432f7a4860ca2701faa49183fad818ebcab16bee96bdea64b87cc291"
+    },
+    {
+      "path": "typesafe_computer_use/timing.py",
+      "sha256": "b20ad21d24aa1d26b8880922069f105f3bbd9418b52195fe15fcda94dd2de3e1"
+    },
+    {
+      "path": "typesafe_computer_use/windows.py",
+      "sha256": "26b182aadbddb1a1fb851ca75f6dfd146aaa5435e5e909ace792060609c0c79e"
+    },
+    {
+      "path": "typesafe_computer_use/windows_capture.py",
+      "sha256": "d0697ca50364391566dcf56bf2ef575aea90d31ad32d1036ef138ca82560bd89"
+    },
+    {
+      "path": "typesafe_computer_use/windows_ocr.py",
+      "sha256": "22c68047e54455af973175c1b38a7ef6c43408e39e31e5264c523151350dc8bf"
+    },
+    {
+      "path": "typesafe_computer_use/writer.py",
+      "sha256": "625806c539b099d5ce9285bdef91b095c73df9151372b76dc4b9fe17c1442d7d"
+    },
+    {
+      "path": "uv.lock",
+      "sha256": "d0e330b45989a3d78b04c18c9d1c9263866ff839c68ede97312d86ebe59a1a1e"
+    }
+  ]
+}

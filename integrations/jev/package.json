@@ -1,0 +1,7 @@
+{
+  "name": "typesafe-computer-use-windows-mcp",
+  "private": true,
+  "type": "module",
+  "scripts": {"start": "node mcp.mjs"},
+  "dependencies": {"@modelcontextprotocol/sdk": "1.30.0", "zod": "3.25.76"}
+}

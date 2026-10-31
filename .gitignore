@@ -1,0 +1,30 @@
+node_modules/
+dist/
+dist-mobile/
+dist-electron/
+release/
+/release-*/
+.DS_Store
+.env
+.env.*
+!.env.example
+.venv/
+__pycache__/
+*.pyc
+*.log
+sidecar/runtime/
+roadmap.md
+.env_test*
+.ui-shots/
+/personality-review/
+/workspace-review/
+
+# Local state for the bundled optional Jev executor.
+integrations/jev/config/
+integrations/jev/runs/
+integrations/jev/inspections/
+integrations/jev/benchmark-runs/
+integrations/jev/mcp-config.json
+*.dpapi
+# Public test evidence referenced by the installation report.
+!validation/final-hermes-regressions/canonical-hermes-tests.log

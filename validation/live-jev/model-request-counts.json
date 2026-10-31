@@ -1,0 +1,21 @@
+{
+  "date": "2026-10-31",
+  "scope": "Successful real Avalon/Hermes/Jev typed-request and completion-audio validation",
+  "jevDecisionRequests": 9,
+  "qwenWorkerRequests": 11,
+  "qwenConversationAndContextRequests": 2,
+  "visionRequests": 1,
+  "automaticTitleRequests": 1,
+  "recordedTextAndVisionModelCalls": 24,
+  "geminiLiveConnections": 1,
+  "geminiSpeechGenerationStarts": 7,
+  "geminiInterruptedAttempts": 2,
+  "geminiCompletedFinalResultPlayback": true,
+  "interpretation": "Gemini generation starts are events on one persistent Live connection, not separate HTTP requests. The 24 figure describes recorded calls in the successful workflow; it is not a provider billing statement or a count of all network packets.",
+  "evidence": {
+    "jev": "decision_api.attempts in the Jev run report",
+    "workerVisionAndTitle": "Hermes state.db session_model_usage for the dedicated worker created during the test",
+    "conversation": "Two assistant replies in the test time window; the conversation usage counter and assistant count agree",
+    "audio": "gemini_status / voice_started / voice_interrupted events in the saved integration report"
+  }
+}

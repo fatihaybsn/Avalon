@@ -1,0 +1,47 @@
+{
+  "ok": true,
+  "localLinkChecks": [
+    {
+      "root": "C:\\Users\\Fatih\\Desktop\\iris-main\\iris-main",
+      "file": "README.md",
+      "missingLocalLinks": []
+    },
+    {
+      "root": "C:\\Users\\Fatih\\Desktop\\iris-main\\iris-main",
+      "file": "INSTALL-WINDOWS.md",
+      "missingLocalLinks": []
+    },
+    {
+      "root": "C:\\Users\\Fatih\\Desktop\\iris-main\\iris-main",
+      "file": "docs/JEV-WINDOWS.md",
+      "missingLocalLinks": []
+    },
+    {
+      "root": "C:\\Users\\Fatih\\Desktop\\iris-main\\iris-main",
+      "file": "docs/jev/windows-task-routing.md",
+      "missingLocalLinks": []
+    },
+    {
+      "root": "C:\\Users\\Fatih\\Desktop\\Avalon-Hermes-Windows-2026-10-30",
+      "file": "README.md",
+      "missingLocalLinks": []
+    },
+    {
+      "root": "C:\\Users\\Fatih\\Desktop\\Avalon-Hermes-Windows-2026-10-30",
+      "file": "INSTALL-WINDOWS.md",
+      "missingLocalLinks": []
+    },
+    {
+      "root": "C:\\Users\\Fatih\\Desktop\\Avalon-Hermes-Windows-2026-10-30",
+      "file": "docs/JEV-WINDOWS.md",
+      "missingLocalLinks": []
+    },
+    {
+      "root": "C:\\Users\\Fatih\\Desktop\\Avalon-Hermes-Windows-2026-10-30",
+      "file": "docs/jev/windows-task-routing.md",
+      "missingLocalLinks": []
+    }
+  ],
+  "runtimeScriptsChanged": false,
+  "newInstallationOrProviderCalls": false
+}

@@ -1,0 +1,14 @@
+.venv/
+runs/
+inspections/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.env
+dist/
+node_modules/
+*.dpapi
+config/
+benchmark-runs/
+mcp-config.json
+benchmarks/*.exe

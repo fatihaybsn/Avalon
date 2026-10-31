@@ -1,0 +1,75 @@
+{
+  "date": "2026-10-31",
+  "liveAvalonIntegrationVerified": true,
+  "realProviderCalls": true,
+  "simulatedHost": false,
+  "entryPoint": "Avalon typed request -> real brain proposal -> once approval -> Hermes worker -> Jev MCP -> Windows GUI -> file verification -> Gemini speech -> renderer playback acknowledgement",
+  "brainProvider": "evren",
+  "brainModel": "qwen3.8-flash-next",
+  "jevModel": "jev-1.13-free",
+  "expectedText": "Jev Avalon doğrulaması başarılı.",
+  "exactUtf8FileMatch": true,
+  "hostResponseToolCalls": 3,
+  "workerTools": [
+    "skill_view",
+    "tool_describe",
+    "mcp__jev_windows_pilot__typesafe_windows",
+    "mcp__jev_windows_pilot__typesafe_run",
+    "mcp__jev_windows_pilot__typesafe_respond",
+    "vision_analyze",
+    "tool_call",
+    "terminal"
+  ],
+  "approvalScope": "once",
+  "approvalCount": 4,
+  "workerResult": "Jev doğrulaması tamamlandı.",
+  "completionTranscript": "Jev doğrulaması tamamlandı.",
+  "completionTranscriptMatches": true,
+  "completionPlaybackAcknowledged": true,
+  "allGeneratedAudioBytes": 103202,
+  "completeCheckSeconds": 163.65,
+  "realMcpWorkerCancellation": {
+    "ok": true,
+    "realPythonWorker": true,
+    "syntheticWorker": false,
+    "observationOnly": true,
+    "stopFileWritten": true,
+    "workerTerminated": true,
+    "status": "aborted",
+    "stopReason": "host request cancelled"
+  },
+  "unitTests": {
+    "avalonNodePassed": 272,
+    "jevPythonPassed": 208,
+    "jevMcpPassed": 6
+  },
+  "limits": [
+    "One bounded Notepad type-and-save workflow on this Windows computer; not a universal task or clean-machine certification.",
+    "The request was typed; the test used silent microphone input and verified generated completion audio and renderer playback, not human hearing or speech recognition.",
+    "The full-chain duration includes application/provider startup, the real brain, approvals and host assistance; it is not comparable to the earlier 11.2-second deterministic-host pilot."
+  ],
+  "testScriptSha256": "4a7ddc10bf713ec31b444338a5f500ab2c719c42207b8ced2a4749d66e95535a",
+  "harnessFollowupChanges": "After the successful run, diagnostic logging/session isolation were improved and assertions against direct host file writing were added. Captured evidence independently passes the file-creation-before-terminal assertion. Product routing code was unchanged after the successful run.",
+  "fileCreatedBeforeTerminalVerification": true,
+  "recordedModelRequestCounts": {
+    "date": "2026-10-31",
+    "scope": "Successful real Avalon/Hermes/Jev typed-request and completion-audio validation",
+    "jevDecisionRequests": 9,
+    "qwenWorkerRequests": 11,
+    "qwenConversationAndContextRequests": 2,
+    "visionRequests": 1,
+    "automaticTitleRequests": 1,
+    "recordedTextAndVisionModelCalls": 24,
+    "geminiLiveConnections": 1,
+    "geminiSpeechGenerationStarts": 7,
+    "geminiInterruptedAttempts": 2,
+    "geminiCompletedFinalResultPlayback": true,
+    "interpretation": "Gemini generation starts are events on one persistent Live connection, not separate HTTP requests. The 24 figure describes recorded calls in the successful workflow; it is not a provider billing statement or a count of all network packets.",
+    "evidence": {
+      "jev": "decision_api.attempts in the Jev run report",
+      "workerVisionAndTitle": "Hermes state.db session_model_usage for the dedicated worker created during the test",
+      "conversation": "Two assistant replies in the test time window; the conversation usage counter and assistant count agree",
+      "audio": "gemini_status / voice_started / voice_interrupted events in the saved integration report"
+    }
+  }
+}

@@ -1,0 +1,25 @@
+▶ not activated — using HERMES_PYTHON: C:/Users/Fatih/AppData/Local/Temp/Avalon package tests e9tp73gd/Hermes ç test/validation-test-venv/Scripts/python.exe
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 4 test files (~21 tests) under ['tests\\tui_gateway\\test_iris_contract.py', 'tests\\tui_gateway\\test_iris_reply_repair.py', 'tests\\agent\\test_final_reply_request.py', 'tests\\agent\\test_final_reply_policy_persistence.py']; running with -j 2
+[ 14.3% |     3/~21 | ✓3 | ✗0] ✓ tests\agent\test_final_reply_request.py (3✓, 5.9s)
+[ 28.6% |     6/~21 | ✓6 | ✗0] ✓ tests\tui_gateway\test_iris_contract.py (3✓, 4.2s)
+[ 76.2% |    16/~21 | ✓46 | ✗ 0] ✓ tests\tui_gateway\test_iris_reply_repair.py (40✓, 4.3s)
+[100.0% |    21/~21 | ✓53 | ✗ 0] ✓ tests\agent\test_final_reply_policy_persistence.py (7✓, 45.7s)
+
+=== Summary: 4 files, 53 tests passed, 0 failed (100% complete) in 45.9s (2 workers) ===
+  Durations cached to test_durations.json (4 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   4
+  Total subprocess CPU-wall: 60.1s  (runner wall: 45.9s, parallelism: 2x)
+  P50: 5.90s  P90: 45.72s  P95: 45.72s  P99: 45.72s  Max: 45.72s
+  <1s: 0 files (0%)  <2s: 0 files (0%)
+  Top 10 slowest:
+     45.72s  tests\agent\test_final_reply_policy_persistence.py
+      5.90s  tests\agent\test_final_reply_request.py
+      4.34s  tests\tui_gateway\test_iris_reply_repair.py
+      4.16s  tests\tui_gateway\test_iris_contract.py
+

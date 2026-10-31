@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "jev-computer-use": {
+      "command": "C:/Program Files/nodejs/node.exe",
+      "args": ["C:/FULL/PATH/TO/typesafe-computer-use-windows/mcp.mjs"]
+    }
+  }
+}
