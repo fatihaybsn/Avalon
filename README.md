@@ -11,7 +11,7 @@ The application runs on a computer. Its Android interface connects to that same 
 **Hermes Agent provides the reasoning and execution environment. Gemini Live provides the implemented real-time voice connection. Evren and OpenCode are the configured brain-provider integrations.** Provider access and pricing are separate from the application itself.
 
 <!-- SCREENSHOT SLOT: Desktop hero. Replace this file with a current capture of the final interface. -->
-![Avalon desktop voice workspace](docs/images/desktop-voice.png)
+![Avalon desktop voice workspace](docs/images/desktop-overview.png)
 
 *Interface preview with example data. Screenshot files can be replaced without changing the documentation layout.*
 
@@ -632,7 +632,7 @@ Selected, applied, and observed effective routes are tracked separately. A safe 
 Wide desktop windows keep conversation/notes, the central voice area, and tasks visible together. Under 1100 pixels, focused workspace navigation takes priority. Window bounds and maximized state are retained, clamped to the available display area, and restored independently of HUD bounds.
 
 <!-- SCREENSHOT SLOT: Desktop overview. Replace with the final wide-window capture. -->
-![Avalon conversation and task workspace](docs/images/desktop-overview.png)
+![Avalon conversation and task workspace](docs/images/desktop-voice.png)
 
 | Control | Action |
 |---|---|
