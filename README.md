@@ -809,6 +809,74 @@ Conversation, task prompts, attached note text, and voice can reach the configur
 
 Installation instructions are maintained in this README and its linked Windows/Jev guides. For optional conversation deletion and a recoverable reset of local task-card history, see [session and task-history maintenance](docs/MAINTENANCE.md). These are not installation prerequisites and must not be run as automatic setup cleanup. `Kurulum.md` is retained only as a short redirect to the current documentation.
 
+
+## Delete selected conversations from the terminal
+
+You do not need to delete all conversations at once. Each conversation in Hermes has a **session ID**, so you can delete only the session you choose. This is not a required installation step; use it only when you want to remove conversations.
+
+### Find the conversation to delete
+
+If a task is running in that conversation, wait for it to finish or stop it in Avalon. Then close Avalon and open PowerShell in the project directory.
+
+List recent sessions:
+
+```powershell
+hermes sessions list --limit 100
+```
+
+To show only sessions created by Avalon:
+
+```powershell
+hermes sessions list --source iris --limit 100
+```
+
+Use the conversation title, date, and session ID to identify the conversation you want to delete. Replace `SESSION_ID` in the commands below with that ID. If the list shows a shortened ID, Hermes also accepts a unique prefix that matches only one session. If multiple sessions match, use a longer prefix or the full ID.
+
+The commands must use the same data folder selected in Avalon's **Hermes home** field. In a standard Windows installation, this folder is `%LOCALAPPDATA%\hermes`. If you use a custom Hermes folder, set it in the current PowerShell window before running the commands:
+
+```powershell
+$env:HERMES_HOME = "YOUR_ACTUAL_HERMES_DATA_FOLDER"
+```
+
+### Delete the selected conversation
+
+```powershell
+hermes sessions delete "SESSION_ID"
+```
+
+Hermes displays the session to be deleted and asks for confirmation. If the ID is correct, type `y` and press Enter. This removes the selected session and its messages. Linked delegated or subagent sessions may also be included.
+
+If you have already verified the ID, you can skip the confirmation prompt:
+
+```powershell
+hermes sessions delete "SESSION_ID" --yes
+```
+
+To delete several selected conversations, run the command separately for each session ID. There is no need to automatically delete every session shown by the `list` command.
+
+If Hermes refuses deletion because the session is active or has running or pending work, finish or stop the relevant work and try again. `--yes` only skips the confirmation prompt; it does not bypass this restriction.
+
+### Check the result
+
+```powershell
+hermes sessions list --source iris --limit 100
+```
+
+The deleted session should no longer appear in the list. Reopen Avalon. If needed, use the **+** button in the conversation selector to create a new conversation, or select one of the remaining conversations.
+
+**What does this leave unchanged?** These commands do not clear Hermes' persistent memory (`USER.md` and `MEMORY.md`), your notes folder, files created by tasks, or Avalon's separate local task cards. They delete the conversation session.
+
+Do not open `state.db` in a text editor and empty its contents to delete conversations. It is a SQLite database; use the Hermes commands above to remove sessions.
+
+### Clear all local task records
+
+To clear all records in Avalon's local task registry, use the following command. **This clears the entire registry, so use it carefully.**
+
+```powershell
+Remove-Item "$env:USERPROFILE\.iris\run-registry.json" -ErrorAction SilentlyContinue
+```
+
+
 ## Hermes compatibility package design
 
 The Windows package is implemented and distributed with the application source. Its layout is:
