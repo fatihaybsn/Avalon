@@ -1,11 +1,30 @@
 # Changelog
 
-All notable changes to Iris are documented here.
+All notable changes to Avalon are documented here. Earlier entries are retained
+as historical release notes.
 
 This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
-and the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format. Iris is
-pre-1.0, so minor versions may still contain breaking changes to configuration
-and IPC surfaces.
+and the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
+
+## [1.0.0](https://github.com/fatihaybsn/Avalon/releases/tag/v1.0.0) — 2026-10-31
+
+The first main Avalon release, superseding the earlier Windows beta.
+
+### Added
+
+- A Windows x64 application download and SHA-256 checksum, published separately
+  from the source code.
+- Documented installation with the pinned Hermes compatibility package and the
+  optional bundled Jev Windows computer-use executor.
+
+### Changed
+
+- Desktop and mobile chrome use obsidian backgrounds, charcoal panels and
+  crimson accents; the floating HUD keeps its transparency.
+- HUD mode hides the native menu bar and restores the original visibility when
+  returning to the desktop window, preserving menu shortcuts and window state.
+- Desktop/mobile screenshots reflect the current interface.
+- Application metadata, build badges and the Windows package use version 1.0.0.
 
 ## [0.4.0] — 2026-07-25
 

@@ -2,13 +2,13 @@
 
 ## Supported versions
 
-Avalon is pre-1.0 and ships from `main`. Only the latest release receives security
+Avalon ships from `main`. Only the latest release receives security
 fixes.
 
 | Version | Supported |
 | ------- | --------- |
-| 0.4.x   | ✅        |
-| < 0.4   | ❌        |
+| 1.0.x   | ✅        |
+| < 1.0   | ❌        |
 
 ## Reporting a vulnerability
 
