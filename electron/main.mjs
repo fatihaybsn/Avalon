@@ -4423,12 +4423,24 @@ function createWindow() {
 // floats over everything while you keep working underneath.
 let uiMode = "deck";
 let deckBounds = null;
+let deckMenuBar = null;
 const deckLayout = new WindowLayout(path.join(path.dirname(userConfigPath()), "window-layout.json"), () => screen.getAllDisplays());
 
 function enterHud() {
   if (!mainWindow || uiMode === "hud") return;
-  if (!deckLayout.suspended) deckBounds = deckLayout.suspend(mainWindow);
+  if (!deckLayout.suspended) {
+    deckBounds = deckLayout.suspend(mainWindow);
+    if (process.platform !== "darwin") {
+      deckMenuBar = { visible: mainWindow.isMenuBarVisible(), autoHide: mainWindow.isMenuBarAutoHide() };
+    }
+  }
   uiMode = "hud";
+  if (process.platform !== "darwin") {
+    // Keep the attached menu and its shortcuts, but no native strip over other
+    // apps. Disable Alt-to-reveal while this window is a fullscreen overlay.
+    mainWindow.setAutoHideMenuBar(false);
+    mainWindow.setMenuBarVisibility(false);
+  }
   // Let the renderer fade the deck out before the window jumps to full screen.
   emitToRenderer("hud:mode", { mode: "hud" });
   // The OS traffic lights must not float over the fullscreen overlay.
@@ -4465,6 +4477,10 @@ function exitHud() {
     mainWindow.setHasShadow(true);
     mainWindow.setMinimumSize(800, 600);
     if (deckBounds) deckLayout.restore(mainWindow, deckBounds);
+    if (process.platform !== "darwin" && deckMenuBar) {
+      mainWindow.setAutoHideMenuBar(deckMenuBar.autoHide);
+      mainWindow.setMenuBarVisibility(deckMenuBar.visible);
+    }
     try {
       mainWindow.setWindowButtonVisibility(true);
       // Bounds changes can reset the native buttons to the default corner

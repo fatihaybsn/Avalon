@@ -1,0 +1,311 @@
+/* Desktop and mobile chrome: obsidian surfaces and restrained carmine highlights.
+   Keep these tokens out of the brand, CenterStage and HandoffLayer: their
+   reactor, voice controls and semantic animation palettes stay independent. */
+.deck {
+  background: #09090b;
+  box-shadow: inset 0 0 0 1px rgba(207, 72, 89, 0.16);
+}
+
+:is(.deck, .mobile-app) :is(.deck-left, .deck-right, .deck-top-right, .workspace-nav, .reminder-alert),
+.hud-shell :is(.hud-left, .hud-right, .hud-brain-model, .hud-permission-control),
+.mobile-app,
+:is(.reader-backdrop, .history-backdrop, .match-backdrop, .setup-backdrop, .research-backdrop) {
+  --bg-0: #09090b;
+  --bg-1: #0e0e11;
+  --bg-2: #1b1a1e;
+  --bg: var(--bg-0);
+  --panel: rgba(28, 26, 30, 0.94);
+  --panel-strong: rgba(23, 22, 26, 0.98);
+  --panel-solid: #1b191e;
+  --panel-recessed: #141316;
+  --hairline: rgba(213, 182, 188, 0.1);
+  --hairline-strong: rgba(213, 182, 188, 0.2);
+  --text: #f2edef;
+  --text-soft: #bab2b8;
+  --muted: #8e838d;
+  --text-dim: #71666f;
+
+  /* Legacy cyan names are consumed by the shared controls. Override them
+     only inside chrome; never replace the reactor's global color tokens. */
+  --cyan: #ed6879;
+  --cyan-bright: #ffa0ab;
+  --cyan-soft: #f28b99;
+  --cyan-rgb: 210, 57, 78;
+  --accent-rgb: 210, 57, 78;
+  --accent-glow: rgba(var(--accent-rgb), 0.5);
+  --accent-edge: rgba(var(--accent-rgb), 0.22);
+  --accent-wash: rgba(var(--accent-rgb), 0.06);
+}
+
+/* A fine red edge gives the rails depth without a full-window light wash. */
+:is(.deck, .mobile-app) :is(.deck-panel, .notes-panel) {
+  box-shadow:
+    inset 0 1px 0 rgba(232, 105, 122, 0.13),
+    inset 0 0 0 1px rgba(213, 182, 188, 0.045),
+    0 12px 32px rgba(0, 0, 0, 0.18);
+}
+
+:is(.deck, .mobile-app) .deck-status {
+  background: #121114;
+  box-shadow: inset 0 0 0 1px rgba(213, 182, 188, 0.1);
+}
+
+:is(.deck, .mobile-app) .deck-status .status-dot + .status-dot {
+  border-color: rgba(213, 182, 188, 0.1);
+}
+
+:is(.deck, .mobile-app) :is(.brain-model-chip, .permission-mode-chip) {
+  background: #19161b;
+  border-color: #3c2d34;
+}
+
+:is(.deck, .mobile-app) :is(.research-tabs button, .research-actions button, .scheduled-actions button, .scheduled-history) {
+  background: #1c191e;
+}
+
+:is(.deck, .mobile-app) .research-tabs button[aria-selected="true"],
+:is(.deck, .mobile-app) .workspace-nav [aria-selected="true"] {
+  color: #ffa0ab;
+  background: #30171f;
+  border-color: #803040;
+  box-shadow: inset 0 2px 0 #cf3b51;
+}
+
+:is(.deck, .mobile-app) :is(.research-tabs button, .research-actions button, .scheduled-actions button, .notes-panel button, .find-bar button, .workspace-nav button):hover {
+  color: #ffe3e7;
+  border-color: #9b3a4b;
+  background: #38202a;
+}
+
+:is(.deck, .hud-shell, .mobile-app) .composer {
+  background: #101013;
+}
+
+:is(.deck, .hud-shell, .mobile-app) :is(.composer textarea, .notes-search input, .notes-search select, .find-bar input, .research-actions select) {
+  color: var(--text);
+  background: #0e0e11;
+  border-color: #453039;
+}
+
+:is(.deck, .hud-shell, .mobile-app) .composer textarea::placeholder,
+:is(.deck, .mobile-app) .notes-search input::placeholder {
+  color: #8e838d;
+}
+
+:is(.deck, .hud-shell, .mobile-app) .composer textarea:focus {
+  border-color: #cf3b51;
+}
+
+:is(.deck, .hud-shell, .mobile-app) :is(.composer button, .notes-panel button, .find-bar button, .workspace-nav button, .new-menu > summary) {
+  color: #f5dce1;
+  background: #321a23;
+  border-color: #78303e;
+}
+
+:is(.deck, .hud-shell, .mobile-app) .composer button:not(.t-btn):not(:disabled):hover {
+  background: #51212f;
+  border-color: #cf3b51;
+}
+
+:is(.deck, .mobile-app) .composer-voice [aria-pressed="true"] {
+  color: var(--cyan-bright);
+  border-color: var(--cyan);
+}
+
+:is(.deck, .mobile-app) :is(.find-bar, .session-menu, .new-menu > div) {
+  background: #161317;
+  border-color: #453039;
+}
+
+:is(.deck, .mobile-app) .notes-results article,
+:is(.deck, .mobile-app) .research-advanced {
+  border-color: #34262d;
+}
+
+:is(.deck, .mobile-app) :is(.notes-results small, .workspace-help) {
+  color: var(--text-soft);
+}
+
+:is(.deck, .mobile-app) .found-text mark.current-match {
+  outline-color: var(--cyan);
+}
+
+:is(.deck, .mobile-app) .focused-reminder {
+  outline-color: var(--cyan);
+}
+
+:is(.deck, .mobile-app) .scheduled-card {
+  background: #1b181d;
+}
+
+:is(.deck, .mobile-app) .reminder-alert {
+  color: #f5dce1;
+  background: #30171f;
+  box-shadow: inset 3px 0 0 #cf3b51;
+}
+
+:is(.deck, .mobile-app) .reminder-alert button {
+  border-color: #78303e;
+}
+
+:is(.deck, .mobile-app) :is(.deck-left, .deck-right, .deck-top-right, .workspace-nav, .reminder-alert) :is(button, input, textarea, select, summary):focus-visible {
+  outline-color: #ed6879;
+}
+
+:is(.deck, .mobile-app) :is(.deck-left, .deck-right) ::selection {
+  background: rgba(210, 57, 78, 0.32);
+}
+
+:is(.deck, .mobile-app) :is(.deck-left, .deck-right) ::-webkit-scrollbar-thumb {
+  background: #4c303a;
+}
+
+:is(.deck, .mobile-app) :is(.deck-left, .deck-right) ::-webkit-scrollbar-thumb:hover {
+  background: #82404f;
+}
+
+:is(.deck, .mobile-app) .deck-top-right .theme-toggle.active {
+  color: #fff1f4;
+  background: linear-gradient(180deg, #a62d43, #741e31);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 200, 211, 0.2),
+    inset 0 0 0 1px rgba(237, 104, 121, 0.4),
+    0 0 18px rgba(210, 57, 78, 0.18);
+}
+
+:is(.deck, .mobile-app) .camera-frame {
+  background: #09090b;
+}
+
+:is(.deck, .mobile-app) .deck-left .device-pick-trigger {
+  background: #21181f;
+}
+
+/* Research/reminder dialogs are portaled to body on desktop and mobile. */
+.research-backdrop {
+  background: rgba(5, 4, 6, 0.84);
+}
+
+.research-form :is(input, textarea, select) {
+  background: #0c0b0e;
+  color: var(--text);
+}
+
+.research-form button {
+  background: #21191f;
+}
+
+.research-form button.primary {
+  color: #ffe3e7;
+  background: #702338;
+  border-color: #b43951;
+}
+
+.research-form footer {
+  background: var(--bg-1);
+}
+
+.research-backdrop :focus-visible {
+  outline-color: #ed6879;
+}
+
+/* Floating glass keeps every original fill alpha. Only the RGB tint changes;
+   the window and the gaps between islands remain completely transparent. */
+.hud-shell,
+.hud-mode :is(.reader-backdrop, .history-backdrop, .match-backdrop, .setup-backdrop) {
+  --hud-fill: linear-gradient(180deg, rgba(28, 24, 29, 0.62), rgba(10, 9, 12, 0.66));
+  --hud-fill-strong: linear-gradient(180deg, rgba(28, 24, 29, 0.72), rgba(10, 9, 12, 0.76));
+  --hud-chip: rgba(24, 20, 25, 0.68);
+}
+
+.hud-shell :is(.hud-left, .hud-right),
+.hud-mode :is(.reader-backdrop, .history-backdrop, .match-backdrop, .setup-backdrop) {
+  --hud-text: #f5eff2;
+  --hud-text-soft: #d8cdd3;
+  --hud-text-dim: #bfb0ba;
+}
+
+.hud-shell .hud-comms {
+  background: linear-gradient(180deg, rgba(25, 20, 26, 0.42), rgba(10, 8, 12, 0.46));
+}
+
+.hud-mode .bubble.iris {
+  background: rgba(36, 18, 26, 0.62);
+}
+
+.hud-mode .bubble.self {
+  background: rgba(28, 24, 30, 0.62);
+}
+
+.hud-mode .activity-step {
+  background: rgba(29, 23, 30, 0.5);
+}
+
+.hud-mode .step-detail {
+  color: #c8b9c3;
+}
+
+.hud-shell .hud-left > .hud-btn {
+  background-color: rgba(24, 20, 25, 0.68);
+}
+
+/* Voice controls keep the live reactor accent and their amber mute state. */
+:is(.hud-shell, .mobile-app) .composer-voice {
+  --accent-rgb: var(--orb-accent, 34, 190, 205);
+}
+
+.hud-shell .brain-model-chip:not([aria-pressed="true"]) {
+  background: rgba(24, 20, 25, 0.8);
+  border-color: rgba(210, 126, 142, 0.28);
+  color: #d8cdd3;
+}
+
+.hud-shell :is(.hud-left, .hud-right, .hud-brain-model, .hud-permission-control) :focus-visible {
+  outline-color: #ed6879;
+}
+
+.hud-shell :is(.hud-left, .hud-right) ::selection {
+  background: rgba(210, 57, 78, 0.32);
+}
+
+.hud-mode .markdown-body {
+  color: #dfd5dc;
+}
+
+.hud-mode .markdown-body pre {
+  background: rgba(10, 8, 12, 0.72);
+}
+
+.hud-mode .setup-card {
+  background: rgba(17, 14, 19, 0.96);
+}
+
+.hud-mode :is(.reader-backdrop, .history-backdrop, .match-backdrop, .setup-backdrop) {
+  background: rgba(5, 4, 6, 0.16);
+}
+
+/* Startup uses the same obsidian canvas. Accent only the log and progress
+   track so the Avalon wordmark, reactor artwork and state colors stay intact. */
+.boot:not(.compact) {
+  background: #09090b;
+}
+
+.hud-mode .boot.compact {
+  background: rgba(12, 10, 14, 0.94);
+  border-color: rgba(213, 182, 188, 0.16);
+}
+
+.boot :is(.boot-log, .boot-bar) {
+  --cyan: #ed6879;
+  --cyan-bright: #ffa0ab;
+  --cyan-rgb: 210, 57, 78;
+  --muted: #8e838d;
+}
+
+.boot .boot-sub {
+  color: #8e838d;
+}
+
+.boot .boot-bar {
+  background: rgba(210, 126, 142, 0.12);
+}

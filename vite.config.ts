@@ -38,7 +38,7 @@ export default defineConfig(({ mode }) => ({
     }),
     ...(mode === "mobile" ? [viteStaticCopy({ targets: [{ src: asset("build/mobile-icon-{192,512}.png"), dest: ".", rename: { stripBase: 1 } }] }), VitePWA({
       strategies: "injectManifest", srcDir: "../src/mobile", filename: "sw.ts", injectRegister: false,
-      manifest: { name: "Avalon", short_name: "Avalon", start_url: "/", display: "standalone", background_color: "#0c1220", theme_color: "#0c1220", icons: [192, 512].map((size) => ({ src: `/mobile-icon-${size}.png`, sizes: `${size}x${size}`, type: "image/png", purpose: "any" as const })) },
+      manifest: { name: "Avalon", short_name: "Avalon", start_url: "/", display: "standalone", background_color: "#09090b", theme_color: "#09090b", icons: [192, 512].map((size) => ({ src: `/mobile-icon-${size}.png`, sizes: `${size}x${size}`, type: "image/png", purpose: "any" as const })) },
       injectManifest: { globPatterns: ["**/*.{js,css,html,png,svg,webmanifest,woff2}"], globIgnores: ["vad-assets/**"], maximumFileSizeToCacheInBytes: 4 * 1024 * 1024 },
     })] : []),
   ],

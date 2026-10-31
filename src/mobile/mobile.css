@@ -3,10 +3,11 @@
 @import "../styles/overlays.css";
 @import "../styles/research.css";
 @import "../styles/workspace.css";
-*{box-sizing:border-box}body{margin:0;background:#0c1220;color:#e0e9f5;font-family:system-ui,sans-serif;font-size:16px}button,input,textarea,select{font:inherit}button{cursor:pointer;background:#163447;color:#dff9ff;border:1px solid #3c7185;border-radius:10px;padding:11px 14px;min-height:44px}button:disabled{opacity:.5}input,textarea,select{width:100%;background:#101e2e;border:1px solid #456076;border-radius:8px;color:inherit;padding:12px;min-height:44px}input[type=checkbox]{width:auto}label{display:block;margin:12px 0}a{color:#71def7}section{margin:16px 0;background:#101a29;border:1px solid #283e54;border-radius:16px;padding:16px}h1,h2,h3{overflow-wrap:anywhere}h1{font-size:24px}h2{font-size:20px}p{line-height:1.6;overflow-wrap:anywhere}pre{white-space:pre-wrap;overflow-wrap:anywhere;max-width:100%}.mobile-app{max-width:850px;margin:auto;padding:16px 16px max(24px,env(safe-area-inset-bottom))}.mobile-head{display:flex;align-items:center;gap:12px;padding:12px 0}.mobile-head strong{font-size:25px;letter-spacing:.25em;color:#71def7}.mobile-head span{flex:1;font-size:13px;color:#9baec2}nav,.voice-controls,.setup-actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}nav button{flex:1;background:transparent}nav button[aria-current=true]{background:#164555;border-color:#71def7}.mobile-error{padding:12px;border:1px solid #a95555;background:#321d29;border-radius:10px}.mobile-chat{display:grid;gap:10px;margin-top:18px}.mobile-chat article{background:#132538;border-radius:12px;padding:12px}.mobile-chat article p{white-space:pre-wrap;margin:5px 0}.mobile-chat small{color:#72d9eb}.message-form{display:flex;gap:8px;position:sticky;bottom:0;background:#0c1220;padding:12px 0}.message-form textarea{flex:1}.prewrap{white-space:pre-wrap}.setup-field span{display:block;margin-bottom:7px}.setup-note{display:block;font-size:13px;color:#a4b7c8;line-height:1.5}.mobile-app .wcard{margin:10px 0;width:100%;max-width:100%;cursor:pointer}.mobile-app .hermes-interaction-prompt{position:static;width:100%;max-height:none;padding:12px}.mobile-app .hermes-interaction-prompt header{display:flex;gap:8px}.mobile-app .hermes-interaction-prompt header span{display:block;max-height:100px;overflow:auto}.mobile-app .interaction-choices{display:flex;gap:8px;flex-wrap:wrap}.mobile-app .interaction-choices button{flex:1}.mobile-app .selected{outline:2px solid #73e9f5}.mobile-app .brain-model-panel{max-width:100%}.markdown-body{overflow:auto;line-height:1.65}.markdown-body table{border-collapse:collapse}.markdown-body td,.markdown-body th{border:1px solid #456076;padding:6px}.markdown-body code{background:#071220;border-radius:4px;padding:2px 4px}.session-switcher{position:relative}.mobile-app .session-menu{z-index:10;background:#15263a;max-width:90vw}.mobile-app .setup-btn{white-space:normal}.remote-panel strong{font-size:24px;letter-spacing:3px}
+@import "../styles/crimson.css";
+*{box-sizing:border-box}body{margin:0;background:#09090b;color:#f2edef;font-family:system-ui,sans-serif;font-size:16px}button,input,textarea,select{font:inherit}button{cursor:pointer;background:#321a23;color:#f5dce1;border:1px solid #78303e;border-radius:10px;padding:11px 14px;min-height:44px}button:disabled{opacity:.5}input,textarea,select{width:100%;background:#0e0e11;border:1px solid #453039;border-radius:8px;color:inherit;padding:12px;min-height:44px}input[type=checkbox]{width:auto}label{display:block;margin:12px 0}a{color:#ffa0ab}section{margin:16px 0;background:#141316;border:1px solid rgba(213,182,188,.1);border-radius:16px;padding:16px}h1,h2,h3{overflow-wrap:anywhere}h1{font-size:24px}h2{font-size:20px}p{line-height:1.6;overflow-wrap:anywhere}pre{white-space:pre-wrap;overflow-wrap:anywhere;max-width:100%}.mobile-app{max-width:850px;margin:auto;padding:16px 16px max(24px,env(safe-area-inset-bottom))}.mobile-head{display:flex;align-items:center;gap:12px;padding:12px 0}.mobile-head strong{font-size:25px;letter-spacing:.25em;color:#eaf6ff}.mobile-head span{flex:1;font-size:13px;color:#bab2b8}nav,.voice-controls,.setup-actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}nav button{flex:1;background:transparent}nav button[aria-current=true]{background:#30171f;border-color:#ffa0ab}.mobile-error{padding:12px;border:1px solid #a95555;background:#321d29;border-radius:10px}.mobile-chat{display:grid;gap:10px;margin-top:18px}.mobile-chat article{background:#1b191e;border-radius:12px;padding:12px}.mobile-chat article p{white-space:pre-wrap;margin:5px 0}.mobile-chat small{color:#ed6879}.message-form{display:flex;gap:8px;position:sticky;bottom:0;background:#09090b;padding:12px 0}.message-form textarea{flex:1}.prewrap{white-space:pre-wrap}.setup-field span{display:block;margin-bottom:7px}.setup-note{display:block;font-size:13px;color:#bab2b8;line-height:1.5}.mobile-app .wcard{margin:10px 0;width:100%;max-width:100%;cursor:pointer}.mobile-app .hermes-interaction-prompt{position:static;width:100%;max-height:none;padding:12px}.mobile-app .hermes-interaction-prompt header{display:flex;gap:8px}.mobile-app .hermes-interaction-prompt header span{display:block;max-height:100px;overflow:auto}.mobile-app .interaction-choices{display:flex;gap:8px;flex-wrap:wrap}.mobile-app .interaction-choices button{flex:1}.mobile-app .selected{outline:2px solid #ed6879}.mobile-app .brain-model-panel{max-width:100%}.markdown-body{overflow:auto;line-height:1.65}.markdown-body table{border-collapse:collapse}.markdown-body td,.markdown-body th{border:1px solid #453039;padding:6px}.markdown-body code{background:#0e0e11;border-radius:4px;padding:2px 4px}.session-switcher{position:relative}.mobile-app .session-menu{z-index:10;background:#161317;max-width:90vw}.mobile-app .setup-btn{white-space:normal}.remote-panel strong{font-size:24px;letter-spacing:3px}
 
 .mobile-app { padding-bottom: calc(86px + env(safe-area-inset-bottom)); }
-.mobile-nav { position: fixed; bottom: 0; left: 0; right: 0; margin: 0; z-index: 50; padding: 8px 8px max(8px,env(safe-area-inset-bottom)); background: #0c1220; border-top: 1px solid #294154; flex-wrap: nowrap; }
+.mobile-nav { position: fixed; bottom: 0; left: 0; right: 0; margin: 0; z-index: 50; padding: 8px 8px max(8px,env(safe-area-inset-bottom)); background: #09090b; border-top: 1px solid #34262d; flex-wrap: nowrap; }
 .mobile-nav button { min-width: 0; padding: 10px 4px; font-size: 13px; }
 .keyboard-open .mobile-nav { display: none; }
 .keyboard-open .mobile-app { padding-bottom: 8px; }
@@ -14,7 +15,7 @@
 .mobile-chat-workspace .composer { position: sticky; bottom: calc(70px + env(safe-area-inset-bottom)); padding: 12px 0; z-index: 5; }
 .keyboard-open .mobile-chat-workspace .composer { bottom: 0; }
 .mobile-session-options { margin: 8px 0; font-size: 13px; }
-.mobile-session-options > summary { padding: 10px 0; cursor: pointer; color: #a4b7c8; }
+.mobile-session-options > summary { padding: 10px 0; cursor: pointer; color: #bab2b8; }
 .mobile-session-options .session-switcher { margin-top: 8px; }
 .mobile-tasks[hidden] { display: none; }
 .mobile-app .notes-panel { margin: 12px 0; padding: 12px; }
@@ -27,6 +28,45 @@
 
 .mobile-chat-workspace { min-height: max(220px,calc(var(--visual-height,100dvh) - 250px)); }
 .mobile-chat { flex: 1; }
-.mobile-update { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; background: #17394a; padding: 12px; margin-bottom: 12px; border-radius: 12px; font-size: 13px; }
+.mobile-update { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; background: #30171f; padding: 12px; margin-bottom: 12px; border-radius: 12px; font-size: 13px; }
 .mobile-update span { flex: 1; }
 .mobile-update p { width: 100%; color: #ffb5a6; margin: 0; }
+
+/* The shared crimson skin above supplies the desktop colors for composers,
+   notes, research tabs and dialogs. These are the mobile-only surfaces. */
+.mobile-nav button[aria-current=true] {
+  color: #ffa0ab;
+  border-color: #803040;
+  box-shadow: inset 0 2px 0 #cf3b51;
+}
+
+.mobile-app :is(button, input, textarea, select, summary):focus-visible {
+  outline: 2px solid #ed6879;
+  outline-offset: 2px;
+}
+
+.mobile-app :is(input[type=checkbox], input[type=radio]) {
+  accent-color: var(--cyan);
+}
+
+.mobile-app :is(.brain-model-panel select, .setup-field input) {
+  background: #0e0e11;
+  color: var(--text);
+  border-color: #453039;
+}
+
+.mobile-app :is(input, textarea)::placeholder {
+  color: #8e838d;
+}
+
+.mobile-app ::selection {
+  background: rgba(210, 57, 78, 0.32);
+}
+
+.mobile-app ::-webkit-scrollbar-thumb {
+  background: #4c303a;
+}
+
+.mobile-app ::-webkit-scrollbar-thumb:hover {
+  background: #82404f;
+}
