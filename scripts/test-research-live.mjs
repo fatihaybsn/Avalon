@@ -14,8 +14,9 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 loadEnvFiles({ repoRoot: root });
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), "avalon-research-live-"));
 fs.writeFileSync(path.join(temp, ".env"), "");
+const durable = process.argv.includes("--durable");
 const bridge = new HermesBrainBridge({ repoRoot: root });
-const route = validateBrainSelection({ provider: process.env.IRIS_BRAIN_PROVIDER || DEFAULT_BRAIN.provider, modelId: process.env.IRIS_BRAIN_MODEL || DEFAULT_BRAIN.modelId, reasoning: process.env.IRIS_BRAIN_REASONING || "default" });
+const route = validateBrainSelection(durable ? { provider: "evren", modelId: "qwen3.8-flash-next", reasoning: "disabled" } : { provider: process.env.IRIS_BRAIN_PROVIDER || DEFAULT_BRAIN.provider, modelId: process.env.IRIS_BRAIN_MODEL || DEFAULT_BRAIN.modelId, reasoning: process.env.IRIS_BRAIN_REASONING || "default" });
 const models = new BrainModelService({ bridge, selected: route, current: route });
 const scheduler = new ResearchScheduler({ bridge, repoRoot: root, home: () => process.env.HERMES_HOME || path.join(os.homedir(), ".hermes") });
 const service = new ResearchService({ root: path.join(temp, "research"), outputRoot: path.join(temp, "output"), repoRoot: root,
@@ -26,10 +27,10 @@ let schedule, run;
 const scheduled = process.argv.includes("--schedule");
 try {
   const spec = await service.specification({
-    topic: scheduled ? "Python resmî indirme sayfasından güncel kararlı sürümü bul ve kaynakla doğrula." : "Python, Node.js ve TypeScript'in resmî sitelerindeki kararlı sürüm bilgilerini kısa ve kaynaklı biçimde karşılaştır. Üç projenin resmî sayfalarını gerçekten aç; sürüm ve yayın tarihini doğrulayabildiğin ölçüde yaz.",
+    topic: durable ? "Python, Node.js ve TypeScript nedir? Her biri için resmî sitesinden tek bir kısa tanım bul, sayfayı gerçekten oku ve tanımı birebir alıntıyla destekle. Üç tanım yeterli; sürüm, tarihçe, paket veya kurulum araştırma." : scheduled ? "Python resmî indirme sayfasından güncel kararlı sürümü bul ve kaynakla doğrula." : "Python, Node.js ve TypeScript'in resmî sitelerindeki kararlı sürüm bilgilerini kısa ve kaynaklı biçimde karşılaştır. Üç projenin resmî sayfalarını gerçekten aç; sürüm ve yayın tarihini doğrulayabildiğin ölçüde yaz.",
     purpose: "Avalon gerçek araştırma hattı kontrolü. Yalnız resmî kaynaklar; kod çalıştırma veya kurulum yapma.",
-    sites: scheduled ? ["python.org"] : ["python.org", "nodejs.org", "typescriptlang.org"], minutes: scheduled ? 2 : 3, mode: scheduled ? "normal" : "deep",
-    outputDirectory: path.join(temp, "output"), ...(scheduled ? { schedule: { kind: "daily", time: "23:59", day: 6, timezone: "Europe/Istanbul" } } : {}),
+    sites: scheduled && !durable ? ["python.org"] : ["python.org", "nodejs.org", "typescriptlang.org"], minutes: durable ? 30 : scheduled ? 2 : 3, mode: durable || !scheduled ? "deep" : "normal",
+    outputDirectory: path.join(temp, "output"), ...(scheduled ? { schedule: { kind: "once", date: new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Istanbul", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(Date.now() + 86400000)), time: "23:59", day: 6, timezone: "Europe/Istanbul" } } : {}),
   });
   if (scheduled) {
     schedule = await service.createSchedule(spec);
@@ -38,13 +39,16 @@ try {
     service.close(); // No Avalon service or UI remains to do the work.
     console.log("Native scheduler dispatched; Avalon service stopped. Waiting for the independent runner.");
   } else { run = await service.start(spec); service.close(); console.log("Detached deep research launched; observing durable run state."); }
-  const end = Date.now() + 240000; let last;
+  const end = Date.now() + spec.minutes * 60000 + 60000; let last, acceptedCount = 0;
   while (Date.now() < end) {
     const state = scheduled ? service.store.list().find((state) => state.scheduleId === schedule.id) : service.store.get(run.id);
     if (state) {
       run = state;
-      const progress = `${state.phase}:${state.sourceCount}:${state.status}`;
-      if (progress !== last) { last = progress; console.log(JSON.stringify({ phase: state.phase, sources: state.sourceCount, status: state.status })); }
+      const checkpoint = readJson(service.store.file(state.id, "checkpoint.json"));
+      const count = checkpoint?.claims?.length ?? acceptedCount;
+      assert.ok(count >= acceptedCount, "Accepted findings cannot disappear between checkpoints"); acceptedCount = count;
+      const progress = `${state.phase}:${state.sourceCount}:${count}:${state.status}`;
+      if (progress !== last) { last = progress; console.log(JSON.stringify({ phase: state.phase, sources: state.sourceCount, findings: count, status: state.status })); }
       if (RESEARCH_TERMINAL.has(state.status)) break;
     }
     await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -55,7 +59,15 @@ try {
   const evidence = readJson(path.join(run.outputPath, "evidence.json"));
   assert.ok(evidence.some((claim) => claim.verified), "At least one claim must match actual retrieved text");
   assert.ok(fs.existsSync(path.join(run.outputPath, "report.md")));
-  console.log(JSON.stringify({ ok: true, scheduled, status: run.status, sourceCount: run.sourceCount, verifiedClaims: evidence.filter((claim) => claim.verified).length, outputPath: run.outputPath }));
+  if (durable) {
+    const checkpoint = readJson(service.store.file(run.id, "checkpoint.json"));
+    assert.equal(evidence.length, checkpoint.claims.length);
+    const report = fs.readFileSync(path.join(run.outputPath, "report.md"), "utf8");
+    for (const finding of evidence) assert.ok(report.includes(finding.id), "Every accepted finding must appear in the report");
+    assert.ok(evidence.some((finding) => finding.verified && finding.reviewStatus === "supported"), "Content review must support at least one finding");
+    assert.ok(checkpoint.criteria.every((c) => c.resolved) || run.status === "partial");
+  }
+  console.log(JSON.stringify({ ok: true, scheduled, status: run.status, sourceCount: run.sourceCount, verifiedClaims: evidence.filter((claim) => claim.verified).length, supportedClaims: evidence.filter((claim) => claim.verified && claim.reviewStatus === "supported").length, outputPath: run.outputPath }));
 } finally {
   service.close();
   if (run && !RESEARCH_TERMINAL.has(run.status)) service.stop(run.id);

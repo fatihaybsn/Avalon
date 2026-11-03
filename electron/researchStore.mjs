@@ -3,24 +3,15 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { validateBrainSelection } from "./brainModels.mjs";
 import { RESEARCH_PURPOSE_MAX_LENGTH } from "./researchLimits.mjs";
+import { CHECKPOINT_VERSION, projectArtifacts, atomicWrite } from "./researchArtifacts.mjs";
+export { canonicalUrl } from "./researchArtifacts.mjs";
 
 export const RESEARCH_TERMINAL = new Set(["completed", "partial", "failed", "cancelled", "interrupted", "needs_access"]);
 export function readJson(file, fallback = null) { try { return JSON.parse(fs.readFileSync(file, "utf8")); } catch { return fallback; } }
 export function writeJson(file, value) {
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  const temp = `${file}.${process.pid}.${crypto.randomUUID()}.tmp`;
-  fs.writeFileSync(temp, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600 }); fs.renameSync(temp, file);
+  atomicWrite(file, `${JSON.stringify(value, null, 2)}\n`);
 }
 export function processAlive(pid) { try { if (!Number.isInteger(pid) || pid < 1) return false; process.kill(pid, 0); return true; } catch { return false; } }
-export function canonicalUrl(value) {
-  try {
-    const url = new URL(value);
-    if (!["https:", "http:"].includes(url.protocol) || url.username || url.password) return null;
-    url.hash = "";
-    for (const key of [...url.searchParams.keys()]) if (/^(utm_|fbclid$|gclid$)/i.test(key)) url.searchParams.delete(key);
-    url.searchParams.sort(); return url.href.replace(/\/$/, "");
-  } catch { return null; }
-}
 export function normalizeResearch(input, { outputRoot, sessionId, route } = {}) {
   if (!input || typeof input !== "object" || Array.isArray(input)) throw new Error("Araştırma bilgileri gerekli.");
   const topic = String(input.topic || input.goal || "").trim();
@@ -84,7 +75,16 @@ export class ResearchStore {
   reconcile() {
     for (const state of this.list()) {
       if (!RESEARCH_TERMINAL.has(state.status) && Date.now() - state.updatedAt > 20000 && !processAlive(state.pid)) {
-        this.save({ ...state, status: "interrupted", error: "Araştırma çalıştırıcısı kesildi. Toplanan sonuçlar korundu.", finishedAt: Date.now() });
+        const recovered = { ...state, status: "interrupted", phase: "done", error: "Araştırma çalıştırıcısı kesildi. Toplanan sonuçlar korundu.", finishedAt: Date.now() };
+        const checkpoint = readJson(this.file(state.id, "checkpoint.json"));
+        if (checkpoint?.version === CHECKPOINT_VERSION && checkpoint.runId === state.id && ["sources", "claims", "batches", "criteria", "issues", "access"].every((key) => Array.isArray(checkpoint[key]))) {
+          try {
+            recovered.output = projectArtifacts(recovered, { ...checkpoint, issues: [...checkpoint.issues, { kind: "interrupted", message: recovered.error }] }, writeJson, "interrupted");
+            recovered.sourceCount = checkpoint.sources.length;
+            writeJson(path.join(state.outputPath, "summary.json"), { ...recovered, output: undefined, spec: { ...state.spec, runtime: undefined } });
+          } catch { recovered.error += " Çıktı yeniden oluşturulamadı; kalıcı araştırma kaydı korundu."; }
+        }
+        this.save(recovered);
       }
     }
   }

@@ -10,6 +10,7 @@ import { ResearchEngine, RESEARCH_AUTONOMY_POLICY } from "../electron/researchEn
 import { runEntry } from "../electron/researchRunner.mjs";
 import { HermesInteractiveTransport } from "../electron/hermesInteractiveTransport.mjs";
 import { brainProviderSlug } from "../electron/brainReasoning.mjs";
+import { reviewedDelivery, reportOutline } from "./researchPeer.mjs";
 import { proposeHermesTask, claimVisibleProposal, resetHermesGate } from "../electron/hermesGate.mjs";
 
 const chatRoute = { provider: "evren", modelId: "qwen3.8-flash-next", reasoning: "disabled" };
@@ -49,7 +50,8 @@ function nativeBackends(onPrompt) {
         const complete = () => {
           let result;
           if (params.text.includes("Plan a targeted")) result = { questions: ["A", "B", "C"], criteria: ["original evidence"] };
-          else if (params.text.includes("Synthesize")) result = { report: "Verified research report", resolved: true, gaps: [] };
+          else if (params.text.includes("Synthesize")) result = reportOutline(params.text);
+          else if (params.text.includes("Find independent corroboration")) result = reviewedDelivery(params.text);
           else {
             const url = `https://source-${id}.example/document`, quote = "the documented result is supported by original evidence";
             client.emit("event", { session_id: id, type: "tool.complete", payload: { name: "web_extract", result: { url, content: `${quote}. `.repeat(5) } } });
@@ -301,11 +303,11 @@ for (const phase of ["Plan a targeted", "Assigned subquestion"]) {
       asked = true; return askClarification(context, { repeat: true });
     });
     const result = await new ResearchEngine({ store, state: store.create(spec), createBackend: peer.factory }).run();
-    assert.equal(result.status, "partial");
+    assert.equal(result.status, phase === "Plan a targeted" ? "completed" : "partial");
     assert.match(result.output, /yeniden kullanıcı yanıtı istendi/);
     assert.match(result.output, /Araştırmanın kapsamı ne olmalı\?/);
     assert.equal(peer.calls.filter((call) => call.method === "clarify.respond").length, 1);
-    assert.ok(result.sourceCount >= 3, "Fallback questions and independent workers must preserve usable evidence");
+    assert.ok(result.sourceCount >= 2, "Independent workers must preserve their usable evidence");
   });
 }
 
@@ -323,11 +325,11 @@ for (const type of ["approval", "secret", "sudo"]) {
       return true;
     });
     const result = await new ResearchEngine({ store, state: store.create(spec), createBackend: peer.factory }).run();
-    assert.equal(result.status, "partial"); assert.ok(result.sourceCount >= 3);
+    assert.equal(result.status, "partial"); assert.ok(result.sourceCount >= 2);
     const reply = peer.calls.find((call) => call.method === "server.response" && call.result);
     if (type === "approval") assert.deepEqual(reply.result, { choice: "deny" });
     else assert.equal(reply, undefined, "No secret or password value may be supplied");
-    for (const file of [store.file(result.id), path.join(result.outputPath, "summary.json"), path.join(result.outputPath, "report.md")]) {
+    for (const file of [store.file(result.id), store.file(result.id, "checkpoint.json"), path.join(result.outputPath, "summary.json"), path.join(result.outputPath, "report.md"), path.join(result.outputPath, "findings.json"), path.join(result.outputPath, "evidence.json")]) {
       assert.doesNotMatch(fs.readFileSync(file, "utf8"), /DO_NOT_PERSIST/);
     }
     assert.equal(result.interactionLog[0].type, type);
@@ -356,7 +358,7 @@ for (const cancellation of [true, false]) {
     try {
       await responding;
       if (cancellation) { engine.cancelled = true; await engine.stopActive(); }
-      await assert.rejects(turn, cancellation ? /Kullanıcı durdurdu/ : /Süre doldu/);
+      await assert.rejects(turn, cancellation ? /Kullanıcı durdurdu/ : { code: "RESEARCH_TURN_TIMEOUT" });
       const log = JSON.stringify(readJson(store.file(state.id)).interactionLog);
       release(); await new Promise(setImmediate);
       assert.equal(JSON.stringify(readJson(store.file(state.id)).interactionLog), log, "Late responses cannot mutate completed turn diagnostics");
@@ -386,9 +388,9 @@ test("clarification response failures retain the actual question without becomin
     return true;
   });
   const result = await new ResearchEngine({ store, state: store.create(spec), createBackend: peer.factory }).run();
-  assert.equal(result.status, "failed");
+  assert.equal(result.status, "completed");
   assert.match(result.output, /gerçek soru/);
-  assert.match(result.error, /otomatik yanıt iletilemedi/);
+  assert.match(result.limitations.join("\n"), /otomatik yanıt iletilemedi/);
 });
 
 test("an approval required before any sources is still a genuine needs_access result", async (t) => {

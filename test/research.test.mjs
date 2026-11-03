@@ -11,6 +11,7 @@ import { claimSchedule } from "../electron/researchRunner.mjs";
 import { proposeHermesTask, claimVisibleProposal, resetHermesGate } from "../electron/hermesGate.mjs";
 import { ResearchLeases } from "../electron/researchLeases.mjs";
 import { nativeResourcePath } from "../electron/resourcePaths.mjs";
+import { reviewedDelivery, reportOutline } from "./researchPeer.mjs";
 
 function setup() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "avalon-research-test-"));
@@ -71,7 +72,8 @@ function fakeBackends({ unverified = false, fail = false, sourceUrls, accessFail
       setTimeout(() => {
         let result;
         if (task.includes("Plan a targeted")) result = { questions: ["A", "B", "C"], criteria: ["three original sources"] };
-        else if (task.includes("Synthesize")) result = { report: "# Verified test report\n\nEvidence is attached.", resolved: true, gaps: [], ...reportPatch };
+        else if (task.includes("Synthesize")) result = reportOutline(task);
+        else if (task.includes("Find independent corroboration")) result = reviewedDelivery(task, reportPatch);
         else {
           const text = `Source number ${number}: the documented result is confirmed by original evidence. `.repeat(4);
           const url = sourceUrls ? sourceUrls[(number - 2) % sourceUrls.length] : `https://source-${number}.example/document`;
@@ -95,11 +97,11 @@ const accessSourceUrls = ["https://first.example/a", "https://second.example/b",
 for (const { name, options = {}, specPatch = {}, status = "completed", warning } of [
   { name: "one optional inaccessible site", options: { accessFailures: ["https://blocked.example/a"] }, warning: "https://blocked.example/a" },
   { name: "two optional inaccessible sites", options: { accessFailures: ["https://blocked.example/a", "https://other.example/b"] } },
-  { name: "three inaccessible sites", options: { accessFailures: ["https://blocked.example/a", "https://other.example/b", "https://third.example/c"] }, status: "partial", warning: "3 farklı sitede" },
+  { name: "three optional inaccessible sites do not block answered goals", options: { accessFailures: ["https://blocked.example/a", "https://other.example/b", "https://third.example/c"] } },
   { name: "repeated pages and subdomains on one inaccessible Turkish site", options: { accessFailures: ["https://www.blocked.com.tr/a", "https://news.blocked.com.tr/b", "https://blocked.com.tr/c", "https://blocked.com.tr/c"] } },
-  { name: "distinct Turkish sites crossing the limit", options: { accessFailures: ["https://first.com.tr/a", "https://second.com.tr/b", "https://third.com.tr/c"] }, status: "partial" },
+  { name: "distinct optional Turkish sites", options: { accessFailures: ["https://first.com.tr/a", "https://second.com.tr/b", "https://third.com.tr/c"] } },
   { name: "a required inaccessible source from worker notes", options: { inaccessible: [{ url: "https://essential.example/a", reason: "Primary evidence missing", required: true }] }, status: "partial", warning: "gerekli kaynağa" },
-  { name: "a required source reported during synthesis", options: { reportPatch: { inaccessible: [{ url: "https://essential.example/a", reason: "Primary evidence missing", required: true }] } }, status: "partial" },
+  { name: "a required source reported during review", options: { reportPatch: { inaccessible: [{ url: "https://essential.example/a", reason: "Primary evidence missing", required: true }] } }, status: "partial" },
   { name: "an assigned site with no readable source", options: { accessFailures: ["https://assigned.example/a"] }, specPatch: { sites: ["assigned.example"] }, status: "partial" },
   { name: "an optional failed page on an otherwise covered assigned site", options: { accessFailures: ["https://first.example/extra"] }, specPatch: { sites: ["first.example"] } },
   { name: "an explicitly assigned unreadable page on a covered site", options: { accessFailures: ["https://first.example/required"] }, specPatch: { sites: ["https://first.example/required"] }, status: "partial" },
@@ -112,10 +114,10 @@ for (const { name, options = {}, specPatch = {}, status = "completed", warning }
   { name: "unanswered questions despite resolved wording", options: { reportPatch: { resolved: true, gaps: ["The main question remains unanswered"] } }, status: "partial" },
   { name: "an explicitly unresolved report", options: { reportPatch: { resolved: false } }, status: "partial" },
   { name: "insufficient independent coverage", options: { sourceUrls: ["https://first.example/a", "https://first.example/b", "https://first.example/c"], accessFailures: ["https://blocked.example/a"] }, status: "partial" },
-  { name: "normal research with insufficient coverage for access tolerance", options: { sourceUrls: ["https://first.example/a"], accessFailures: ["https://blocked.example/a"] }, specPatch: { mode: "normal" }, status: "partial" },
+  { name: "normal research with optional failures", options: { sourceUrls: ["https://first.example/a"], accessFailures: ["https://blocked.example/a"] }, specPatch: { mode: "normal" } },
   { name: "normal research without access problems", options: { sourceUrls: ["https://first.example/a"] }, specPatch: { mode: "normal" } },
   { name: "a 404 page reported without a status code", options: { accessFailures: [{ url: "https://blocked.example/a", title: "Page not found", content: "Not a usable source. ".repeat(10) }] }, warning: "https://blocked.example/a" },
-  { name: "no readable sources with access problems", options: { readable: false, accessFailures: ["https://blocked.example/a"] }, status: "needs_access" },
+  { name: "no readable sources with generic 403 errors", options: { readable: false, accessFailures: ["https://blocked.example/a"] }, status: "partial" },
 ]) {
   test(`research access tolerance handles ${name}`, async () => {
     const { root, store, spec } = setup(), state = store.create({ ...spec, ...specPatch });
@@ -144,7 +146,7 @@ test("scheduled access tolerance advances only completed evidence and retains ea
     ].entries()) {
       const state = store.create(spec, { scheduleId });
       const sourceUrls = index === 2 ? accessSourceUrls.map((url) => `${url}/new`) : accessSourceUrls;
-      const result = await new ResearchEngine({ store, state, createBackend: fakeBackends({ sourceUrls, accessFailures }).factory }).run();
+      const result = await new ResearchEngine({ store, state, createBackend: fakeBackends({ sourceUrls, accessFailures, reportPatch: index === 2 ? { resolved: false } : {} }).factory }).run();
       assert.equal(result.status, index === 2 ? "partial" : "completed");
       assert.equal(result.newCount, index === 1 ? 0 : 3);
       if (index === 0) completedBaseline = readJson(seenFile);
