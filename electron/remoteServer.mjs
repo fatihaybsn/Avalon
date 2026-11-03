@@ -3,6 +3,13 @@ import fs from "node:fs";
 import path from "node:path";
 import { WebSocketServer } from "ws";
 import { APPLICATION_METHODS, READ_METHODS } from "./applicationMethods.mjs";
+import { RESEARCH_PURPOSE_MAX_LENGTH } from "./researchLimits.mjs";
+
+const BODY_MAX_BYTES = 128 * 1024;
+const RESEARCH_RPC_METHODS = new Set(["proposeResearch", "updateResearchSchedule"]);
+// A JSON-escaped UTF-16 code unit can occupy six bytes. Reserve room for
+// the larger purpose only on authenticated research RPCs, not other methods.
+const RESEARCH_BODY_MAX_BYTES = BODY_MAX_BYTES + RESEARCH_PURPOSE_MAX_LENGTH * 6;
 
 const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".webmanifest": "application/manifest+json", ".svg": "image/svg+xml", ".png": "image/png", ".wasm": "application/wasm", ".mjs": "text/javascript", ".onnx": "application/octet-stream", ".woff2": "font/woff2", ".woff": "font/woff" };
 const AUDIO_COMMANDS = new Set(["speech_activity", "audio_stream_end", "playback_ended", "speech_vad_status"]);
@@ -32,11 +39,14 @@ export class RemoteServer {
     const token = /(?:^|;\s*)iris_remote=([\w-]+)/.exec(req.headers.cookie || "")?.[1];
     return this.state.authenticate(token);
   }
-  async body(req) {
+  async body(req, { researchRpc = false } = {}) {
     if (!String(req.headers["content-type"] || "").startsWith("application/json")) throw new Error("JSON gerekli.");
     let size = 0, parts = [];
-    for await (const part of req) { size += part.length; if (size > 128 * 1024) throw new Error("İstek fazla büyük."); parts.push(part); }
-    return JSON.parse(Buffer.concat(parts).toString("utf8"));
+    const maxBytes = researchRpc ? RESEARCH_BODY_MAX_BYTES : BODY_MAX_BYTES;
+    for await (const part of req) { size += part.length; if (size > maxBytes) throw new Error("İstek fazla büyük."); parts.push(part); }
+    const value = JSON.parse(Buffer.concat(parts).toString("utf8"));
+    if (size > BODY_MAX_BYTES && !RESEARCH_RPC_METHODS.has(value?.method)) throw new Error("İstek fazla büyük.");
+    return value;
   }
   async handle(req, res) {
     res.setHeader("X-Content-Type-Options", "nosniff");
@@ -61,7 +71,7 @@ export class RemoteServer {
       if (url.pathname === "/api/v1/push/key" && req.method === "GET") return this.reply(res, 200, { publicKey: this.state.publicKey() });
       if (url.pathname === "/api/v1/push/subscription" && req.method === "POST") return this.reply(res, 200, this.state.subscribe(await this.body(req)));
       if (url.pathname === "/api/v1/rpc" && req.method === "POST") {
-        const { method, args = [], requestId } = await this.body(req);
+        const { method, args = [], requestId } = await this.body(req, { researchRpc: true });
         const special = ["startSidecar", "stopSidecar", "getSidecarStatus", "sendCommand", "sendUiContext", "remoteStatus", "setNotifications", "testNotification"];
         if ((!Object.hasOwn(APPLICATION_METHODS, method) && !special.includes(method)) || !Array.isArray(args) || args.length > 4) return this.reply(res, 400, { error: "Desteklenmeyen işlem." });
         try {

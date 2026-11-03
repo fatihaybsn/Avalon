@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import type { TaskCard } from "../types";
 import RemindersPanel, { ReminderForm } from "./RemindersPanel";
 import { brainLabel } from "./BrainModelPanel";
+import { RESEARCH_PURPOSE_MAX_LENGTH } from "../../electron/researchLimits.mjs";
 
 const dateLabel = (value: string | null) => value ? new Date(value).toLocaleString("tr-TR", { timeZone: "Europe/Istanbul" }) : "—";
 const isActive = (task: TaskCard) => ["starting", "running", "stopping"].includes(task.status);
@@ -70,7 +71,7 @@ function ResearchForm({ scheduled, job, onClose, onSaved }: { scheduled: boolean
     <form className="research-form" role="dialog" aria-modal="true" aria-label={scheduled ? "Zamanlanmış araştırma" : "Derin araştırma"} onSubmit={(event) => { event.preventDefault(); void submit(); }}>
       <header><h2>{job ? "Zamanlamayı düzenle" : scheduled ? "Araştırma zamanla" : "Derin araştırma"}</h2><button type="button" onClick={onClose} aria-label="Araştırma formunu kapat">×</button></header>
       <label>Konu<textarea required maxLength={12000} value={topic} onChange={(event) => setTopic(event.target.value)} placeholder="Neyi araştırmamı istiyorsun?" /></label>
-      <label>Amaç / beklenen sonuç<textarea maxLength={4000} value={purpose} onChange={(event) => setPurpose(event.target.value)} placeholder="Hangi sorular cevaplanmalı? İlanlar için aradığın koşulları belirt." /></label>
+      <label>Amaç / beklenen sonuç<textarea maxLength={RESEARCH_PURPOSE_MAX_LENGTH} value={purpose} onChange={(event) => setPurpose(event.target.value)} placeholder="Hangi sorular cevaplanmalı? İlanlar için aradığın koşulları belirt." /></label>
       <details className="research-advanced"><summary>Gelişmiş seçenekler</summary>
       <label>Tercih edilen siteler <small>(isteğe bağlı, her satıra bir kaynak)</small><textarea value={sites} onChange={(event) => setSites(event.target.value)} placeholder="Şirket kariyer sayfaları, ilan siteleri…" /></label>
       <div className="research-fields">

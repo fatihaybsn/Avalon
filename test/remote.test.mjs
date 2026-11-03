@@ -6,6 +6,7 @@ import path from "node:path";
 import { once } from "node:events";
 import crypto from "node:crypto";
 import http from "node:http";
+import { Readable } from "node:stream";
 import WebSocket from "ws";
 import { RemoteState } from "../electron/remoteState.mjs";
 import { RemoteServer } from "../electron/remoteServer.mjs";
@@ -20,6 +21,26 @@ function setup(t, options = {}) {
 }
 const subscription = { endpoint: "https://fcm.googleapis.com/fcm/send/example", keys: { p256dh: "a".repeat(87), auth: "b".repeat(22) } };
 function pair(state) { const { code } = state.newCode(); const token = state.pairDevice(code, "Android"); return { token, device: state.authenticate(token) }; }
+
+test("research RPCs accept long Unicode and escaped purposes without relaxing other request limits", async () => {
+  const request = (value) => {
+    const bytes = Buffer.from(JSON.stringify(value));
+    const req = Readable.from([bytes.subarray(0, 100_000), bytes.subarray(100_000)]);
+    req.headers = { "content-type": "application/json" };
+    return req;
+  };
+  const parse = (value, options) => RemoteServer.prototype.body.call({}, request(value), options);
+  for (const purpose of ["界".repeat(20_000), "\u0001".repeat(20_000)]) {
+    for (const method of ["proposeResearch", "updateResearchSchedule"]) {
+      const value = { method, args: [{ topic: "界".repeat(12_000), purpose, sites: Array(30).fill("界".repeat(500)) }] };
+      assert.ok(Buffer.byteLength(JSON.stringify(value)) > 128 * 1024);
+      assert.deepEqual(await parse(value, { researchRpc: true }), value);
+      await assert.rejects(parse(value), /İstek fazla büyük/);
+      await assert.rejects(parse({ ...value, method: "saveConfig" }, { researchRpc: true }), /İstek fazla büyük/);
+    }
+  }
+  await assert.rejects(parse({ method: "proposeResearch", args: ["x".repeat(256 * 1024)] }, { researchRpc: true }), /İstek fazla büyük/);
+});
 
 test("pairing is single-use, bounded, persists only token hashes and supports revocation", (t) => {
   const { state, dir } = setup(t);

@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { validateBrainSelection } from "./brainModels.mjs";
+import { RESEARCH_PURPOSE_MAX_LENGTH } from "./researchLimits.mjs";
 
 export const RESEARCH_TERMINAL = new Set(["completed", "partial", "failed", "cancelled", "interrupted", "needs_access"]);
 export function readJson(file, fallback = null) { try { return JSON.parse(fs.readFileSync(file, "utf8")); } catch { return fallback; } }
@@ -24,13 +25,15 @@ export function normalizeResearch(input, { outputRoot, sessionId, route } = {}) 
   if (!input || typeof input !== "object" || Array.isArray(input)) throw new Error("Araştırma bilgileri gerekli.");
   const topic = String(input.topic || input.goal || "").trim();
   if (!topic || topic.length > 12000) throw new Error("Araştırma konusu 1–12000 karakter olmalı.");
+  const purpose = String(input.purpose || "");
+  if (purpose.length > RESEARCH_PURPOSE_MAX_LENGTH) throw new Error(`Amaç / beklenen sonuç en fazla ${RESEARCH_PURPOSE_MAX_LENGTH} karakter olmalı.`);
   const minutes = Number(input.minutes ?? 30);
   if (!Number.isInteger(minutes) || minutes < 1 || minutes > 120) throw new Error("Süre 1–120 dakika arasında olmalı.");
   const sites = (Array.isArray(input.sites) ? input.sites : String(input.sites || "").split(/[\n,]/)).map((x) => String(x).trim()).filter(Boolean);
   if (sites.length > 30 || sites.some((x) => x.length > 500 || /[\r\n\0]/.test(x))) throw new Error("En fazla 30 geçerli kaynak/site belirt.");
   const outputDirectory = String(input.outputDirectory || outputRoot || "").trim();
   if (!path.isAbsolute(outputDirectory) || outputDirectory.includes("\0")) throw new Error("Çıktı klasörü tam bir dosya yolu olmalı.");
-  return { topic, purpose: String(input.purpose || "").slice(0, 4000), sites, minutes,
+  return { topic, purpose, sites, minutes,
     mode: input.mode === "normal" ? "normal" : "deep", language: input.language === "en" ? "en" : "tr", outputDirectory,
     sessionId: String(sessionId || input.sessionId || ""), route: validateBrainSelection(route ?? input.route),
     ...(input.schedule ? { schedule: normalizeSchedule(input.schedule) } : {}) };
