@@ -8,7 +8,7 @@ import { PassThrough } from "node:stream";
 import { setTimeout as delay } from "node:timers/promises";
 import { AutomationService } from "../electron/automationService.mjs";
 import { runEntry } from "../electron/researchRunner.mjs";
-import { ResearchStore } from "../electron/researchStore.mjs";
+import { ResearchStore, writeJson } from "../electron/researchStore.mjs";
 
 const repoRoot = path.resolve(".");
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), "avalon-automation-test-"));
@@ -70,6 +70,90 @@ try {
   await run("complete", false);
   await run("partial", true);
   console.log("Node-RED authenticated editor, deployment, same-run report input, partial and duplicate/overlap checks passed.");
+
+  const careerId = "record-tracking-fixture", careerSchedule = "schedule_cafe";
+  const inputs = path.join(directory, "automation", "inputs", careerId);
+  fs.mkdirSync(inputs, { recursive: true });
+  fs.writeFileSync(path.join(inputs, "profile.md"), "Fixture profile.");
+  fs.writeFileSync(path.join(inputs, "activities.md"), "Fixture activity.");
+  const ids = ["discovery", "analysis", "contacts", "opportunities", "strategy"];
+  writeJson(path.join(directory, "automation", "editor", "flows.json"), [...graph.flows,
+    { id: careerId, type: "tab", label: "Record tracking fixture" },
+    { id: "fixture-start", z: careerId, type: "avalon-start", wires: [[ids[0]]] },
+    ...ids.map((id, index) => ({ id, z: careerId, type: "avalon-research", topic: id,
+      mode: index === 4 ? "synthesis" : "deep", reportInputs: ids.slice(0, index),
+      wires: [[ids[index + 1] || "fixture-finish"]] })),
+    { id: "fixture-finish", z: careerId, type: "avalon-finish", wires: [] },
+  ]);
+  writeJson(path.join(inputs, "inputs.json"), { steps: {
+    discovery: { documents: ["profile.md"], group: "companies", identity: "domain" },
+    analysis: { documents: ["profile.md"], coverage: { group: "companies", changesFrom: "opportunities" } },
+    contacts: { documents: ["profile.md"], group: "contacts", coverage: { group: "companies", after: "analysis" } },
+    opportunities: { documents: ["profile.md"], group: "opportunities", coverage: { group: "companies", refresh: true } },
+    strategy: { documents: ["profile.md", "activities.md"], group: "actions" },
+  } });
+  assert.ok(automation.flows().some((flow) => flow.id === careerId && flow.steps.length === 5));
+  store.save({ id: careerSchedule, spec: { ...spec, automationFlowId: careerId } });
+  const fixtureMarkdown = "# Fixture report\n\n" + "r".repeat(13_000);
+  const report = (records = [], coverage = []) => fixtureMarkdown + "\n\n" + String.fromCharCode(96).repeat(3) +
+    "avalon-records\n" + JSON.stringify({ records, coverage }) + "\n" + String.fromCharCode(96).repeat(3);
+  const company = (key, url) => ({ key, name: key, url, status: "completed", note: "Fixture finding." });
+  const checked = (key) => ({ key, status: "completed", note: "Checked with fixture evidence." });
+  async function careerRound(number) {
+    let calls = 0;
+    const args = ["--schedule", store.file(careerSchedule), "--occurrence", `career-${number}`];
+    const result = await runEntry(args, {
+      resolveModel: async () => ({ configured: true, key: "fixture", baseUrl: "https://example.org/v1" }),
+      spawnWorker() {
+        const child = Object.assign(new EventEmitter(), { stdin: new PassThrough(), stdout: new PassThrough(), kill() {} });
+        child.stdin.once("data", (data) => {
+          const job = JSON.parse(data);
+          const history = JSON.parse(job.reports.at(-1).markdown);
+          const queue = history.requiredQueue?.map((entry) => entry.key);
+          assert.ok(job.reports.some(({ markdown }) => markdown === "Fixture profile."));
+          assert.ok(job.purpose.includes("avalon-records"));
+          let markdown;
+          switch (++calls) {
+            case 1:
+              assert.equal(history.records.companies?.length ?? 0, number === 1 ? 0 : 2);
+              markdown = number === 1
+                ? report([company("Original company name", "https://www.example.org/company"), company("Waiting", "https://example.net")])
+                : report([company("Alternative name", "https://example.org")]);
+              break;
+            case 2:
+              assert.deepEqual(queue, number === 1 ? ["example.org", "example.net"] : ["example.net"]);
+              assert.equal(job.reports[0].markdown, fixtureMarkdown);
+              markdown = report([], [checked(number === 1 ? "example.org" : "example.net")]);
+              break;
+            case 3:
+              assert.deepEqual(queue, [number === 1 ? "example.org" : "example.net"]);
+              markdown = report([], queue.map(checked));
+              break;
+            case 4:
+              assert.deepEqual(queue, ["example.org", "example.net"]);
+              markdown = report(number === 2 ? [company("github.com/org/repo/issues/7", "https://github.com/org/repo/issues/7")] : [], queue.map(checked));
+              break;
+            case 5:
+              assert.equal(job.mode, "synthesis");
+              assert.equal(job.reports.filter(({ markdown }) => markdown === fixtureMarkdown).length, 4);
+              assert.ok(job.reports.some(({ name }) => name === "activities.md"));
+              assert.equal(history.records.opportunities.length, number === 2 ? 1 : 0);
+              markdown = report();
+              break;
+            default: assert.fail("Unexpected career stage");
+          }
+          child.stdout.end(JSON.stringify({ kind: "report", markdown }) + "\n");
+          queueMicrotask(() => child.emit("close", 0));
+        });
+        return child;
+      },
+    });
+    assert.equal(result.status, "completed", result.error);
+    assert.equal(calls, 5);
+  }
+  await careerRound(1);
+  await careerRound(2);
+  console.log("Career workflow passed both rounds, including profile, all four report inputs, duplicate identity, pending work and a new opportunity.");
 } finally {
   automation.close();
   // Give Node-RED and Windows time to release their files.

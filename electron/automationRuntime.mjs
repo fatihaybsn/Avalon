@@ -63,9 +63,12 @@ export function getAutomationFlows(root, repoRoot) {
 }
 
 export function automationResearchSpec(step, spec) {
-  return normalizeResearch({ ...step, language: spec.language, outputDirectory: spec.outputDirectory }, {
+  const mode = step.mode === "synthesis" ? "normal" : step.mode;
+  const research = normalizeResearch({ ...step, mode, language: spec.language, outputDirectory: spec.outputDirectory }, {
     sessionId: spec.sessionId, route: spec.route,
   });
+  if (step.mode === "synthesis") research.mode = "synthesis";
+  return research;
 }
 
 export function startAutomationHost({ root, repoRoot, mode, userDir, log }) {
