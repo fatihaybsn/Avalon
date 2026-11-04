@@ -7,6 +7,7 @@ import { createInterface } from "node:readline";
 import { HermesBrainBridge } from "./brainModels.mjs";
 import { reasoningBody } from "./brainReasoning.mjs";
 import { nativeResourcePath } from "./resourcePaths.mjs";
+import { parseEnvFile, userConfigPath } from "./configStore.mjs";
 import { atomicWrite, canonicalUrl } from "./researchFiles.mjs";
 
 export function researchScope(spec) {
@@ -61,6 +62,9 @@ export async function runGPTResearch({ state, store, writeJson, readJson, signal
     if (!info.configured || !info.key || !info.baseUrl) throw new Error("Seçili sağlayıcının model bağlantısı bulunamadı.");
     if (cancelled || signal.aborted || fs.existsSync(store.file(state.id, "cancel"))) stop();
     if (!cancelled) {
+      const userEnv = Object.create(null);
+      parseEnvFile(userConfigPath(), userEnv);
+      const tavilyKey = userEnv.TAVILY_API_KEY ?? (process.env.TAVILY_API_KEY || info.tavilyKey || "");
       const python = path.join(os.homedir(), ".iris", "gpt-researcher-0.16.0", process.platform === "win32" ? "Scripts/python.exe" : "bin/python");
       const script = nativeResourcePath(root, "sidecar", "gpt_researcher_worker.py");
       child = spawnWorker(python, ["-I", "-u", script], { windowsHide: true, cwd: state.outputPath, stdio: ["pipe", "pipe", "ignore"],
@@ -105,7 +109,7 @@ export async function runGPTResearch({ state, store, writeJson, readJson, signal
       });
       child.stdin.on("error", () => {});
       child.stdin.end(JSON.stringify({ ...state.spec, runtime: undefined, ...researchScope(state.spec), runId: state.id, parentPid: process.pid, baseUrl: info.baseUrl,
-        apiKey: info.key, tavilyKey: process.env.TAVILY_API_KEY || info.tavilyKey || "", reasoning: reasoningBody(route) }));
+        apiKey: info.key, tavilyKey, reasoning: reasoningBody(route) }));
       const exitCode = await finished;
       lines.close();
       if (signal.aborted || fs.existsSync(store.file(state.id, "cancel"))) cancelled = true;

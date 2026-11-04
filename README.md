@@ -1049,6 +1049,8 @@ For Tavily Advanced search, get an API key from the [Tavily dashboard](https://a
 TAVILY_API_KEY=your_key_here
 ```
 
+Avalon reads this value when each research run starts. It takes precedence over a key inherited from the terminal or Windows. When the line is absent, Avalon can still use the inherited key. To explicitly use DuckDuckGo, set `TAVILY_API_KEY=` in this file.
+
 Tavily Advanced uses two credits per search query. Tavily's free plan includes 1,000 credits per month, and the same key works after the monthly quota renews. If Tavily reports that the quota is exhausted during a run, the remaining searches switch to DuckDuckGo without restarting the task. If no key is configured, the task starts with DuckDuckGo. Avalon shows the reason in the task card and records it in the run summary. [Tavily credit pricing](https://docs.tavily.com/documentation/api-credits)
 
 In Deep Research mode, you can choose:

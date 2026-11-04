@@ -15,9 +15,19 @@ for (const scheduled of [false, true]) {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "avalon-gptr-"));
     t.after(() => fs.rmSync(root, { recursive: true, force: true }));
     const store = new ResearchStore(path.join(root, "state"));
+    const configPath = path.join(root, ".env");
+    const env = { IRIS_TEST_HOOKS: "1", IRIS_TEST_CONFIG_PATH: configPath, TAVILY_API_KEY: "old-terminal-key" };
+    const priorEnv = Object.fromEntries(Object.keys(env).map((key) => [key, process.env[key]]));
+    t.after(() => {
+      for (const [key, value] of Object.entries(priorEnv)) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+    });
+    if (!scheduled) fs.writeFileSync(configPath, "TAVILY_API_KEY=new-file-key\n");
     const selected = scheduled ? { provider: "opencode", modelId: "deepseek-v4.1-flash-free", reasoning: "low" } : route;
     const spec = { ...normalizeResearch({ topic: "Test", purpose: "p".repeat(20000), minutes: 60, outputDirectory: root, route: selected }),
-      runtime: { repoRoot: process.cwd(), stateRoot: store.root, env: {} } };
+      runtime: { repoRoot: process.cwd(), stateRoot: store.root, env } };
     const scheduleId = "schedule_abcd";
     if (scheduled) store.save({ id: scheduleId, spec, createdAt: Date.now() });
     const id = scheduled ? scheduleId : store.create(spec).id;
@@ -33,6 +43,7 @@ for (const scheduled of [false, true]) {
           assert.equal(job.purpose.length, 20000);
           assert.equal(job.breadth, 4); assert.equal(job.depth, 2);
           assert.equal(job.minutes, undefined);
+          assert.equal(job.tavilyKey, scheduled ? "old-terminal-key" : "new-file-key");
           const emit = (event) => child.stdout.write(JSON.stringify(event) + "\n");
           emit({ kind: "search", provider: "duckduckgo", reason: "quota", counts: { tavily: 1, duckduckgo: 1 } });
           emit({ kind: "source", source: { url: "https://example.com", content: "Captured content" } });

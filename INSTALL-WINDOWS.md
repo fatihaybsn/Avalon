@@ -168,4 +168,6 @@ For a custom installation, use the same absolute path as `-HermesHome`. The inst
 
 For Tavily Advanced search, obtain a key from [Tavily](https://app.tavily.com/) and set `TAVILY_API_KEY` in `%USERPROFILE%\.iris\.env`. Restart Avalon after changing the key. Advanced search uses two credits per query. Tavily's free plan includes 1,000 credits per month. You can keep the same key when the monthly quota renews. If the key is absent or its usage quota is exhausted, the task uses DuckDuckGo and shows the reason in the task card. See [Tavily credit pricing](https://docs.tavily.com/documentation/api-credits).
 
+The value in `%USERPROFILE%\.iris\.env` takes precedence over an inherited terminal or Windows value. Set `TAVILY_API_KEY=` there to explicitly use DuckDuckGo.
+
 Deep research defaults to breadth 3 and depth 2. Increasing either can increase runtime and search usage. Avalon shows elapsed time and saves partial material if you stop the task.
