@@ -51,7 +51,7 @@ type IrisUiAction = {
 
 type BrainSelection = { provider: "evren" | "opencode"; modelId: string; reasoning?: string };
 type ResearchSchedule = { kind: "daily" | "weekly" | "once"; time: string; day: number; date?: string; timezone: string };
-type ResearchInput = { topic: string; purpose: string; sites: string[]; minutes: number; mode: "normal" | "deep"; outputDirectory: string; route?: BrainSelection; schedule?: ResearchSchedule | null };
+type ResearchInput = { topic: string; purpose: string; sites: string[]; minutes?: number; breadth?: number; depth?: number; mode: "normal" | "deep"; outputDirectory: string; route?: BrainSelection; schedule?: ResearchSchedule | null };
 type ResearchScheduledJob = { id: string; name: string; label: string; modelLabel?: string; paused: boolean; spec: ResearchInput; nextRunAt: string | null;
   lastRun: import("./types").TaskCard | null; history: import("./types").TaskCard[]; error: string; lastSkip?: { reason: string; at: number } };
 type ResearchScheduleSnapshot = { jobs: ResearchScheduledJob[]; scheduler: { available: boolean; error?: string; timezone?: string } };
@@ -228,7 +228,7 @@ type BrainSearchResult = {
 };
 
 type IrisApi = {
-  researchDefaults: () => Promise<{ outputDirectory: string; minutes: number; route: BrainSelection }>;
+  researchDefaults: () => Promise<{ outputDirectory: string; route: BrainSelection }>;
   listResearch: () => Promise<import("./types").TaskCard[]>;
   proposeResearch: (input: ResearchInput) => Promise<{ ok: boolean; proposalId: string }>;
   listResearchSchedules: () => Promise<ResearchScheduleSnapshot>;

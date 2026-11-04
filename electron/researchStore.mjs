@@ -3,13 +3,33 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { validateBrainSelection } from "./brainModels.mjs";
 import { RESEARCH_PURPOSE_MAX_LENGTH } from "./researchLimits.mjs";
-import { CHECKPOINT_VERSION, projectArtifacts, atomicWrite } from "./researchArtifacts.mjs";
-export { canonicalUrl } from "./researchArtifacts.mjs";
+import { publishResearch, researchScope } from "./gptResearch.mjs";
+import { atomicWrite } from "./researchFiles.mjs";
+export { canonicalUrl } from "./researchFiles.mjs";
 
 export const RESEARCH_TERMINAL = new Set(["completed", "partial", "failed", "cancelled", "interrupted", "needs_access"]);
 export function readJson(file, fallback = null) { try { return JSON.parse(fs.readFileSync(file, "utf8")); } catch { return fallback; } }
 export function writeJson(file, value) {
   atomicWrite(file, `${JSON.stringify(value, null, 2)}\n`);
+}
+function recoverLegacyFiles(state, checkpoint) {
+  const { sources, claims, batches } = checkpoint;
+  if (![sources, claims, batches].every(Array.isArray)) return;
+  const outputFile = (name) => path.join(state.outputPath, name);
+  for (const [name, data] of [["sources.json", sources], ["findings.json", batches], ["evidence.json", claims]]) {
+    if (!fs.existsSync(outputFile(name))) writeJson(outputFile(name), data);
+  }
+  const reportFile = outputFile("report.md");
+  if (fs.existsSync(reportFile)) state.output = fs.readFileSync(reportFile, "utf8");
+  else {
+    const notice = state.spec.language === "en"
+      ? "Legacy research was interrupted. Recovered records are in sources.json, findings.json and evidence.json."
+      : "Eski araştırma kesintiye uğradı. Kurtarılan kayıtlar sources.json, findings.json ve evidence.json dosyalarında.";
+    state.output = state.output || checkpoint.document?.markdown || `# ${state.task}\n\n${notice}\n`;
+    atomicWrite(reportFile, state.output);
+  }
+  state.sourceCount = sources.length;
+  writeJson(outputFile("summary.json"), { ...state, output: undefined, spec: { ...state.spec, runtime: undefined } });
 }
 export function processAlive(pid) { try { if (!Number.isInteger(pid) || pid < 1) return false; process.kill(pid, 0); return true; } catch { return false; } }
 export function normalizeResearch(input, { outputRoot, sessionId, route } = {}) {
@@ -18,13 +38,15 @@ export function normalizeResearch(input, { outputRoot, sessionId, route } = {}) 
   if (!topic || topic.length > 12000) throw new Error("Araştırma konusu 1–12000 karakter olmalı.");
   const purpose = String(input.purpose || "");
   if (purpose.length > RESEARCH_PURPOSE_MAX_LENGTH) throw new Error(`Amaç / beklenen sonuç en fazla ${RESEARCH_PURPOSE_MAX_LENGTH} karakter olmalı.`);
-  const minutes = Number(input.minutes ?? 30);
-  if (!Number.isInteger(minutes) || minutes < 1 || minutes > 120) throw new Error("Süre 1–120 dakika arasında olmalı.");
+  const minutes = input.minutes == null ? undefined : Number(input.minutes);
+  if (minutes !== undefined && (!Number.isInteger(minutes) || minutes < 1 || minutes > 120)) throw new Error("Süre 1–120 dakika arasında olmalı.");
   const sites = (Array.isArray(input.sites) ? input.sites : String(input.sites || "").split(/[\n,]/)).map((x) => String(x).trim()).filter(Boolean);
   if (sites.length > 30 || sites.some((x) => x.length > 500 || /[\r\n\0]/.test(x))) throw new Error("En fazla 30 geçerli kaynak/site belirt.");
   const outputDirectory = String(input.outputDirectory || outputRoot || "").trim();
   if (!path.isAbsolute(outputDirectory) || outputDirectory.includes("\0")) throw new Error("Çıktı klasörü tam bir dosya yolu olmalı.");
-  return { topic, purpose, sites, minutes,
+  if (input.mode !== "normal" && ((input.breadth != null && ![3, 4, 5].includes(input.breadth)) ||
+      (input.depth != null && ![1, 2, 3].includes(input.depth)))) throw new Error("Geçersiz araştırma genişliği veya derinliği.");
+  return { topic, purpose, sites, ...(minutes === undefined ? {} : { minutes }), ...researchScope({ ...input, minutes, mode: input.mode === "normal" ? "normal" : "deep" }),
     mode: input.mode === "normal" ? "normal" : "deep", language: input.language === "en" ? "en" : "tr", outputDirectory,
     sessionId: String(sessionId || input.sessionId || ""), route: validateBrainSelection(route ?? input.route),
     ...(input.schedule ? { schedule: normalizeSchedule(input.schedule) } : {}) };
@@ -77,12 +99,15 @@ export class ResearchStore {
       if (!RESEARCH_TERMINAL.has(state.status) && Date.now() - state.updatedAt > 20000 && !processAlive(state.pid)) {
         const recovered = { ...state, status: "interrupted", phase: "done", error: "Araştırma çalıştırıcısı kesildi. Toplanan sonuçlar korundu.", finishedAt: Date.now() };
         const checkpoint = readJson(this.file(state.id, "checkpoint.json"));
-        if (checkpoint?.version === CHECKPOINT_VERSION && checkpoint.runId === state.id && ["sources", "claims", "batches", "criteria", "issues", "access"].every((key) => Array.isArray(checkpoint[key]))) {
+        if (checkpoint?.engine === "gpt-researcher" && checkpoint.runId === state.id) {
           try {
-            recovered.output = projectArtifacts(recovered, { ...checkpoint, issues: [...checkpoint.issues, { kind: "interrupted", message: recovered.error }] }, writeJson, "interrupted");
             recovered.sourceCount = checkpoint.sources.length;
-            writeJson(path.join(state.outputPath, "summary.json"), { ...recovered, output: undefined, spec: { ...state.spec, runtime: undefined } });
-          } catch { recovered.error += " Çıktı yeniden oluşturulamadı; kalıcı araştırma kaydı korundu."; }
+            recovered.output = publishResearch(recovered, checkpoint, writeJson);
+          }
+          catch { recovered.error += " Çıktı yeniden oluşturulamadı; kalıcı araştırma kaydı korundu."; }
+        } else if ([1, 2, 3].includes(checkpoint?.version) && checkpoint.runId === state.id) {
+          try { recoverLegacyFiles(recovered, checkpoint); }
+          catch { recovered.error += " Çıktı yeniden oluşturulamadı; kalıcı araştırma kaydı korundu."; }
         }
         this.save(recovered);
       }
@@ -92,7 +117,7 @@ export class ResearchStore {
 export function researchCard(state) {
   return { id: state.id, kind: state.kind, sessionId: state.sessionId, task: state.task, status: state.status,
     updatedAt: state.updatedAt, output: state.output || "", error: state.error || "", phase: state.phase,
-    startedAt: state.startedAt || state.createdAt, deadline: state.deadline || state.createdAt + state.spec.minutes * 60000,
+    startedAt: state.startedAt || state.createdAt, deadline: state.deadline, searchNotice: state.searchNotice, finishedAt: state.finishedAt,
     sourceCount: state.sourceCount, activeWorkers: state.activeWorkers || 0, newCount: state.newCount, changedCount: state.changedCount,
     lastActivity: state.lastActivity, outputPath: state.outputPath, scheduleId: state.scheduleId, steps: state.steps || [] };
 }

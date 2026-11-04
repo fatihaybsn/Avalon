@@ -30,7 +30,7 @@ Typical requests include:
 - Explain a technical subject, compare approaches, or discuss a project decision.
 - Find current information and discuss the sources.
 - Prepare a document or perform a local task through the available Hermes tools.
-- Research a topic against a time limit and save a report with supporting evidence.
+- Research a topic and save a report with its source archive.
 - Repeat an investigation on a daily or weekly schedule and report new or changed sources.
 - Create a personal reminder and review its date and time before saving it.
 - Search connected Markdown notes and previous task results in the current conversation.
@@ -48,7 +48,7 @@ This route is **optional and configured separately from the Hermes installer**. 
 
 ### Research and planning
 
-Research can be given a topic, purpose, preferred sources, output directory, model, reasoning setting, and maximum duration. The application separates planning, source collection, verification, and report writing. Results include a readable Markdown report and structured evidence files.
+Research accepts a topic, purpose, preferred sources, output directory, model and reasoning setting. Deep mode also accepts breadth and depth. GPT Researcher plans, collects sources and writes the Markdown report. Avalon saves the report and research archive.
 
 Research can run immediately or be scheduled once, daily, or weekly. The planning workspace shows upcoming runs, previous results, and controls for editing, pausing, resuming, removing, or running a schedule immediately. New and changed source counts help compare repeated investigations.
 
@@ -279,6 +279,15 @@ The API port is normally `8642` when available. If another process already uses 
 
 ### 5 Configure Avalon
 
+To enable research, run this from the Avalon project root after installing Hermes:
+
+```powershell
+$env:HERMES_HOME = Join-Path $env:LOCALAPPDATA 'Avalon\Hermes'
+npm.cmd run setup:research
+```
+
+For a custom Hermes installation, set `HERMES_HOME` to the absolute path used with `-HermesHome`. The research installer uses that runtime's uv to prepare a separate Python environment and checks that GPT Researcher loads. See [research setup and Tavily options](#gpt-researcher-research-runtime).
+
 From the Avalon project root, start the built application:
 
 ```powershell
@@ -481,7 +490,7 @@ The agent's procedure is:
 1. Inspect installed software, the project root, existing processes, ports, and configuration locations without overwriting a working installation.
 2. Verify that the required Hermes compatibility package is present. If it is absent, report that specific missing prerequisite and stop dependent steps; do not substitute an unmodified or arbitrary latest runtime.
 3. Prepare the pinned source runtime, apply/verify the supplied compatibility package, and confirm the actual loaded source and advertised contract.
-4. Install the locked Avalon dependencies and build desktop/mobile assets.
+4. Install the locked Avalon dependencies and build desktop/mobile assets. If research is requested, set `HERMES_HOME` to the resolved Hermes installation path and run `npm.cmd run setup:research` from the Avalon project root.
 5. Generate or retain the matching local API secret; place provider keys only in their intended settings.
 6. Configure the real absolute Hermes home/executable, user name, voice, and brain route. Apply the route through the model panel rather than marking it applied by hand.
 7. If Jev is requested, follow [the complete Jev procedure](docs/JEV-WINDOWS.md): require the reviewed source, use its independent locked environment, store the OpenCode key privately, merge the MCP entry and routing skill, and verify worker discovery/cancellation and host handoffs. Keep this status separate from the already verified Hermes base.
@@ -649,35 +658,21 @@ Optional hand tracking is processed on the device with MediaPipe. Point-and-hold
 
 ### Research execution
 
-Research is implemented through `researchService.mjs`, `researchRunner.mjs`, `researchEngine.mjs`, `researchStore.mjs`, and `researchLeases.mjs`. The runner is a detached process separate from desktop audio. Shared SQLite leases limit active research turns to three slots across runners using the same research root.
+Avalon starts one isolated GPT Researcher process per investigation. The same runner serves immediate and scheduled research. Hermes receives requests from chat and dispatches native schedules. The research process sends model requests directly to the selected Evren or OpenCode endpoint.
 
-The workflow is:
+Normal research uses the standard GPT Researcher report flow. Deep research offers breadth 3–5 and depth 1–3. The task card displays elapsed time and reports a switch to DuckDuckGo when Tavily is unavailable because its key is missing or its quota is exhausted. Individual network calls have bounded waits and retries.
 
-1. Validate the topic, output path, language, route, preferred sites, and upper time limit.
-2. Create a plan for deep mode, with up to three independent questions.
-3. Search and retrieve original source pages. Browser tools can assist when extraction is insufficient.
-4. Seek corroboration, counter-evidence, and unresolved questions in additional deep-mode passes.
-5. Match evidence quotations against retrieved source text.
-6. Reserve the final 10% of the time budget for synthesis and save the report and evidence.
-
-The UI offers 15/30/60/120-minute limits; the service validates 1–120 minutes. Thirty minutes is the default. The limit is a maximum, not a minimum running time. Deep completion requires sufficient source coverage, including at least three retrieved pages from two independent sites, along with the remaining completion checks.
-
-Search snippets, login pages, access-denied responses, and a model's unsupported claim to have read a source do not count as successful retrieval. Exact quotation matching checks provenance within retrieved text; it does not independently establish semantic or real-world truth. Important inaccessible sources and unresolved questions remain visible in the result.
-
-The runner exposes planning, collection, verification, and reporting phases. `completed`, `partial`, `failed`, `cancelled`, `interrupted`, and `needs_access` are distinct outcomes. Interrupted work preserves available output instead of being silently restarted or labelled complete.
-
-Default research output is under the operating system's Desktop directory at `Avalon/Araştırmalar`, with a separate folder per run:
+Each run has its own output folder, under `Avalon/Araştırmalar` on the Desktop by default:
 
 ```text
-plan.json       Questions and research criteria
-findings.json   Worker findings and unresolved items
+findings.json   Research notes captured from completed branches
 sources.json    Retrieved source records and text
-evidence.json   Claims, quotations, URLs, and match status
-report.md       Readable report with limitations and sources
-summary.json    Run metadata and final state
+evidence.json   Available notes and their source links
+report.md       GPT Researcher Markdown or a summary of available material
+summary.json    Scope, elapsed time, search counts and final state
 ```
 
-Research workers use a checked tool inventory and instructions to stay within the assigned output directory. The directory instruction should not be mistaken for an operating-system container that prevents every possible out-of-directory access.
+Sources and available report text are saved during execution. Cancellation and interruption preserve the saved material.
 
 ### Scheduled research and reminders
 
@@ -1041,3 +1036,24 @@ An additional model-selection slot is marked by an HTML comment in the technical
 ## License
 
 Avalon is distributed under the [MIT license](LICENSE). The repository and any distributed dependencies must retain their applicable license and copyright notices.
+
+### GPT Researcher research runtime
+
+Follow [step 5](#5-configure-avalon) to install the research runtime. The installer provisions a separate Python 3.12 environment using uv, installs the pinned dependencies and checks that the worker imports successfully. The Windows app uses that environment for both immediate and scheduled research. Existing Evren and OpenCode model credentials are reused.
+
+**OpenCode status:** The most recent live checks still returned HTTP 429. We are investigating and working to resolve OpenCode rate limiting for both Avalon research tasks and regular Hermes API usage. Current live research validation is limited to Evren.
+
+For Tavily Advanced search, get an API key from the [Tavily dashboard](https://app.tavily.com/). Add the following line to `%USERPROFILE%\.iris\.env`. To replace your key, edit the existing line, save the file and restart Avalon.
+
+```dotenv
+TAVILY_API_KEY=your_key_here
+```
+
+Tavily Advanced uses two credits per search query. Tavily's free plan includes 1,000 credits per month, and the same key works after the monthly quota renews. If Tavily reports that the quota is exhausted during a run, the remaining searches switch to DuckDuckGo without restarting the task. If no key is configured, the task starts with DuckDuckGo. Avalon shows the reason in the task card and records it in the run summary. [Tavily credit pricing](https://docs.tavily.com/documentation/api-credits)
+
+In Deep Research mode, you can choose:
+
+- **Breadth (3, 4 or 5)** controls how many different lines of inquiry the engine opens initially. For example, a wider company search can explore more candidates or technical areas.
+- **Depth (1, 2 or 3)** controls how many levels the engine follows each line of inquiry. For example, it can start with a company's product page and then follow up on its technical documentation.
+
+The default is **breadth 3 and depth 2**. Increasing either setting can increase runtime and search usage. Avalon shows elapsed time and saves partial material if you stop the task.

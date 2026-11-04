@@ -12,7 +12,7 @@ export class ResearchService {
     this.schedulerStatus = { available: false, error: "Zamanlayıcı henüz kontrol edilmedi." }; this.refreshing = false;
     this.timer = setInterval(() => this.poll(), 1000); this.timer.unref();
   }
-  defaults() { return { outputDirectory: this.outputRoot, minutes: 30 }; }
+  defaults() { return { outputDirectory: this.outputRoot }; }
   async formDefaults() { return { ...this.defaults(), route: validateBrainSelection(await this.getRoute()) }; }
   async specification(input) {
     const route = validateBrainSelection(input?.route === undefined ? await this.getRoute() : input.route);

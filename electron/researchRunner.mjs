@@ -5,7 +5,7 @@ import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { loadEnvFiles } from "./configStore.mjs";
 import { ResearchStore, readJson, writeJson, processAlive, RESEARCH_TERMINAL } from "./researchStore.mjs";
-import { ResearchEngine } from "./researchEngine.mjs";
+import { runGPTResearch } from "./gptResearch.mjs";
 import { validateBrainSelection } from "./brainModels.mjs";
 
 export function claimSchedule(store, schedule, occurrence) {
@@ -25,7 +25,7 @@ export function claimSchedule(store, schedule, occurrence) {
   return { release };
 }
 
-export async function runEntry(args = process.argv.slice(2), { createBackend } = {}) {
+export async function runEntry(args = process.argv.slice(2), { spawnWorker, resolveModel } = {}) {
   const scheduled = args[0] === "--schedule";
   if (!scheduled && args[0] !== "--run") throw new Error("Expected --run or --schedule");
   const stateFile = path.resolve(args[1] || "");
@@ -53,11 +53,11 @@ export async function runEntry(args = process.argv.slice(2), { createBackend } =
   } else if (RESEARCH_TERMINAL.has(state.status) || (state.pid && processAlive(state.pid))) return { skipped: true, reason: "already_started" };
   try {
     state.spec = { ...state.spec, route: validateBrainSelection(state.spec.route) };
-    const engine = new ResearchEngine({ store, state, createBackend });
-    const signal = () => { engine.cancelled = true; void engine.stopActive(); };
-    process.once("SIGTERM", signal); process.once("SIGINT", signal);
-    try { return await engine.run(); }
-    finally { process.off("SIGTERM", signal); process.off("SIGINT", signal); }
+    const controller = new AbortController();
+    const stop = () => controller.abort();
+    process.once("SIGTERM", stop); process.once("SIGINT", stop);
+    try { return await runGPTResearch({ store, state, writeJson, readJson, signal: controller.signal, spawnWorker, resolveModel }); }
+    finally { process.off("SIGTERM", stop); process.off("SIGINT", stop); }
   } catch (error) {
     store.save({ ...state, status: "failed", finishedAt: Date.now(), error: String(error.message).slice(0, 1000) });
     throw error;

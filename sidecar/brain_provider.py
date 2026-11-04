@@ -69,7 +69,10 @@ def main(payload):
     action = payload.get("action", "info")
     if action == "info":
         # The caller is Electron main, never the renderer.
-        return {"configured": bool(key), "key": key, "baseUrl": ENDPOINTS[provider]}
+        result = {"configured": bool(key), "key": key, "baseUrl": ENDPOINTS[provider]}
+        if payload.get("includeResearchSearch") is True:
+            result["tavilyKey"] = env.get("TAVILY_API_KEY", "")
+        return result
     if not key:
         return {"ok": False, "error": "Bu sağlayıcı için API anahtarı kaydedilmemiş.", "kind": "credentials"}
     if action == "prepare":

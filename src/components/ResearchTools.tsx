@@ -12,7 +12,9 @@ function ResearchForm({ scheduled, job, onClose, onSaved }: { scheduled: boolean
   const [topic, setTopic] = useState(job?.spec.topic || "");
   const [purpose, setPurpose] = useState(job?.spec.purpose || "");
   const [sites, setSites] = useState(job?.spec.sites.join("\n") || "");
-  const [minutes, setMinutes] = useState(job?.spec.minutes || 30);
+  const legacyMinutes = job?.spec.minutes || 30;
+  const [breadth, setBreadth] = useState(job?.spec.breadth ?? (legacyMinutes > 60 ? 5 : legacyMinutes > 30 ? 4 : 3));
+  const [depth, setDepth] = useState(job?.spec.depth ?? 2);
   const [mode, setMode] = useState<"normal" | "deep">(job?.spec.mode || "deep");
   const [directory, setDirectory] = useState(job?.spec.outputDirectory || "");
   const [route, setRoute] = useState<BrainSelection | null>(job?.spec.route || null);
@@ -59,7 +61,7 @@ function ResearchForm({ scheduled, job, onClose, onSaved }: { scheduled: boolean
   async function submit() {
     if (!route || busy || loadingDefaults) return;
     setBusy(true); setError("");
-    const input: ResearchInput = { topic, purpose, sites: sites.split(/[\n,]/).map((s) => s.trim()).filter(Boolean), minutes, mode, outputDirectory: directory, route: { ...route }, schedule: scheduled ? schedule : null };
+    const input: ResearchInput = { topic, purpose, sites: sites.split(/[\n,]/).map((s) => s.trim()).filter(Boolean), ...(mode === "deep" ? { breadth, depth } : {}), mode, outputDirectory: directory, route: { ...route }, schedule: scheduled ? schedule : null };
     try {
       if (job) await window.iris.updateResearchSchedule(job.id, input);
       else await window.iris.proposeResearch(input);
@@ -76,7 +78,11 @@ function ResearchForm({ scheduled, job, onClose, onSaved }: { scheduled: boolean
       <label>Tercih edilen siteler <small>(isteğe bağlı, her satıra bir kaynak)</small><textarea value={sites} onChange={(event) => setSites(event.target.value)} placeholder="Şirket kariyer sayfaları, ilan siteleri…" /></label>
       <div className="research-fields">
         {scheduled && <label>Araştırma türü<select value={mode} onChange={(event) => setMode(event.target.value as "normal" | "deep")}><option value="deep">Derin araştırma</option><option value="normal">Normal araştırma</option></select></label>}
-        <label>Üst süre<select value={minutes} onChange={(event) => setMinutes(Number(event.target.value))}>{[15, 30, 60, 120].map((value) => <option value={value} key={value}>{value} dakika</option>)}</select></label>
+        {mode === "deep" && <>
+          <label>Genişlik<select value={breadth} onChange={(event) => setBreadth(Number(event.target.value))}>{[3, 4, 5].map((value) => <option key={value}>{value}</option>)}</select></label>
+          <label>Derinlik<select value={depth} onChange={(event) => setDepth(Number(event.target.value))}>{[1, 2, 3].map((value) => <option key={value}>{value}</option>)}</select></label>
+          <small>Genişlik araştırma kolu, derinlik takip seviyesi sayısını artırır. Daha büyük kapsam daha uzun sürebilir ve daha fazla Tavily kredisi kullanabilir.</small>
+        </>}
       </div>
       <fieldset><legend>Bu araştırmanın modeli</legend>
         <div className="research-fields">

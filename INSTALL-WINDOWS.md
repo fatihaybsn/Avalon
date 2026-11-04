@@ -154,3 +154,18 @@ powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .\tests\
 ```
 
 Actual test results and the tested scope are recorded in [validation/RESULTS.md](validation/RESULTS.md).
+
+### GPT Researcher research runtime
+
+After Hermes setup, set `HERMES_HOME` to the installation path and run the research installer from the Avalon checkout:
+
+```powershell
+$env:HERMES_HOME = Join-Path $env:LOCALAPPDATA 'Avalon\Hermes'
+npm.cmd run setup:research
+```
+
+For a custom installation, use the same absolute path as `-HermesHome`. The installer prepares a separate Python 3.12 environment and checks that GPT Researcher loads. Both immediate and scheduled research reuse the existing Evren or OpenCode model credentials.
+
+For Tavily Advanced search, obtain a key from [Tavily](https://app.tavily.com/) and set `TAVILY_API_KEY` in `%USERPROFILE%\.iris\.env`. Restart Avalon after changing the key. Advanced search uses two credits per query. Tavily's free plan includes 1,000 credits per month. You can keep the same key when the monthly quota renews. If the key is absent or its usage quota is exhausted, the task uses DuckDuckGo and shows the reason in the task card. See [Tavily credit pricing](https://docs.tavily.com/documentation/api-credits).
+
+Deep research defaults to breadth 3 and depth 2. Increasing either can increase runtime and search usage. Avalon shows elapsed time and saves partial material if you stop the task.

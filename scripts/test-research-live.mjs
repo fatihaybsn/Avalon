@@ -29,7 +29,7 @@ try {
   const spec = await service.specification({
     topic: durable ? "Python, Node.js ve TypeScript nedir? Her biri için resmî sitesinden tek bir kısa tanım bul, sayfayı gerçekten oku ve tanımı birebir alıntıyla destekle. Üç tanım yeterli; sürüm, tarihçe, paket veya kurulum araştırma." : scheduled ? "Python resmî indirme sayfasından güncel kararlı sürümü bul ve kaynakla doğrula." : "Python, Node.js ve TypeScript'in resmî sitelerindeki kararlı sürüm bilgilerini kısa ve kaynaklı biçimde karşılaştır. Üç projenin resmî sayfalarını gerçekten aç; sürüm ve yayın tarihini doğrulayabildiğin ölçüde yaz.",
     purpose: "Avalon gerçek araştırma hattı kontrolü. Yalnız resmî kaynaklar; kod çalıştırma veya kurulum yapma.",
-    sites: scheduled && !durable ? ["python.org"] : ["python.org", "nodejs.org", "typescriptlang.org"], minutes: durable ? 30 : scheduled ? 2 : 3, mode: durable || !scheduled ? "deep" : "normal",
+    sites: scheduled && !durable ? ["python.org"] : ["python.org", "nodejs.org", "typescriptlang.org"], breadth: 3, depth: 1, mode: durable || !scheduled ? "deep" : "normal",
     outputDirectory: path.join(temp, "output"), ...(scheduled ? { schedule: { kind: "once", date: new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Istanbul", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(Date.now() + 86400000)), time: "23:59", day: 6, timezone: "Europe/Istanbul" } } : {}),
   });
   if (scheduled) {
@@ -39,13 +39,13 @@ try {
     service.close(); // No Avalon service or UI remains to do the work.
     console.log("Native scheduler dispatched; Avalon service stopped. Waiting for the independent runner.");
   } else { run = await service.start(spec); service.close(); console.log("Detached deep research launched; observing durable run state."); }
-  const end = Date.now() + spec.minutes * 60000 + 60000; let last, acceptedCount = 0;
+  const end = Date.now() + (durable ? 30 : 5) * 60000; let last, acceptedCount = 0;
   while (Date.now() < end) {
     const state = scheduled ? service.store.list().find((state) => state.scheduleId === schedule.id) : service.store.get(run.id);
     if (state) {
       run = state;
       const checkpoint = readJson(service.store.file(state.id, "checkpoint.json"));
-      const count = checkpoint?.claims?.length ?? acceptedCount;
+      const count = checkpoint?.findings?.length ?? acceptedCount;
       assert.ok(count >= acceptedCount, "Accepted findings cannot disappear between checkpoints"); acceptedCount = count;
       const progress = `${state.phase}:${state.sourceCount}:${count}:${state.status}`;
       if (progress !== last) { last = progress; console.log(JSON.stringify({ phase: state.phase, sources: state.sourceCount, findings: count, status: state.status })); }
@@ -56,18 +56,14 @@ try {
   assert.ok(run && RESEARCH_TERMINAL.has(run.status), "The independent runner must reach a terminal state");
   assert.ok(run.sourceCount > 0, "At least one real page must be extracted");
   assert.ok(["completed", "partial"].includes(run.status), `Unexpected research state: ${run.status}: ${run.error}`);
-  const evidence = readJson(path.join(run.outputPath, "evidence.json"));
-  assert.ok(evidence.some((claim) => claim.verified), "At least one claim must match actual retrieved text");
+  const checkpoint = readJson(service.store.file(run.id, "checkpoint.json"));
+  const sources = readJson(path.join(run.outputPath, "sources.json"));
+  assert.equal(checkpoint.engine, "gpt-researcher");
+  assert.ok(sources.some((source) => source.url && source.text), "At least one actual retrieved source must be archived");
+  assert.equal(sources.length, checkpoint.sources.length);
   assert.ok(fs.existsSync(path.join(run.outputPath, "report.md")));
-  if (durable) {
-    const checkpoint = readJson(service.store.file(run.id, "checkpoint.json"));
-    assert.equal(evidence.length, checkpoint.claims.length);
-    const report = fs.readFileSync(path.join(run.outputPath, "report.md"), "utf8");
-    for (const finding of evidence) assert.ok(report.includes(finding.id), "Every accepted finding must appear in the report");
-    assert.ok(evidence.some((finding) => finding.verified && finding.reviewStatus === "supported"), "Content review must support at least one finding");
-    assert.ok(checkpoint.criteria.every((c) => c.resolved) || run.status === "partial");
-  }
-  console.log(JSON.stringify({ ok: true, scheduled, status: run.status, sourceCount: run.sourceCount, verifiedClaims: evidence.filter((claim) => claim.verified).length, supportedClaims: evidence.filter((claim) => claim.verified && claim.reviewStatus === "supported").length, outputPath: run.outputPath }));
+  console.log(JSON.stringify({ ok: true, scheduled, status: run.status, sourceCount: run.sourceCount,
+    searchCounts: run.searchCounts, outputPath: run.outputPath }));
 } finally {
   service.close();
   if (run && !RESEARCH_TERMINAL.has(run.status)) service.stop(run.id);

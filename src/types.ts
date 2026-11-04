@@ -40,6 +40,8 @@ export type TaskCard = {
   phase?: string;
   startedAt?: number;
   deadline?: number;
+  finishedAt?: number;
+  searchNotice?: string;
   sourceCount?: number;
   newCount?: number;
   changedCount?: number;

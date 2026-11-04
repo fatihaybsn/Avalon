@@ -24,13 +24,14 @@ function ResearchMeta({ task }: { task: TaskCard }) {
   const [now, setNow] = useState(Date.now()); const [error, setError] = useState("");
   const active = !TERMINAL.has(task.status);
   useEffect(() => { if (!active) return; const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer); }, [active]);
-  const elapsed = Math.max(0, Math.round(((active ? now : task.updatedAt) - (task.startedAt || task.updatedAt)) / 60000));
+  const elapsed = Math.max(0, Math.round(((active ? now : (task.finishedAt || task.updatedAt)) - (task.startedAt || task.updatedAt)) / 60000));
   const remaining = Math.max(0, Math.ceil(((task.deadline || now) - now) / 60000));
   const phases: Record<string, string> = { planning: "Planlama", collecting: "Kaynak toplama", verifying: "Doğrulama", reporting: "Raporlama", done: "Sonuç kaydedildi" };
   return <div className="research-meta" onClick={(event) => event.stopPropagation()}>
     <strong>{task.kind === "deep_research" ? "Derin araştırma" : "Araştırma"} · {phases[task.phase || ""] || task.phase}</strong>
-    <span>{task.sourceCount || 0} okunmuş kaynak · {elapsed} dk geçti{active ? ` · en fazla ${remaining} dk kaldı` : ""}</span>
+    <span>{task.sourceCount || 0} okunmuş kaynak · {elapsed} dk geçti{active && task.deadline ? ` · en fazla ${remaining} dk kaldı` : ""}</span>
     <span>{task.lastActivity}</span>
+    {task.searchNotice && task.searchNotice !== task.lastActivity && <span>{task.searchNotice}</span>}
     <div className="research-actions">
       {active && <button onClick={() => void window.iris.stopTask(task.id).catch((error) => setError(String(error)))}>Araştırmayı durdur</button>}
       {task.outputPath && <button onClick={() => void window.iris.openResearchOutput?.(task.id).catch((error) => setError(String(error)))}>Sonuç klasörünü aç</button>}

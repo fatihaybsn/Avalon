@@ -188,7 +188,12 @@ function getResearch() {
   const startedAt = Date.now();
   researchService = new ResearchService({ root: path.join(configDir, "research"),
     outputRoot: process.env.IRIS_TEST_HOOKS === "1" ? path.join(configDir, "research-output") : path.join(app.getPath("desktop"), "Avalon", "Araştırmalar"),
-    repoRoot, scheduler, configPath: userConfigPath(), getRoute: () => brainModels.route(), getLanguage: conversationLanguage, prepareRoute: (route) => brainModels.prepare(route), sessionId: hermesSessionId, emit: emitEvent,
+    repoRoot, scheduler, configPath: userConfigPath(), getRoute: () => brainModels.route(), getLanguage: conversationLanguage,
+    prepareRoute: async (route) => {
+      const info = await brainModels.info(route.provider);
+      if (!info.configured) throw new Error(info.error || "Seçili araştırma sağlayıcısının API anahtarı bulunamadı.");
+    },
+    sessionId: hermesSessionId, emit: emitEvent,
     notify: (state) => {
       emitEvent({ type: "research_notice", run_id: state.id, text: `${state.task}: ${state.status === "completed" ? "tamamlandı" : state.status === "partial" ? "kısmi sonuç" : "kontrol gerekiyor"}. Yeni: ${state.newCount || 0}, güncellenen: ${state.changedCount || 0}.` });
       // Old results hydrate quietly. A background runner never opens the mic.
@@ -202,12 +207,12 @@ function getResearch() {
   return researchService;
 }
 function researchBrief(spec) {
-  return `${spec.mode === "deep" ? "Derin araştırma" : "Araştırma"}: ${spec.topic}\nAmaç: ${spec.purpose || "Belirtilmedi"}\nKaynaklar: ${spec.sites.join(", ") || "İlgili güvenilir kaynaklar"}\nModel: ${brainSelectionLabel(spec.route)}\nÜst süre: ${spec.minutes} dakika\nÇıktı: ${spec.outputDirectory}${spec.schedule ? `\nZamanlama: ${scheduleLabel(spec.schedule)}` : ""}`;
+  return `${spec.mode === "deep" ? "Derin araştırma" : "Araştırma"}: ${spec.topic}\nAmaç: ${spec.purpose || "Belirtilmedi"}\nKaynaklar: ${spec.sites.join(", ") || "İlgili güvenilir kaynaklar"}\nModel: ${brainSelectionLabel(spec.route)}${spec.mode === "deep" ? `\nGenişlik: ${spec.breadth} · Derinlik: ${spec.depth}` : ""}\nÇıktı: ${spec.outputDirectory}${spec.schedule ? `\nZamanlama: ${scheduleLabel(spec.schedule)}` : ""}`;
 }
 function stageResearch(spec) {
   const topic = spec.topic.length > 240 ? `${spec.topic.slice(0, 237)}…` : spec.topic;
   const result = gatePropose(researchBrief(spec), "normal", { sessionId: spec.sessionId, summary: spec.topic,
-    readback: spec.language === "en" ? `I'll research ${topic} for up to ${spec.minutes} minutes${spec.schedule ? ` on this schedule: ${scheduleLabel(spec.schedule)}` : ""} and save the report in the selected folder. Shall I start?` : `${spec.schedule ? `${scheduleLabel(spec.schedule)} çalışacak şekilde` : ""} ${topic} konusunu en fazla ${spec.minutes} dakika ${spec.mode === "deep" ? "derinlemesine " : ""}araştırıp sonuçları belirtilen klasöre kaydedeceğim. Başlatmamı onaylıyor musun?`.trim(), researchSpec: spec });
+    readback: spec.language === "en" ? `I'll research ${topic}${spec.schedule ? ` on this schedule: ${scheduleLabel(spec.schedule)}` : ""} and save the report in the selected folder. Shall I start?` : `${spec.schedule ? `${scheduleLabel(spec.schedule)} çalışacak şekilde` : ""} ${topic} konusunu ${spec.mode === "deep" ? "derinlemesine " : ""}araştırıp sonuçları belirtilen klasöre kaydedeceğim. Başlatmamı onaylıyor musun?`.trim(), researchSpec: spec });
   if (result.ok) emitEvent({ type: "brain_proposal", proposal_id: result.proposal.id, task: result.proposal.task, session_id: spec.sessionId });
   return result;
 }

@@ -85,7 +85,10 @@ try {
     await page.screenshot({ path: path.join(temp, "research-model-form.png") });
     await page.getByRole("button", { name: "Öneriyi göster", exact: true }).click();
     assert.equal(await page.evaluate(() => window.__researchUi.proposals[0].mode), "deep");
-    assert.equal(await page.evaluate(() => window.__researchUi.proposals[0].minutes), 30);
+    assert.deepEqual(await page.evaluate(() => {
+      const { breadth, depth, minutes } = window.__researchUi.proposals[0];
+      return { breadth, depth, hasMinutes: minutes !== undefined };
+    }), { breadth: 3, depth: 2, hasMinutes: false });
     assert.deepEqual(await page.evaluate(() => window.__researchUi.proposals[0].route), { provider: "opencode", modelId: "beam-free", reasoning: "high" });
     await page.getByRole("tab", { name: "Planlama", exact: true }).click();
     await page.getByText("İlan takibi", { exact: true }).waitFor();

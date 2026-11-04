@@ -50,6 +50,7 @@
     "package:win": "npm run build && electron-builder --win --dir",
     "dist:win": "npm run build && electron-builder --win",
     "electron": "node scripts/run-electron.mjs",
+    "setup:research": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup-research.ps1",
     "sidecar": "node scripts/python-command.mjs sidecar",
     "check:python": "node scripts/python-command.mjs check",
     "brain:index": "node electron/brainIndex.mjs",
@@ -73,7 +74,6 @@
     "react-markdown": "^10.1.0",
     "remark-breaks": "^4.0.0",
     "remark-gfm": "^4.0.1",
-    "tldts": "^7.4.19",
     "web-push": "^3.6.7",
     "ws": "^8.21.0"
   },
@@ -98,6 +98,7 @@
     "appId": "app.iris.voice",
     "productName": "Avalon",
     "asarUnpack": [
+      "sidecar/gpt_researcher_worker.py",
       "sidecar/brain_provider.py",
       "sidecar/research_scheduler.py"
     ],
@@ -109,6 +110,7 @@
       "dist/**",
       "dist-mobile/**",
       "electron/**",
+      "sidecar/gpt_researcher_worker.py",
       "sidecar/brain_provider.py",
       "sidecar/research_scheduler.py",
       "build/icon.png",
