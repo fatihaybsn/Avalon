@@ -2,7 +2,7 @@
 
 **A personal AI workspace for conversation, research, and computer tasks, available on the desktop and an Android phone.**
 
-[Download Avalon 1.1.2 for Windows x64](https://github.com/fatihaybsn/Avalon/releases/tag/v1.1.2). First-time installations also require the runtime and account setup described under [Installation](#installation).
+[Download Avalon 1.2.1 for Windows x64](https://github.com/fatihaybsn/Avalon/releases/tag/v1.2.1). See [Install from the Windows ZIP](#install-from-the-windows-zip) for first-time setup and API keys.
 
 Avalon brings a conversational assistant, background workers, connected notes, research reports, reminders, and a planning workspace into one application. A request can begin as a typed message or a voice conversation, become a reviewed task, and continue in the background while the conversation remains available.
 
@@ -126,6 +126,27 @@ The current brain selector supports the explicit Evren/OpenCode list documented 
 Secrets belong in the local settings described below. They must not be committed to the repository or included in screenshots.
 
 ## Installation
+
+### Install from the Windows ZIP
+
+1. Download `Avalon-1.2.1-Windows-x64.zip` from the release and extract the entire archive into a folder you own. Keep `Avalon.exe`, `resources`, and the other extracted files together. This package already contains the built desktop and mobile app.
+2. On a new installation, open PowerShell in the folder containing `Avalon.exe` and run the bundled Hermes setup. Use the same compatible Hermes home when upgrading an existing installation.
+
+   ```powershell
+   powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\setup-hermes.ps1
+   ```
+
+   The default Hermes home is `%LOCALAPPDATA%\Avalon\Hermes`. The script downloads the pinned runtime and creates the local API secret in that home's `.env`. For a custom home, pass `-HermesHome` and use that path in the following steps.
+3. Open `Avalon.exe`. In the setup wizard or **Settings**, enter the [Google AI Studio key](https://aistudio.google.com/apikey) in **Gemini API key** for voice. In the Hermes fields, enter the selected home, the full path to its `avalon-bin\avalon-hermes.exe`, the local URL `http://127.0.0.1:<API_SERVER_PORT>` using the port in the Hermes `.env`, and the generated `API_SERVER_KEY` from that same file. Save the settings and use **Test Gemini** and **Test Hermes** to check the connections.
+4. Open **Settings → Brain**, choose **Evren** or your configured provider, enter that provider's API key, test it, and **Apply** the model. An installation agent can run the setup and check the local paths. Sign in to the provider yourself and enter real keys in the application or pass them through a private setup channel.
+5. To enable research, run the bundled research setup from the extracted folder. Then use **Planlama → Otomasyonlar → Kur** if you want multi-step automations. Node-RED setup uses an existing Node.js 24 with npm or downloads a verified portable copy.
+
+   ```powershell
+   $env:HERMES_HOME = Join-Path $env:LOCALAPPDATA 'Avalon\Hermes'
+   powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\setup-research.ps1
+   ```
+
+For Android access, continue with [Android setup](#android-setup). To upgrade from a ZIP, extract the new version to a separate folder, quit Avalon from the tray, and start the new `Avalon.exe`. Open and save any existing automation schedule from the new version so its background launcher points to the new executable.
 
 ### Supported installation target
 
@@ -470,7 +491,7 @@ Only one device owns the active voice connection. Starting voice on the phone tr
 
 ## Agent-assisted installation
 
-An installation agent should receive the following non-secret setup choices and obtain credentials through an appropriate private channel:
+For the prebuilt executable, follow [Install from the Windows ZIP](#install-from-the-windows-zip). For a source checkout, an installation agent should receive the following non-secret setup choices and obtain credentials through an appropriate private channel:
 
 ```text
 Avalon repository URL or existing project directory:
@@ -721,6 +742,8 @@ Node-RED provides an open-source visual editor for arranging research steps and 
 4. Click **Done** in the node form and **Deploy** in the editor. Back in **Planlama → Otomasyonlar**, each valid published workflow appears as its own card. Use **Zamanla** to save one start schedule for the whole workflow, then **Şimdi çalıştır** to test it immediately. The PC must be awake and the Hermes scheduler running for a timed start, including when Avalon has exited.
 
 **Scope.** Avalon supports linear research workflows. The editor displays Node-RED's **Subflows** section, but Avalon does not support Subflows (reusable groups of nodes) or branching.
+
+**Mobile controls.** In the connected mobile app, open **Görevler → Planlama → Otomasyonlar**. Cards with a saved schedule show the next start, current or last run, step statuses, and available reports. **Zamanlamayı düzenle** changes the day, time, or recurrence. Under **Diğer işlemler**, **Duraklat** pauses future starts and **Devam et** restores them. **Bu turu iptal et** stops the active run after confirmation, preserves saved reports, and keeps the schedule. Create cards, edit flows, and set up Node-RED on the Windows desktop. The PC still hosts and runs the automation.
 
 ### Notes and the knowledge graph
 

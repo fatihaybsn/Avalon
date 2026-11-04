@@ -758,6 +758,12 @@ async function invokeRemote(method, args, device) {
     if (args[0] && typeof args[0] === "object" && JSON.stringify(args[0]).length <= 1024 * 1024) { deviceUiContexts.set(device, args[0]); if (voiceDevice.deviceId === device) irisUiContext = args[0]; }
     return { ok: true };
   }
+  if (method === "updateResearchSchedule" || method === "researchScheduleAction") {
+    const state = getResearch().requireSchedule(String(args[0]));
+    if (state.spec.automationFlowId && (method !== "researchScheduleAction" || !["pause", "resume"].includes(args[1]))) {
+      throw new Error("Bu otomasyon işlemi mobilde kullanılamaz.");
+    }
+  }
   const operation = applicationOperations.get(APPLICATION_METHODS[method]);
   if (!operation) throw new Error("Uygulama işlemi bulunamadı.");
   const result = await operation(...args);
@@ -4740,6 +4746,9 @@ app.whenReady().then(() => {
   trustedHandle("hermes:history", () => fetchHermesHistory());
   trustedHandle("research:defaults", () => getResearch().formDefaults());
   trustedHandle("automation:list", () => getAutomation().snapshot());
+  trustedHandle("automation:mobile-list", () => getAutomation().snapshot(true));
+  trustedHandle("automation:mobile-schedule", (_event, flowId, schedule) => getAutomation().saveSchedule(String(flowId), schedule, true));
+  trustedHandle("automation:cancel-run", (_event, flowId, runId) => getAutomation().cancelRun(String(flowId), String(runId)));
   trustedHandle("automation:install", async () => { await getAutomation().install(); });
   trustedHandle("automation:editor", () => openAutomationEditor());
   trustedHandle("automation:schedule", (_event, flowId, schedule) => getAutomation().saveSchedule(String(flowId), schedule));

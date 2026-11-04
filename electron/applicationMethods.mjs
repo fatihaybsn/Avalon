@@ -11,7 +11,9 @@ export const APPLICATION_METHODS = Object.freeze({
   respondHermesInteraction: "hermes:interaction-response", stopTask: "hermes:stop-task",
   readTaskResult: "hermes:read-result",
   listResearch: "research:list", researchDefaults: "research:defaults", listResearchSchedules: "research:schedules",
+  listAutomations: "automation:mobile-list", saveAutomationSchedule: "automation:mobile-schedule",
+  cancelAutomationRun: "automation:cancel-run",
   loadBrain: "brain:load", readBrainNote: "brain:read", searchBrain: "brain:search", filterBrain: "brain:filter", syncBrainIndex: "brain:sync-index",
   searchMemory: "memory:search", readMemoryNote: "memory:read",
 });
-export const READ_METHODS = new Set(["searchSources", "listReminders", "getAppConfig", "getConfig", "brainCatalog", "brainStatus", "getHermesHistory", "getConversationHistory", "listHermesSessions", "loadBrain", "readBrainNote", "searchBrain", "filterBrain", "searchMemory", "readMemoryNote", "readTaskResult", "remoteStatus", "listResearch", "researchDefaults", "listResearchSchedules"]);
+export const READ_METHODS = new Set(["searchSources", "listReminders", "getAppConfig", "getConfig", "brainCatalog", "brainStatus", "getHermesHistory", "getConversationHistory", "listHermesSessions", "loadBrain", "readBrainNote", "searchBrain", "filterBrain", "searchMemory", "readMemoryNote", "readTaskResult", "remoteStatus", "listResearch", "researchDefaults", "listResearchSchedules", "listAutomations"]);

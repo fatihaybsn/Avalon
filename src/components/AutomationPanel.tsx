@@ -26,14 +26,15 @@ function ScheduleFields({ value, onChange }: { value: ResearchSchedule; onChange
   </div>;
 }
 
-export default function AutomationPanel({ onOpenTask, schedulerAvailable }: {
-  onOpenTask: (task: TaskCard) => void; schedulerAvailable: boolean;
+export default function AutomationPanel({ onOpenTask, schedulerAvailable, mobile = false }: {
+  onOpenTask: (task: TaskCard) => void; schedulerAvailable: boolean; mobile?: boolean;
 }) {
   const [snapshot, setSnapshot] = useState<AutomationSnapshot | null>(null);
   const [draft, setDraft] = useState<{ id: string; schedule: ResearchSchedule } | null>(null);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [confirmRemove, setConfirmRemove] = useState("");
+  const [confirmCancel, setConfirmCancel] = useState("");
   async function refresh() {
     const value = await window.iris.listAutomations?.();
     if (value) setSnapshot(value);
@@ -53,21 +54,21 @@ export default function AutomationPanel({ onOpenTask, schedulerAvailable }: {
   return <section className="planned-research automation-panel" aria-label="Otomasyonlar">
     <div className="automation-toolbar">
       <h3>Otomasyonlar</h3>
-      {snapshot?.installed && <button type="button" className="automation-button" disabled={Boolean(busy)}
+      {!mobile && snapshot?.installed && <button type="button" className="automation-button" disabled={Boolean(busy)}
         onClick={() => void run("editor", () => window.iris.openAutomationEditor?.())}>
         <Workflow size={15} aria-hidden="true" /> Akışı düzenle
       </button>}
     </div>
     {error && <p className="research-error" role="alert">{error}</p>}
     {!snapshot && <p className="research-help">Otomasyonlar yükleniyor…</p>}
-    {snapshot && !snapshot.supported && <p className="research-help">Otomasyon kurulumu Windows x64 gerektirir.</p>}
-    {snapshot?.supported && !snapshot.installed && <>
+    {!mobile && snapshot && !snapshot.supported && <p className="research-help">Otomasyon kurulumu Windows x64 gerektirir.</p>}
+    {!mobile && snapshot?.supported && !snapshot.installed && <>
       <p className="research-help">Node-RED bir kez bu bilgisayara kurulur ve gerektiğinde Avalon tarafından açılır.</p>
       <button type="button" className="automation-button primary" disabled={Boolean(busy)} onClick={() => void run("install", () => window.iris.installAutomation?.())}>{busy === "install" ? "Kuruluyor…" : "Kur"}</button>
     </>}
-    {snapshot?.installed && <>
+    {snapshot && (mobile || snapshot.installed) && <>
       {!schedulerAvailable && <p className="research-help">Zamanlama için Hermes zamanlayıcısı çalışmalıdır.</p>}
-      {!snapshot.flows.length && <p className="research-help">Node-RED’de bir Avalon akışı oluşturup yayımlayın.</p>}
+      {!snapshot.flows.length && <p className="research-help">{mobile ? "Zamanlanmış otomasyon yok. Bilgisayarda zamanladığınız kartlar burada görünür." : "Node-RED’de bir Avalon akışı oluşturup yayımlayın."}</p>}
       {snapshot.flows.map((flow) => {
         const schedule = flow.schedule;
         const last = flow.history[0];
@@ -87,23 +88,29 @@ export default function AutomationPanel({ onOpenTask, schedulerAvailable }: {
               <span className="automation-step-index" aria-hidden="true">{index + 1}</span>
               <span className="automation-step-name">{step.name}</span>
               <span className="automation-status" data-status={step.status}>{statusLabel[step.status] || step.status}</span>
-              {(step.task?.output || (step.task && step.status === "running")) && <div className="automation-step-actions">
+              {(step.task?.output || (!mobile && step.task && step.status === "running")) && <div className="automation-step-actions">
                 {step.task?.output && <button type="button" className="automation-button compact" onClick={() => onOpenTask(step.task!)}><FileText size={14} aria-hidden="true" /> Raporu aç</button>}
-                {step.task && step.status === "running" && <button type="button" className="automation-button compact" disabled={Boolean(busy)} onClick={() => void run("stop", () => window.iris.stopTask(step.task!.id))}>Durdur</button>}
+                {!mobile && step.task && step.status === "running" && <button type="button" className="automation-button compact" disabled={Boolean(busy)} onClick={() => void run("stop", () => window.iris.stopTask(step.task!.id))}>Durdur</button>}
               </div>}
             </li>)}</ol>
           {!editing && <div className="automation-actions">
-            {schedule && <button type="button" className="automation-button primary" disabled={Boolean(busy || flow.error || schedule.paused || last?.status === "running") || !schedulerAvailable}
+            {!mobile && schedule && <button type="button" className="automation-button primary" disabled={Boolean(busy || flow.error || schedule.paused || last?.status === "running") || !schedulerAvailable}
               onClick={() => void run("run", () => window.iris.researchScheduleAction(schedule.id, "run"))}><Play size={14} aria-hidden="true" /> Şimdi çalıştır</button>}
-            <button type="button" className={`automation-button${schedule ? "" : " primary"}`} disabled={Boolean(busy || flow.error) || !schedulerAvailable} onClick={() => setDraft({ id: flow.id, schedule: { ...defaultSchedule(), ...schedule?.spec } })}><CalendarClock size={15} aria-hidden="true" /> {schedule ? "Zamanlamayı düzenle" : "Zamanla"}</button>
+            {(!mobile || schedule) && <button type="button" className={`automation-button${schedule ? "" : " primary"}`} disabled={Boolean(busy || flow.error) || !schedulerAvailable} onClick={() => setDraft({ id: flow.id, schedule: { ...defaultSchedule(), ...schedule?.spec } })}><CalendarClock size={15} aria-hidden="true" /> {schedule ? "Zamanlamayı düzenle" : "Zamanla"}</button>}
             {schedule && <>
               <details className="automation-details"><summary>Diğer işlemler</summary>
                 <div className="automation-actions">
                   <button type="button" className="automation-button" disabled={Boolean(busy) || !schedulerAvailable} onClick={() => void run("pause", () => window.iris.researchScheduleAction(schedule.id, schedule.paused ? "resume" : "pause"))}>{schedule.paused ? "Devam et" : "Duraklat"}</button>
-                  {confirmRemove === flow.id ? <>
+                  {mobile && last?.status === "running" && (confirmCancel === last.id ? <>
+                    <button type="button" className="automation-button danger" disabled={Boolean(busy)} onClick={() => void run("cancel", async () => {
+                      await window.iris.cancelAutomationRun?.(flow.id, last.id); setConfirmCancel("");
+                    })}>Turu iptal etmeyi onayla</button>
+                    <button type="button" className="automation-button" onClick={() => setConfirmCancel("")}>Vazgeç</button>
+                  </> : <button type="button" className="automation-button danger" disabled={Boolean(busy)} onClick={() => setConfirmCancel(last.id)}>Bu turu iptal et</button>)}
+                  {!mobile && (confirmRemove === flow.id ? <>
                     <button type="button" className="automation-button danger" disabled={Boolean(busy) || !schedulerAvailable} onClick={() => void run("remove", async () => { await window.iris.researchScheduleAction(schedule.id, "remove"); setConfirmRemove(""); })}>Kaldırmayı onayla</button>
                     <button type="button" className="automation-button" onClick={() => setConfirmRemove("")}>Vazgeç</button>
-                  </> : <button type="button" className="automation-button" disabled={Boolean(busy) || !schedulerAvailable} onClick={() => setConfirmRemove(flow.id)}>Zamanlamayı kaldır</button>}
+                  </> : <button type="button" className="automation-button" disabled={Boolean(busy) || !schedulerAvailable} onClick={() => setConfirmRemove(flow.id)}>Zamanlamayı kaldır</button>)}
                 </div>
               </details>
             </>}

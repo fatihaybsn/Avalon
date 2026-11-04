@@ -126,7 +126,7 @@ function ResearchForm({ scheduled, job, onClose, onSaved }: { scheduled: boolean
   </div>, document.body);
 }
 
-export default function ResearchTools({ children, onOpenTask, initialPlanning = false }: { children: ReactNode; onOpenTask: (task: TaskCard) => void; initialPlanning?: boolean }) {
+export default function ResearchTools({ children, onOpenTask, initialPlanning = false, mobile = false, showReport = false }: { children: ReactNode; onOpenTask: (task: TaskCard) => void; initialPlanning?: boolean; mobile?: boolean; showReport?: boolean }) {
   const [tab, setTab] = useState<"tasks" | "schedules">(initialPlanning ? "schedules" : "tasks");
   const [reminderForm, setReminderForm] = useState<{ item?: ReminderItem; draft?: Partial<ReminderInput> } | null>(null);
   const [filter, setFilter] = useState("all");
@@ -159,12 +159,13 @@ export default function ResearchTools({ children, onOpenTask, initialPlanning = 
     catch (error) { setError(error instanceof Error ? error.message : String(error)); }
     finally { setBusy(""); }
   }
+  if (showReport) return <div className="research-workspace" data-view="tasks">{children}</div>;
   return <div className="research-workspace" data-view={tab}>
     <div className="research-tabs" role="tablist" aria-label="Görev görünümü">
       <button role="tab" aria-selected={tab === "tasks"} onClick={() => setTab("tasks")}>Çalışmalar</button>
       <button role="tab" aria-selected={tab === "schedules"} onClick={() => setTab("schedules")}>Planlama</button>
     </div>
-    <div className="research-actions">{tab === "tasks" ? <button onClick={() => setForm({ scheduled: false })}>＋ Yeni araştırma</button> : <><select aria-label="Planlama türü" value={filter} onChange={(event) => setFilter(event.target.value)}><option value="all">Tümü</option><option value="reminders">Hatırlatmalar</option><option value="research">Araştırmalar</option>{hasAutomations && <option value="automation">Otomasyonlar</option>}</select><details className="new-menu"><summary>＋ Yeni</summary><div><button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); setReminderForm({}); }}>Hatırlatıcı</button><button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); setForm({ scheduled: true }); }}>Zamanlanmış araştırma</button></div></details></>}</div>
+    <div className="research-actions">{tab === "tasks" ? <button onClick={() => setForm({ scheduled: false })}>＋ Yeni araştırma</button> : <><select aria-label="Planlama türü" value={filter} onChange={(event) => setFilter(event.target.value)}><option value="all">Tümü</option><option value="reminders">Hatırlatmalar</option><option value="research">Araştırmalar</option>{hasAutomations && <option value="automation">Otomasyonlar</option>}</select>{(!mobile || filter !== "automation") && <details className="new-menu"><summary>＋ Yeni</summary><div><button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); setReminderForm({}); }}>Hatırlatıcı</button><button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); setForm({ scheduled: true }); }}>Zamanlanmış araştırma</button></div></details>}</>}</div>
     {notice && <div className="research-notice" role="status">{notice}<button onClick={() => setNotice("")} aria-label="Bildirimi kapat">×</button></div>}
     {tab === "tasks" ? children : <div className="research-schedules" role="tabpanel">
       {(filter === "all" || filter === "reminders") && <RemindersPanel onEdit={(item) => setReminderForm({ item })} focusedId={focusedId} />}
@@ -195,7 +196,7 @@ export default function ResearchTools({ children, onOpenTask, initialPlanning = 
       </article>)}
       {researchJobs.length > limit && <button onClick={() => setLimit((value) => value + 30)}>Daha fazla göster</button>}
       </div>}
-      {hasAutomations && (filter === "all" || filter === "automation") && <AutomationPanel onOpenTask={onOpenTask} schedulerAvailable={snapshot.scheduler.available} />}
+      {hasAutomations && (filter === "automation" || (!mobile && filter === "all")) && <AutomationPanel mobile={mobile} onOpenTask={onOpenTask} schedulerAvailable={snapshot.scheduler.available} />}
     </div>}
     {reminderForm && <ReminderForm {...reminderForm} onClose={() => setReminderForm(null)} />}
     {form && <ResearchForm scheduled={form.scheduled} job={form.job} onClose={() => setForm(null)} onSaved={() => { if (form.job) void refresh(); }} />}

@@ -71,6 +71,35 @@ try {
   await run("partial", true);
   console.log("Node-RED authenticated editor, deployment, same-run report input, partial and duplicate/overlap checks passed.");
 
+  const secondStarted = Promise.withResolvers();
+  let calls = 0;
+  const cancelling = runEntry(["--schedule", store.file(scheduleId), "--occurrence", "cancel-test"], {
+    resolveModel: async () => ({ configured: true, key: "fixture", baseUrl: "https://example.org/v1" }),
+    spawnWorker() {
+      const child = Object.assign(new EventEmitter(), {
+        stdin: new PassThrough(), stdout: new PassThrough(),
+        kill() { child.stdout.end(); queueMicrotask(() => child.emit("close", 1)); },
+      });
+      child.stdin.once("data", () => {
+        if (++calls === 2) return secondStarted.resolve();
+        child.stdout.end(JSON.stringify({ kind: "report", markdown: marker }) + "\n");
+        queueMicrotask(() => child.emit("close", 0));
+      });
+      return child;
+    },
+  });
+  await Promise.race([secondStarted.promise, cancelling.then(() => assert.fail("Run ended before cancellation"))]);
+  automation.research.store = store;
+  automation.research.scheduleSnapshot = () => ({ jobs: [{ id: scheduleId, spec }], scheduler: { available: true } });
+  const [active] = automation.snapshot(true).flows[0].history;
+  assert.equal(active.status, "running");
+  automation.cancelRun(spec.automationFlowId, active.id);
+  const cancelled = await cancelling;
+  assert.equal(cancelled.status, "cancelled");
+  assert.equal(store.get(cancelled.steps[0].researchId).output, marker);
+  assert.equal(cancelled.steps[1].status, "cancelled");
+  assert.ok(automation.snapshot(true).flows[0].schedule);
+
   const careerId = "record-tracking-fixture", careerSchedule = "schedule_cafe";
   const inputs = path.join(directory, "automation", "inputs", careerId);
   fs.mkdirSync(inputs, { recursive: true });
@@ -92,6 +121,7 @@ try {
     opportunities: { documents: ["profile.md"], group: "opportunities", coverage: { group: "companies", refresh: true } },
     strategy: { documents: ["profile.md", "activities.md"], group: "actions" },
   } });
+  assert.deepEqual(automation.snapshot(true).flows.map(({ id }) => id), [spec.automationFlowId]);
   assert.ok(automation.flows().some((flow) => flow.id === careerId && flow.steps.length === 5));
   store.save({ id: careerSchedule, spec: { ...spec, automationFlowId: careerId } });
   const fixtureMarkdown = "# Fixture report\n\n" + "r".repeat(13_000);

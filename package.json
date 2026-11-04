@@ -1,7 +1,7 @@
 {
   "name": "iris-hermes-voice",
   "productName": "Avalon",
-  "version": "1.1.2",
+  "version": "1.2.1",
   "private": true,
   "license": "MIT",
   "description": "A futuristic Gemini Live voice companion that delegates real work to Hermes.",
@@ -141,6 +141,19 @@
       ]
     },
     "win": {
+      "extraFiles": [
+        "README.md",
+        "LICENSE",
+        "compat/hermes/**",
+        "scripts/Avalon.Hermes.Common.psm1",
+        "scripts/hermes-runtime.py",
+        "scripts/setup-hermes.ps1",
+        "scripts/setup-research.ps1",
+        "scripts/start-avalon.ps1",
+        "scripts/verify-hermes.ps1",
+        "sidecar/gpt-researcher.lock",
+        "sidecar/gpt_researcher_worker.py"
+      ],
       "target": [
         "dir"
       ]

@@ -242,6 +242,7 @@ type IrisApi = {
   installAutomation?: () => Promise<void>;
   openAutomationEditor?: () => Promise<void>;
   saveAutomationSchedule?: (id: string, schedule: ResearchSchedule) => Promise<unknown>;
+  cancelAutomationRun?: (flowId: string, runId: string) => Promise<unknown>;
   proposeResearch: (input: ResearchInput) => Promise<{ ok: boolean; proposalId: string }>;
   listResearchSchedules: () => Promise<ResearchScheduleSnapshot>;
   researchScheduleAction: (id: string, action: "pause" | "resume" | "remove" | "run") => Promise<unknown>;

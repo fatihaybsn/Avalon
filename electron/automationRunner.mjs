@@ -46,6 +46,12 @@ export async function runAutomation({ schedule, occurrence, store, runResearch, 
   const run = { id, flowId: spec.automationFlowId, startedAt: Date.now(), pid: process.pid, status: "running", steps: [] };
   const save = () => writeJson(file, run);
   const aborted = new AbortController();
+  const checkCancellation = () => {
+    if (fs.existsSync(path.join(directory, "cancel.json"))) {
+      aborted.abort(Object.assign(new Error("Otomasyon turu kullanıcı tarafından iptal edildi."), { code: "CANCELLED" }));
+    }
+  };
+  const cancellation = setInterval(checkCancellation, 250);
   let child, deadline, current;
   const resetDeadline = () => {
     clearTimeout(deadline);
@@ -74,6 +80,8 @@ export async function runAutomation({ schedule, occurrence, store, runResearch, 
     resetDeadline();
     for await (const [message] of on(child, "message", { signal: aborted.signal })) {
       clearTimeout(deadline);
+      checkCancellation();
+      aborted.signal.throwIfAborted();
       if (message.kind === "error") throw new Error(message.error);
       if (message.kind === "finish" && completed.size === steps.length) {
         run.status = "completed";
@@ -91,6 +99,7 @@ export async function runAutomation({ schedule, occurrence, store, runResearch, 
         save();
         const result = await runResearch(research.id, context.reports, aborted.signal);
         current.status = result.status;
+        checkCancellation();
         aborted.signal.throwIfAborted();
         if (result.status !== "completed" || !result.reportReady) {
           if (current.status === "completed") current.status = "partial";
@@ -114,11 +123,15 @@ export async function runAutomation({ schedule, occurrence, store, runResearch, 
   } catch (error) {
     const reason = aborted.signal.reason || error;
     const interrupted = reason.code === "INTERRUPTED";
-    if (current && ["waiting", "running"].includes(current.status)) current.status = interrupted ? "interrupted" : "failed";
-    run.status = interrupted ? "interrupted" : run.steps.some((step) => step.status === "completed") ? "partial" : "failed";
+    const cancelled = reason.code === "CANCELLED";
+    if (current && ["waiting", "running"].includes(current.status)) {
+      current.status = cancelled ? "cancelled" : interrupted ? "interrupted" : "failed";
+    }
+    run.status = cancelled ? "cancelled" : interrupted ? "interrupted" : run.steps.some((step) => step.status === "completed") ? "partial" : "failed";
     run.error = reason.message.slice(0, 1000);
   } finally {
     clearTimeout(deadline);
+    clearInterval(cancellation);
     if (child?.connected) child.disconnect();
     run.finishedAt = Date.now();
     save();

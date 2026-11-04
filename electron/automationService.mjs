@@ -2,7 +2,7 @@ import path from "node:path";
 import { automationRoot, automationInstalled, automationResearchSpec, editorDirectory, getAutomationFlows,
   installAutomation, startAutomationHost } from "./automationRuntime.mjs";
 import { listAutomationRuns } from "./automationRunner.mjs";
-import { researchCard } from "./researchStore.mjs";
+import { researchCard, writeJson } from "./researchStore.mjs";
 
 export class AutomationService {
   constructor(research) {
@@ -48,7 +48,7 @@ export class AutomationService {
 
   flows() { return getAutomationFlows(this.root, this.repoRoot); }
 
-  async saveSchedule(flowId, schedule) {
+  async saveSchedule(flowId, schedule, existingOnly = false) {
     if (!automationInstalled(this.root, this.repoRoot)) throw new Error("Önce Planlama ekranından Node-RED’i kurun.");
     if (this.savingSchedule) throw new Error("Bir zamanlama zaten kaydediliyor.");
     this.savingSchedule = true;
@@ -56,6 +56,7 @@ export class AutomationService {
       const flow = this.flows().find((item) => item.id === flowId);
       if (!flow || flow.error) throw new Error(flow?.error || "Akış bulunamadı.");
       const existing = this.research.store.list("schedule_").find((item) => !item.removed && item.spec?.automationFlowId === flowId);
+      if (existingOnly && !existing?.nativeId) throw new Error("Mobilde yalnızca mevcut zamanlamalar düzenlenebilir.");
       const spec = await this.research.specification({
         ...existing?.spec, topic: flow.name, mode: "normal", schedule,
       });
@@ -65,7 +66,17 @@ export class AutomationService {
     } finally { this.savingSchedule = false; }
   }
 
-  snapshot() {
+  cancelRun(flowId, runId) {
+    if (!this.research.scheduleSnapshot().jobs.some((job) => job.spec.automationFlowId === flowId) ||
+        !/^[a-f0-9]{64}$/.test(runId) ||
+        !listAutomationRuns(this.root, flowId).some((run) => run.id === runId && run.status === "running")) {
+      throw new Error("İptal edilecek etkin otomasyon turu bulunamadı.");
+    }
+    writeJson(path.join(this.root, "runs", runId, "cancel.json"), { requestedAt: Date.now() });
+    return { ok: true };
+  }
+
+  snapshot(scheduledOnly = false) {
     const installed = automationInstalled(this.root, this.repoRoot);
     const { jobs, scheduler } = this.research.scheduleSnapshot();
     const schedules = jobs.filter((job) => job.spec.automationFlowId);
@@ -75,9 +86,10 @@ export class AutomationService {
       if (!flows.some((flow) => flow.id === id)) flows.push({ id, name: job.name, error: "Kayıtlı akış bulunamadı." });
     }
     return { installed, supported: process.platform === "win32" && process.arch === "x64", scheduler,
-      flows: flows.map(({ id, name, error, steps }) => {
+      flows: flows.filter(({ id }) => !scheduledOnly || schedules.some((job) => job.spec.automationFlowId === id)).map(({ id, name, error, steps }) => {
         const job = schedules.find((item) => item.spec.automationFlowId === id);
-        const history = listAutomationRuns(this.root, id).slice(0, 20).map((run) => ({ ...run, steps: run.steps.map((step) => {
+        const history = listAutomationRuns(this.root, id).slice(0, scheduledOnly ? 3 : 20).map((run) => ({ id: run.id,
+          startedAt: run.startedAt, status: run.status, error: run.error, steps: run.steps.map((step) => {
           const state = step.researchId && this.research.store.get(step.researchId);
           return { ...step, task: state ? researchCard(state) : undefined };
         }) }));
