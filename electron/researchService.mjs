@@ -4,6 +4,7 @@ import crypto from "node:crypto";
 import { spawn } from "node:child_process";
 import { validateBrainSelection, brainSelectionLabel } from "./brainModels.mjs";
 import { ResearchStore, normalizeResearch, researchCard, readJson, writeJson, RESEARCH_TERMINAL, scheduleLabel } from "./researchStore.mjs";
+import { flowLockDirectory } from "./automationRuntime.mjs";
 
 export class ResearchService {
   constructor({ root, outputRoot, repoRoot, scheduler, getRoute, getLanguage = () => "tr", prepareRoute, sessionId, configPath, emit = () => {}, notify = () => {}, executable = process.execPath, spawnImpl = spawn }) {
@@ -48,7 +49,7 @@ export class ResearchService {
     const id = `schedule_${crypto.randomUUID()}`;
     const state = { id, spec: { ...spec, runtime: this.runtime() }, createdAt: Date.now(), paused: false, name: spec.topic, label: scheduleLabel(spec.schedule) };
     this.store.save(state);
-    const script = this.scheduler.installLauncher(id, this.store.file(id), { executable: this.executable, runner: path.join(this.repoRoot, "electron/researchRunner.mjs"), env: state.spec.runtime.env, logFile: this.store.file(id, "runner.log") });
+    const script = this.installScheduleLauncher(state);
     const result = await this.scheduler.call({ action: "create", name: `Avalon: ${spec.topic.slice(0, 90)}`, schedule: spec.schedule, script });
     if (!result.success || !result.job?.job_id) { this.store.save({ ...state, removed: true, error: result.error || "Zamanlama kaydı doğrulanamadı." }); throw new Error(result.error || "Zamanlama kaydı doğrulanamadı."); }
     Object.assign(state, { nativeId: result.job.job_id, native: result.job, script }); this.store.save(state);
@@ -58,12 +59,21 @@ export class ResearchService {
     const state = this.requireSchedule(id);
     const route = validateBrainSelection(input?.route === undefined ? state.spec.route : input.route);
     const spec = normalizeResearch({ ...input, language: state.spec.language }, { outputRoot: this.outputRoot, sessionId: state.spec.sessionId, route }); if (!spec.schedule) throw new Error("Zamanlama bilgisi gerekli.");
+    if (state.spec.automationFlowId) spec.automationFlowId = state.spec.automationFlowId;
     await this.prepareRoute(spec.route);
     const result = await this.scheduler.call({ action: "update", jobId: state.nativeId, name: `Avalon: ${spec.topic.slice(0, 90)}`, schedule: spec.schedule, script: state.script });
     if (!result.success) throw new Error(result.error || "Zamanlama güncellenemedi.");
-    this.scheduler.installLauncher(id, this.store.file(id), { executable: this.executable, runner: path.join(this.repoRoot, "electron/researchRunner.mjs"), env: this.runtime().env, logFile: this.store.file(id, "runner.log") });
-    this.store.save({ ...state, spec: { ...spec, runtime: this.runtime() }, name: spec.topic, label: scheduleLabel(spec.schedule), native: result.job || state.native });
+    const updated = { ...state, spec: { ...spec, runtime: this.runtime() }, name: spec.topic, label: scheduleLabel(spec.schedule), native: result.job || state.native };
+    this.installScheduleLauncher(updated);
+    this.store.save(updated);
     await this.refreshSchedules(); return { ok: true };
+  }
+  installScheduleLauncher({ id, spec }) {
+    return this.scheduler.installLauncher(id, this.store.file(id), {
+      executable: this.executable, runner: path.join(this.repoRoot, "electron/researchRunner.mjs"),
+      env: spec.runtime.env, logFile: this.store.file(id, "runner.log"),
+      ...(spec.automationFlowId ? { lockFile: path.join(flowLockDirectory(this.root, spec.automationFlowId), "supervisor.lock") } : {}),
+    });
   }
   requireSchedule(id) { const state = this.store.get(id); if (!state?.nativeId || state.removed) throw new Error("Zamanlanmış görev bulunamadı."); return state; }
   async scheduleAction(id, action) {

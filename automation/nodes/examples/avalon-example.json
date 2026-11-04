@@ -1,0 +1,7 @@
+[
+  {"id":"avalon-example","type":"tab","label":"Örnek araştırma akışı"},
+  {"id":"example-start","type":"avalon-start","z":"avalon-example","x":130,"y":140,"wires":[["example-first"]]},
+  {"id":"example-first","type":"avalon-research","z":"avalon-example","name":"Kaynak keşfi","topic":"Node-RED'in temel amacını resmî kaynaktan araştır","purpose":"Bir kaynak adresi ve aracın amacı hakkında kısa bir bulgu kaydet.","sites":"nodered.org","mode":"normal","reportInputs":[],"x":350,"y":140,"wires":[["example-second"]]},
+  {"id":"example-second","type":"avalon-research","z":"avalon-example","name":"Kurulum incelemesi","topic":"Node-RED'in Windows kurulumunu incele","purpose":"Önceki raporda geçen bulguyu belirt, ardından Windows kurulum adımlarını resmî kaynaklardan doğrula.","sites":"nodered.org","mode":"normal","reportInputs":["example-first"],"x":580,"y":140,"wires":[["example-finish"]]},
+  {"id":"example-finish","type":"avalon-finish","z":"avalon-example","x":800,"y":140,"wires":[]}
+]

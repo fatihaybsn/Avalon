@@ -7,9 +7,13 @@ import { loadEnvFiles } from "./configStore.mjs";
 import { ResearchStore, readJson, writeJson, processAlive, RESEARCH_TERMINAL } from "./researchStore.mjs";
 import { runGPTResearch } from "./gptResearch.mjs";
 import { validateBrainSelection } from "./brainModels.mjs";
+import { runAutomation } from "./automationRunner.mjs";
+import { flowLockDirectory } from "./automationRuntime.mjs";
 
 export function claimSchedule(store, schedule, occurrence) {
-  const lockFile = store.file(schedule.id, "active.lock");
+  const flow = schedule.spec?.automationFlowId;
+  const lockFile = flow ? path.join(flowLockDirectory(store.root, flow), "active.lock") : store.file(schedule.id, "active.lock");
+  if (flow) fs.mkdirSync(path.dirname(lockFile), { recursive: true });
   const previous = readJson(lockFile);
   if (previous && processAlive(previous.pid)) return { skipped: true, reason: "already_running" };
   if (previous) fs.rmSync(lockFile, { force: true });
@@ -25,7 +29,7 @@ export function claimSchedule(store, schedule, occurrence) {
   return { release };
 }
 
-export async function runEntry(args = process.argv.slice(2), { spawnWorker, resolveModel } = {}) {
+export async function runEntry(args = process.argv.slice(2), { spawnWorker, resolveModel, reports, parentSignal } = {}) {
   const scheduled = args[0] === "--schedule";
   if (!scheduled && args[0] !== "--run") throw new Error("Expected --run or --schedule");
   const stateFile = path.resolve(args[1] || "");
@@ -49,6 +53,16 @@ export async function runEntry(args = process.argv.slice(2), { spawnWorker, reso
       return claim;
     }
     release = claim.release;
+    if (state.spec.automationFlowId) {
+      try {
+        return await runAutomation({
+          schedule: state, occurrence, store,
+          runResearch: (id, inputs, signal) => runEntry(["--run", store.file(id)], {
+            spawnWorker, resolveModel, reports: inputs, parentSignal: signal,
+          }),
+        });
+      } finally { release(); }
+    }
     state = store.create(state.spec, { scheduleId: state.id, occurrence });
   } else if (RESEARCH_TERMINAL.has(state.status) || (state.pid && processAlive(state.pid))) return { skipped: true, reason: "already_started" };
   try {
@@ -56,7 +70,8 @@ export async function runEntry(args = process.argv.slice(2), { spawnWorker, reso
     const controller = new AbortController();
     const stop = () => controller.abort();
     process.once("SIGTERM", stop); process.once("SIGINT", stop);
-    try { return await runGPTResearch({ store, state, writeJson, readJson, signal: controller.signal, spawnWorker, resolveModel }); }
+    const signal = parentSignal ? AbortSignal.any([controller.signal, parentSignal]) : controller.signal;
+    try { return await runGPTResearch({ store, state, writeJson, readJson, signal, spawnWorker, resolveModel, reports }); }
     finally { process.off("SIGTERM", stop); process.off("SIGINT", stop); }
   } catch (error) {
     store.save({ ...state, status: "failed", finishedAt: Date.now(), error: String(error.message).slice(0, 1000) });

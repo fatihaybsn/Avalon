@@ -1,0 +1,8 @@
+{
+  "name": "avalon-node-red-runtime",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "node-red": "5.0.9"
+  }
+}

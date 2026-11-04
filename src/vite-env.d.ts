@@ -51,10 +51,18 @@ type IrisUiAction = {
 
 type BrainSelection = { provider: "evren" | "opencode"; modelId: string; reasoning?: string };
 type ResearchSchedule = { kind: "daily" | "weekly" | "once"; time: string; day: number; date?: string; timezone: string };
-type ResearchInput = { topic: string; purpose: string; sites: string[]; minutes?: number; breadth?: number; depth?: number; mode: "normal" | "deep"; outputDirectory: string; route?: BrainSelection; schedule?: ResearchSchedule | null };
+type ResearchInput = { topic: string; purpose: string; sites: string[]; minutes?: number; breadth?: number; depth?: number; mode: "normal" | "deep"; outputDirectory: string; route?: BrainSelection; schedule?: ResearchSchedule | null; automationFlowId?: string };
 type ResearchScheduledJob = { id: string; name: string; label: string; modelLabel?: string; paused: boolean; spec: ResearchInput; nextRunAt: string | null;
   lastRun: import("./types").TaskCard | null; history: import("./types").TaskCard[]; error: string; lastSkip?: { reason: string; at: number } };
 type ResearchScheduleSnapshot = { jobs: ResearchScheduledJob[]; scheduler: { available: boolean; error?: string; timezone?: string } };
+type AutomationFlow = {
+  id: string; name: string; error?: string;
+  steps?: { id: string; name: string }[];
+  schedule?: { id: string; spec: ResearchSchedule; paused: boolean; nextRunAt: string | null; error?: string; lastSkip?: ResearchScheduledJob["lastSkip"] };
+  history: { id: string; status: string; startedAt: number; error?: string;
+    steps: { id: string; name: string; status: string; task?: import("./types").TaskCard }[] }[];
+};
+type AutomationSnapshot = { installed: boolean; supported: boolean; flows: AutomationFlow[] };
 type BrainReasoningOption = { value: string; label: string; wire: { thinking?: boolean; reasoning_effort?: string } };
 type BrainModelStatus = {
   selected: BrainSelection; effective: BrainSelection | null; pending: boolean; applying: boolean;
@@ -230,6 +238,10 @@ type BrainSearchResult = {
 type IrisApi = {
   researchDefaults: () => Promise<{ outputDirectory: string; route: BrainSelection }>;
   listResearch: () => Promise<import("./types").TaskCard[]>;
+  listAutomations?: () => Promise<AutomationSnapshot>;
+  installAutomation?: () => Promise<void>;
+  openAutomationEditor?: () => Promise<void>;
+  saveAutomationSchedule?: (id: string, schedule: ResearchSchedule) => Promise<unknown>;
   proposeResearch: (input: ResearchInput) => Promise<{ ok: boolean; proposalId: string }>;
   listResearchSchedules: () => Promise<ResearchScheduleSnapshot>;
   researchScheduleAction: (id: string, action: "pause" | "resume" | "remove" | "run") => Promise<unknown>;

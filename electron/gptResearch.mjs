@@ -34,7 +34,7 @@ export function publishResearch(state, record, writeJson) {
   return output;
 }
 
-export async function runGPTResearch({ state, store, writeJson, readJson, signal, spawnWorker = spawn, resolveModel }) {
+export async function runGPTResearch({ state, store, writeJson, readJson, signal, spawnWorker = spawn, resolveModel, reports }) {
   const root = state.spec.runtime.repoRoot;
   const startedAt = Date.now();
   state.spec = { ...state.spec, ...researchScope(state.spec) };
@@ -109,7 +109,7 @@ export async function runGPTResearch({ state, store, writeJson, readJson, signal
       });
       child.stdin.on("error", () => {});
       child.stdin.end(JSON.stringify({ ...state.spec, runtime: undefined, ...researchScope(state.spec), runId: state.id, parentPid: process.pid, baseUrl: info.baseUrl,
-        apiKey: info.key, tavilyKey, reasoning: reasoningBody(route) }));
+        apiKey: info.key, tavilyKey, reasoning: reasoningBody(route), reports }));
       const exitCode = await finished;
       lines.close();
       if (signal.aborted || fs.existsSync(store.file(state.id, "cancel"))) cancelled = true;

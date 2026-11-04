@@ -44,7 +44,9 @@ if len(sys.argv) > 1 and sys.argv[1] == '--avalon-worker':
     # An OS-owned lock is released even if the supervisor crashes. The native
     # scheduler dispatch can return promptly; its 1h script timeout does not
     # bound a 2h research run. Research state owns the actual completion status.
-    lock = open(str(Path(c['stateFile']).with_name('supervisor.lock')), 'a+b')
+    lock_path = Path(c['lockFile']) if c.get('lockFile') else Path(c['stateFile']).with_name('supervisor.lock')
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    lock = open(str(lock_path), 'a+b')
     try:
         if os.fstat(lock.fileno()).st_size == 0:
             lock.write(b'0'); lock.flush()

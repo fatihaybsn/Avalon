@@ -52,6 +52,8 @@ Research accepts a topic, purpose, preferred sources, output directory, model an
 
 Research can run immediately or be scheduled once, daily, or weekly. The planning workspace shows upcoming runs, previous results, and controls for editing, pausing, resuming, removing, or running a schedule immediately. New and changed source counts help compare repeated investigations.
 
+For a sequence of research tasks that pass reports from one step to the next, see [workflow automation with Node-RED](#workflow-automation-with-node-red).
+
 Personal reminders are managed separately. They do not run a language model every time they fire. A reminder can be completed, edited, paused, or postponed by 10, 30, or 60 minutes.
 
 ### Desktop and Android access
@@ -287,6 +289,8 @@ npm.cmd run setup:research
 ```
 
 For a custom Hermes installation, set `HERMES_HOME` to the absolute path used with `-HermesHome`. The research installer uses that runtime's uv to prepare a separate Python environment and checks that GPT Researcher loads. See [research setup and Tavily options](#gpt-researcher-research-runtime).
+
+For multi-step research, install [the optional Node-RED runtime](#workflow-automation-with-node-red) from Avalon's Planning screen after launch.
 
 From the Avalon project root, start the built application:
 
@@ -674,6 +678,10 @@ summary.json    Scope, elapsed time, search counts and final state
 
 Sources and available report text are saved during execution. Cancellation and interruption preserve the saved material.
 
+#### Why GPT Researcher
+
+The hardest part of Avalon's earlier Hermes-based research pipeline was turning findings from separate steps into a coherent, cited report. GPT Researcher brings query planning, source collection, context selection, and report writing into one research pipeline. An initial trial in Avalon produced a more useful report, which motivated the switch. [GPT Researcher architecture](https://github.com/assafelovic/gpt-researcher#architecture)
+
 ### Scheduled research and reminders
 
 Research scheduling uses Hermes' native cron capability through `sidecar/research_scheduler.py`. Avalon saves its own run definition and installs an Avalon-owned launcher in the selected Hermes home's `scripts` directory. The native job starts that launcher without an extra model deciding how to dispatch it.
@@ -698,6 +706,21 @@ Missed reminder occurrences can be summarized after startup/resume. The applicat
 
 <!-- SCREENSHOT SLOT: Planning, reminders, and scheduled research on desktop. -->
 ![Avalon planning workspace](docs/images/planning-desktop.png)
+
+### Workflow automation with Node-RED
+
+Node-RED provides an open-source visual editor for arranging research steps and an engine for running them in order. Avalon uses it as a separate local runtime so it can offer a visual editor without building one from scratch. Hermes starts the workflow at the scheduled time, GPT Researcher researches and writes each report, and Avalon shows the schedule, step status, and saved reports. [Node-RED editor](https://nodered.org/docs/user-guide/editor/)
+
+**Install on Windows x64.** After [setting up Hermes and GPT Researcher](#5-configure-avalon), open **Planlama → Otomasyonlar** and click **Kur**. The first installation needs internet access. Avalon installs Node-RED 5.0.9 and its locked dependencies in your Windows user profile. The installer uses Node.js 24 with npm from PATH when available, or downloads a portable Windows x64 copy of Node.js 24 and verifies its SHA-256 checksum before extracting it. The Node-RED setup requires no administrator rights, Docker, WSL, or global npm installation. If setup fails, click **Kur** again to retry. Avalon starts Node-RED when you open the editor or run a workflow.
+
+**Create and run a workflow.**
+
+1. Click **Akışı düzenle** to open the local editor in a separate Avalon window. The first installation includes a two-step example. Use **+** to create a separate workflow tab.
+2. Connect **Avalon Başlangıç**, one or more **Avalon Araştırması** nodes, and **Avalon Bitiş** in a single chain. Double-click each research node and enter its required topic in **Konu** and its detailed prompt in **Amaç**.
+3. To pass a report to a later step, open that step and select the earlier research under **Girdi olarak kullanılacak raporlar**. The list shows connected research steps that come before the current one. It is empty for the first step. Avalon passes the contents of selected reports from the same run only after those reports are complete. A failed or incomplete step stops the sequence, and any saved material remains in the archive.
+4. Click **Done** in the node form and **Deploy** in the editor. Back in **Planlama → Otomasyonlar**, each valid published workflow appears as its own card. Use **Zamanla** to save one start schedule for the whole workflow, then **Şimdi çalıştır** to test it immediately. The PC must be awake and the Hermes scheduler running for a timed start, including when Avalon has exited.
+
+**Scope.** Avalon supports linear research workflows. The editor displays Node-RED's **Subflows** section, but Avalon does not support Subflows (reusable groups of nodes) or branching.
 
 ### Notes and the knowledge graph
 

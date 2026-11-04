@@ -1,0 +1,17 @@
+body {
+  --red-ui-header-background: #171b28;
+  --red-ui-header-text-color: #e6ebff;
+  --red-ui-primary-background: #222738;
+  --red-ui-primary-text-color: #e6ebff;
+  --red-ui-secondary-background: #2a3145;
+  --red-ui-secondary-background-hover: #363f57;
+  --red-ui-secondary-text-color: #c8d1ee;
+  --red-ui-view-background: #1b2131;
+  --red-ui-palette-content-background: #1b2131;
+  --red-ui-palette-header-background: #222738;
+  --red-ui-palette-header-color: #e6ebff;
+  --red-ui-form-background: #242b3e;
+  --red-ui-form-input-background: #171b28;
+  --red-ui-form-input-border-color: #53617d;
+  --red-ui-form-text-color: #e6ebff;
+}

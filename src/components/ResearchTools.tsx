@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { TaskCard } from "../types";
+import AutomationPanel from "./AutomationPanel";
 import RemindersPanel, { ReminderForm } from "./RemindersPanel";
 import { brainLabel } from "./BrainModelPanel";
 import { RESEARCH_PURPOSE_MAX_LENGTH } from "../../electron/researchLimits.mjs";
@@ -135,6 +136,8 @@ export default function ResearchTools({ children, onOpenTask, initialPlanning = 
   const [error, setError] = useState(""); const [busy, setBusy] = useState(""); const [limit, setLimit] = useState(30);
   const [notice, setNotice] = useState("");
   const [removeId, setRemoveId] = useState("");
+  const hasAutomations = Boolean(window.iris?.listAutomations);
+  const researchJobs = snapshot.jobs.filter((job) => !job.spec.automationFlowId);
   async function refresh() {
     try { const next = await window.iris.listResearchSchedules(); if (Array.isArray(next?.jobs)) setSnapshot(next); }
     catch (error) { setError(error instanceof Error ? error.message : String(error)); }
@@ -161,15 +164,15 @@ export default function ResearchTools({ children, onOpenTask, initialPlanning = 
       <button role="tab" aria-selected={tab === "tasks"} onClick={() => setTab("tasks")}>Çalışmalar</button>
       <button role="tab" aria-selected={tab === "schedules"} onClick={() => setTab("schedules")}>Planlama</button>
     </div>
-    <div className="research-actions">{tab === "tasks" ? <button onClick={() => setForm({ scheduled: false })}>＋ Yeni araştırma</button> : <><select aria-label="Planlama türü" value={filter} onChange={(event) => setFilter(event.target.value)}><option value="all">Tümü</option><option value="reminders">Hatırlatmalar</option><option value="research">Araştırmalar</option></select><details className="new-menu"><summary>＋ Yeni</summary><div><button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); setReminderForm({}); }}>Hatırlatıcı</button><button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); setForm({ scheduled: true }); }}>Zamanlanmış araştırma</button></div></details></>}</div>
+    <div className="research-actions">{tab === "tasks" ? <button onClick={() => setForm({ scheduled: false })}>＋ Yeni araştırma</button> : <><select aria-label="Planlama türü" value={filter} onChange={(event) => setFilter(event.target.value)}><option value="all">Tümü</option><option value="reminders">Hatırlatmalar</option><option value="research">Araştırmalar</option>{hasAutomations && <option value="automation">Otomasyonlar</option>}</select><details className="new-menu"><summary>＋ Yeni</summary><div><button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); setReminderForm({}); }}>Hatırlatıcı</button><button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); setForm({ scheduled: true }); }}>Zamanlanmış araştırma</button></div></details></>}</div>
     {notice && <div className="research-notice" role="status">{notice}<button onClick={() => setNotice("")} aria-label="Bildirimi kapat">×</button></div>}
     {tab === "tasks" ? children : <div className="research-schedules" role="tabpanel">
-      {filter !== "research" && <RemindersPanel onEdit={(item) => setReminderForm({ item })} focusedId={focusedId} />}
-      {filter !== "reminders" && <div className="planned-research"><h3>Zamanlanmış araştırmalar</h3>
+      {(filter === "all" || filter === "reminders") && <RemindersPanel onEdit={(item) => setReminderForm({ item })} focusedId={focusedId} />}
+      {(filter === "all" || filter === "research") && <div className="planned-research"><h3>Zamanlanmış araştırmalar</h3>
       <p className={snapshot.scheduler.available ? "research-help" : "research-error"}>{snapshot.scheduler.available ? "Hermes zamanlayıcısı bağlı · Europe/Istanbul" : snapshot.scheduler.error || "Zamanlayıcı kontrol ediliyor…"}</p>
       {error && <p className="research-error" role="alert">{error}</p>}
-      {!snapshot.jobs.length && <p className="research-help">Henüz zamanlanmış araştırma yok. “Zamanla” ile oluşturabilirsin.</p>}
-      {snapshot.jobs.slice(0, limit).map((job) => <article className="scheduled-card" key={job.id}>
+      {!researchJobs.length && <p className="research-help">Henüz zamanlanmış araştırma yok. “Zamanla” ile oluşturabilirsin.</p>}
+      {researchJobs.slice(0, limit).map((job) => <article className="scheduled-card" key={job.id}>
         <header><strong>{job.name}</strong><span>{job.paused ? "Duraklatıldı" : "Etkin"}</span></header>
         <p>{job.label}</p><p>Sonraki: {dateLabel(job.nextRunAt)}</p>
         {job.modelLabel && <p>Model: {job.modelLabel}</p>}
@@ -190,8 +193,9 @@ export default function ResearchTools({ children, onOpenTask, initialPlanning = 
         </div>
         <details><summary>Çalışma geçmişi ({job.history.length})</summary>{job.history.map((run) => <button className="scheduled-history" disabled={!run.output} key={run.id} onClick={() => onOpenTask(run)}>{new Date(run.updatedAt).toLocaleString("tr-TR")} · {run.status} · Yeni: {run.newCount || 0}</button>)}</details>
       </article>)}
-      {snapshot.jobs.length > limit && <button onClick={() => setLimit((value) => value + 30)}>Daha fazla göster</button>}
+      {researchJobs.length > limit && <button onClick={() => setLimit((value) => value + 30)}>Daha fazla göster</button>}
       </div>}
+      {hasAutomations && (filter === "all" || filter === "automation") && <AutomationPanel onOpenTask={onOpenTask} schedulerAvailable={snapshot.scheduler.available} />}
     </div>}
     {reminderForm && <ReminderForm {...reminderForm} onClose={() => setReminderForm(null)} />}
     {form && <ResearchForm scheduled={form.scheduled} job={form.job} onClose={() => setForm(null)} onSaved={() => { if (form.job) void refresh(); }} />}

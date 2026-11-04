@@ -171,3 +171,7 @@ For Tavily Advanced search, obtain a key from [Tavily](https://app.tavily.com/) 
 The value in `%USERPROFILE%\.iris\.env` takes precedence over an inherited terminal or Windows value. Set `TAVILY_API_KEY=` there to explicitly use DuckDuckGo.
 
 Deep research defaults to breadth 3 and depth 2. Increasing either can increase runtime and search usage. Avalon shows elapsed time and saves partial material if you stop the task.
+
+### Optional Node-RED workflow automation
+
+On Windows x64, complete the Hermes and GPT Researcher setup above, then open **Planlama → Otomasyonlar → Kur** in Avalon. With internet access, Avalon installs the pinned Node-RED runtime in your Windows user profile and starts it when needed. **Akışı düzenle** opens the visual editor with a two-step example. See the [README workflow guide](README.md#workflow-automation-with-node-red) for requirements, report handoff, scheduling, and supported flow types.

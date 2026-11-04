@@ -65,6 +65,7 @@ import { HermesInteractiveTransport } from "./hermesInteractiveTransport.mjs";
 import { bindConversationWebSearch } from "./webSearchActivity.mjs";
 import { WindowLayout } from "./windowLayout.mjs";
 import { ResearchService } from "./researchService.mjs";
+import { AutomationService } from "./automationService.mjs";
 import { ResearchScheduler } from "./researchScheduler.mjs";
 import { scheduleLabel } from "./researchStore.mjs";
 import { isSleepIntent } from "./sleepIntent.mjs";
@@ -180,6 +181,42 @@ let shuttingDown = false;
 let interactiveHermes = null;
 let conversationHermes = null;
 let researchService = null;
+let automationService = null;
+let automationEditor = null;
+
+function getAutomation() {
+  return automationService ??= new AutomationService(getResearch());
+}
+
+async function openAutomationEditor() {
+  const url = await getAutomation().editor();
+  const origin = new URL(url).origin;
+  if (automationEditor && !automationEditor.isDestroyed()) {
+    if (automationEditor.webContents.getURL().startsWith(`${origin}/`)) {
+      automationEditor.focus();
+      return;
+    }
+    automationEditor.destroy();
+  }
+  const window = new BrowserWindow({
+    width: 1200, height: 800, title: "Avalon | Akış Düzenleyicisi", backgroundColor: "#171b28",
+    webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false },
+  });
+  automationEditor = window;
+  window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  window.webContents.on("will-navigate", (event, target) => {
+    if (new URL(target).origin !== origin) event.preventDefault();
+  });
+  window.on("closed", () => { automationEditor = null; });
+  try { await window.loadURL(url); }
+  catch (error) {
+    // Node-RED saves the editor token and reloads without the query string.
+    if (error.code === "ERR_ABORTED" && !window.isDestroyed()) return;
+    if (!window.isDestroyed()) window.destroy();
+    throw new Error("Node-RED düzenleyicisi açılamadı.");
+  }
+}
+
 function getResearch() {
   if (researchService) return researchService;
   const configDir = path.dirname(userConfigPath());
@@ -4702,6 +4739,10 @@ app.whenReady().then(() => {
   trustedHandle("config:preview-voice", (_event, payload) => previewVoice(payload || {}));
   trustedHandle("hermes:history", () => fetchHermesHistory());
   trustedHandle("research:defaults", () => getResearch().formDefaults());
+  trustedHandle("automation:list", () => getAutomation().snapshot());
+  trustedHandle("automation:install", async () => { await getAutomation().install(); });
+  trustedHandle("automation:editor", () => openAutomationEditor());
+  trustedHandle("automation:schedule", (_event, flowId, schedule) => getAutomation().saveSchedule(String(flowId), schedule));
   trustedHandle("research:list", () => getResearch().list());
   trustedHandle("research:propose", async (_event, input) => {
     const spec = await getResearch().specification(input);
@@ -4908,6 +4949,7 @@ app.whenReady().then(() => {
 
 app.on("will-quit", () => globalShortcut.unregisterAll());
 app.on("will-quit", () => researchService?.close());
+app.on("will-quit", () => automationService?.close());
 app.on("before-quit", () => {
   reminderService?.close();
   remoteState.close(); void remoteServer?.close();

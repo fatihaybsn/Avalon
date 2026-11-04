@@ -36,6 +36,7 @@ async def model(self, messages, stream, websocket=None, **kwargs):
     assert self.llm.extra_body["thinking"] is False
     prompt = str(messages)
     if stream:
+        assert "handoff marker from the earlier report" in prompt
         output = "# Research report\n\nThe test product uses Jetson."
         if websocket:
             await websocket.send_json({"type": "report", "output": output})
@@ -63,7 +64,8 @@ def check_pipeline():
     job = {"route": {"provider": "evren", "modelId": "qwen3.8-flash-next"},
            "baseUrl": "https://example.org/v1", "apiKey": "test", "tavilyKey": "test",
            "reasoning": {"thinking": False}, "language": "tr", "mode": "deep",
-           "breadth": 3, "depth": 1, "topic": "Jetson products", "purpose": "Short report", "sites": []}
+           "breadth": 3, "depth": 1, "topic": "Jetson products", "purpose": "Short report", "sites": [],
+           "reports": [{"name": "Prior research", "markdown": "handoff marker from the earlier report"}]}
     response = SimpleNamespace(status_code=200, ok=True, json=lambda: {
         "results": [{"url": SOURCE, "content": "The product uses Jetson."}]
     })

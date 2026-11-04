@@ -1,0 +1,62 @@
+<script type="text/javascript">
+  (function () {
+    const style = { category: "Avalon", color: "#9caeed", icon: "font-awesome/fa-book" };
+    RED.nodes.registerType("avalon-start", {
+      ...style, defaults: {}, inputs: 0, outputs: 1,
+      label: () => "Avalon Başlangıç"
+    });
+    RED.nodes.registerType("avalon-research", {
+      ...style, inputs: 1, outputs: 1,
+      defaults: {
+        name: { value: "" }, topic: { value: "", required: true }, purpose: { value: "" }, sites: { value: "" },
+        mode: { value: "deep" }, breadth: { value: 3 }, depth: { value: 2 }, reportInputs: { value: [] }
+      },
+      label: function () { return this.name || this.topic || "Avalon Araştırması"; },
+      oneditprepare: function () {
+        const selected = this.reportInputs || [];
+        const list = $("#avalon-report-inputs");
+        const incoming = new Map();
+        RED.nodes.eachLink(({ source, target }) => {
+          if (source.z !== this.z || target.z !== this.z) return;
+          if (!incoming.has(target.id)) incoming.set(target.id, []);
+          incoming.get(target.id).push(source);
+        });
+        const seen = new Set([this.id]);
+        const visit = (id) => {
+          for (const node of incoming.get(id) || []) {
+            if (seen.has(node.id)) continue;
+            seen.add(node.id);
+            visit(node.id);
+            if (node.type !== "avalon-research") continue;
+            const checkbox = $("<input>", { type: "checkbox", value: node.id }).prop("checked", selected.includes(node.id));
+            $("<label>").css({ display: "block", width: "auto" }).append(checkbox, document.createTextNode(" " + (node.name || node.topic || node.id))).appendTo(list);
+          }
+        };
+        visit(this.id);
+        if (!list.children().length) list.text("Önce araştırma adımlarını akışta birbirine bağlayın.");
+      },
+      oneditsave: function () {
+        this.reportInputs = $("#avalon-report-inputs input:checked").map(function () { return this.value; }).get();
+      }
+    });
+    RED.nodes.registerType("avalon-finish", {
+      ...style, defaults: {}, inputs: 1, outputs: 0,
+      label: () => "Avalon Bitiş"
+    });
+  })();
+</script>
+
+<script type="text/html" data-template-name="avalon-research">
+  <div class="form-row"><label for="node-input-name">Ad</label><input id="node-input-name"></div>
+  <div class="form-row"><label for="node-input-topic">Konu</label><input id="node-input-topic" maxlength="12000"></div>
+  <div class="form-row"><label for="node-input-purpose">Amaç</label><textarea id="node-input-purpose" rows="5" maxlength="20000"></textarea></div>
+  <div class="form-row"><label for="node-input-sites">Kaynaklar</label><textarea id="node-input-sites" rows="3" placeholder="Her satıra bir kaynak"></textarea></div>
+  <div class="form-row"><label for="node-input-mode">Tür</label><select id="node-input-mode"><option value="deep">Derin</option><option value="normal">Normal</option></select></div>
+  <div class="form-row"><label for="node-input-breadth">Genişlik</label><select id="node-input-breadth"><option>3</option><option>4</option><option>5</option></select></div>
+  <div class="form-row"><label for="node-input-depth">Derinlik</label><select id="node-input-depth"><option>1</option><option>2</option><option>3</option></select></div>
+  <div class="form-row"><strong>Girdi olarak kullanılacak raporlar</strong><div id="avalon-report-inputs"></div></div>
+</script>
+
+<script type="text/html" data-help-name="avalon-research">
+  <p>Avalon’un GPT Researcher çalıştırıcısını kullanır. Seçilen raporların aynı turun tamamlanmış sonuçları olması gerekir.</p>
+</script>
