@@ -1,0 +1,325 @@
+[
+  {
+    "source": "https://evren-llmapi.ssyz.org.tr/v1/models",
+    "status": 200,
+    "models": [
+      {
+        "id": "dots-ocr",
+        "capabilities": {
+          "tools": false,
+          "thinking": false,
+          "reasoning_effort": false,
+          "reasoning_effort_values": null,
+          "reasoning_effort_aliases": null,
+          "vision": false,
+          "max_images_per_request": null,
+          "response_format": true,
+          "seed": false,
+          "top_k": false,
+          "stop": false
+        },
+        "default_max_output_tokens": null
+      },
+      {
+        "id": "deepseek-ocr-2",
+        "capabilities": {
+          "tools": false,
+          "thinking": false,
+          "reasoning_effort": false,
+          "reasoning_effort_values": null,
+          "reasoning_effort_aliases": null,
+          "vision": false,
+          "max_images_per_request": null,
+          "response_format": true,
+          "seed": false,
+          "top_k": false,
+          "stop": false
+        },
+        "default_max_output_tokens": null
+      },
+      {
+        "id": "gemma-4-31b",
+        "capabilities": {
+          "tools": true,
+          "thinking": true,
+          "reasoning_effort": false,
+          "reasoning_effort_values": null,
+          "reasoning_effort_aliases": null,
+          "vision": true,
+          "max_images_per_request": 8,
+          "response_format": true,
+          "seed": true,
+          "top_k": true,
+          "stop": true
+        },
+        "default_max_output_tokens": 16384
+      },
+      {
+        "id": "qwen3-vl-30b",
+        "capabilities": {
+          "tools": true,
+          "thinking": false,
+          "reasoning_effort": false,
+          "reasoning_effort_values": null,
+          "reasoning_effort_aliases": null,
+          "vision": true,
+          "max_images_per_request": 8,
+          "response_format": true,
+          "seed": true,
+          "top_k": true,
+          "stop": true
+        },
+        "default_max_output_tokens": 16384
+      },
+      {
+        "id": "qwen3-embedding-8b",
+        "capabilities": {
+          "tools": false,
+          "thinking": false,
+          "reasoning_effort": false,
+          "reasoning_effort_values": null,
+          "reasoning_effort_aliases": null,
+          "vision": false,
+          "max_images_per_request": null,
+          "response_format": false,
+          "seed": false,
+          "top_k": false,
+          "stop": false
+        },
+        "default_max_output_tokens": null
+      },
+      {
+        "id": "qwen3-reranker-8b",
+        "capabilities": {
+          "tools": false,
+          "thinking": false,
+          "reasoning_effort": false,
+          "reasoning_effort_values": null,
+          "reasoning_effort_aliases": null,
+          "vision": false,
+          "max_images_per_request": null,
+          "response_format": false,
+          "seed": false,
+          "top_k": false,
+          "stop": false
+        },
+        "default_max_output_tokens": null
+      },
+      {
+        "id": "qwen3-asr-1.7b",
+        "capabilities": {
+          "tools": false,
+          "thinking": false,
+          "reasoning_effort": false,
+          "reasoning_effort_values": null,
+          "reasoning_effort_aliases": null,
+          "vision": false,
+          "max_images_per_request": null,
+          "response_format": false,
+          "seed": false,
+          "top_k": false,
+          "stop": false
+        },
+        "default_max_output_tokens": null
+      },
+      {
+        "id": "qwen3-guard-4b",
+        "capabilities": {
+          "tools": false,
+          "thinking": false,
+          "reasoning_effort": false,
+          "reasoning_effort_values": null,
+          "reasoning_effort_aliases": null,
+          "vision": false,
+          "max_images_per_request": null,
+          "response_format": true,
+          "seed": false,
+          "top_k": false,
+          "stop": true
+        },
+        "default_max_output_tokens": 256
+      },
+      {
+        "id": "auto",
+        "capabilities": {
+          "tools": false,
+          "thinking": false,
+          "reasoning_effort": false,
+          "reasoning_effort_values": null,
+          "reasoning_effort_aliases": null,
+          "vision": false,
+          "max_images_per_request": null,
+          "response_format": false,
+          "seed": false,
+          "top_k": false,
+          "stop": false
+        },
+        "default_max_output_tokens": 16384
+      },
+      {
+        "id": "glm-5.3",
+        "capabilities": {
+          "tools": true,
+          "thinking": true,
+          "reasoning_effort": true,
+          "reasoning_effort_values": null,
+          "reasoning_effort_aliases": {
+            "medium": "high",
+            "minimal": "low"
+          },
+          "vision": false,
+          "max_images_per_request": null,
+          "response_format": true,
+          "seed": true,
+          "top_k": true,
+          "stop": true
+        },
+        "default_max_output_tokens": 16384
+      },
+      {
+        "id": "voxcpm2",
+        "capabilities": {
+          "tools": false,
+          "thinking": false,
+          "reasoning_effort": false,
+          "reasoning_effort_values": null,
+          "reasoning_effort_aliases": null,
+          "vision": false,
+          "max_images_per_request": null,
+          "response_format": false,
+          "seed": false,
+          "top_k": false,
+          "stop": false
+        },
+        "default_max_output_tokens": null
+      },
+      {
+        "id": "qwen3.8-flash-next",
+        "capabilities": {
+          "tools": true,
+          "thinking": true,
+          "reasoning_effort": true,
+          "reasoning_effort_values": null,
+          "reasoning_effort_aliases": {
+            "high": "xhigh"
+          },
+          "vision": true,
+          "max_images_per_request": null,
+          "response_format": true,
+          "seed": true,
+          "top_k": true,
+          "stop": true
+        },
+        "default_max_output_tokens": 16384
+      },
+      {
+        "id": "deepseek-v4.1-flash",
+        "capabilities": {
+          "tools": true,
+          "thinking": true,
+          "reasoning_effort": true,
+          "reasoning_effort_values": null,
+          "reasoning_effort_aliases": {
+            "medium": "high",
+            "minimal": "low"
+          },
+          "vision": true,
+          "max_images_per_request": null,
+          "response_format": true,
+          "seed": true,
+          "top_k": true,
+          "stop": true
+        },
+        "default_max_output_tokens": 65536
+      },
+      {
+        "id": "clef",
+        "capabilities": {
+          "tools": false,
+          "thinking": false,
+          "reasoning_effort": false,
+          "reasoning_effort_values": null,
+          "reasoning_effort_aliases": null,
+          "vision": true,
+          "max_images_per_request": null,
+          "response_format": false,
+          "seed": false,
+          "top_k": false,
+          "stop": false
+        },
+        "default_max_output_tokens": null
+      },
+      {
+        "id": "laya",
+        "capabilities": {
+          "tools": false,
+          "thinking": false,
+          "reasoning_effort": false,
+          "reasoning_effort_values": null,
+          "reasoning_effort_aliases": null,
+          "vision": false,
+          "max_images_per_request": null,
+          "response_format": false,
+          "seed": false,
+          "top_k": false,
+          "stop": false
+        },
+        "default_max_output_tokens": null
+      }
+    ]
+  },
+  {
+    "source": "https://evren-llmapi.ssyz.org.tr/openapi.json",
+    "status": 200,
+    "schema": {
+      "properties": {
+        "model": {
+          "type": "string",
+          "title": "Model",
+          "description": "ID of the model to use. See `GET /v1/models`."
+        },
+        "messages": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "type": "array",
+          "title": "Messages",
+          "description": "Conversation so far, as a list of `{role, content}` objects."
+        },
+        "stream": {
+          "type": "boolean",
+          "title": "Stream",
+          "description": "If true, partial message deltas are sent as server-sent events.",
+          "default": false
+        },
+        "max_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Max Tokens",
+          "description": "Maximum number of tokens to generate."
+        },
+        "evren_tools": {
+          "type": "boolean",
+          "title": "Evren Tools",
+          "description": "EVREN extension (non-standard): opt-in to server-executed live-data tools when `tools` is not supplied.",
+          "default": false
+        }
+      },
+      "additionalProperties": true,
+      "type": "object",
+      "required": [
+        "model",
+        "messages"
+      ],
+      "title": "ChatCompletionRequest",
+      "description": "OpenAI sözleşmesinin GEREKLİ alanları - diğer tüm parametreler\n(reasoning_effort, tools, seed, top_k, stop...) `extra='allow'` ile\nolduğu gibi vLLM'e geçer; yetenek doğrulaması chat_service'te ayrıca yapılır."
+    }
+  }
+]

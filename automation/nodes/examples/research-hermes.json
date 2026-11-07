@@ -1,0 +1,92 @@
+[
+  {
+    "id": "research-hermes",
+    "type": "tab",
+    "label": "Araştırma ve Hermes projesi"
+  },
+  {
+    "id": "mixed-start",
+    "type": "avalon-start",
+    "z": "research-hermes",
+    "x": 120,
+    "y": 140,
+    "wires": [
+      [
+        "mixed-research"
+      ]
+    ]
+  },
+  {
+    "id": "mixed-research",
+    "type": "avalon-research",
+    "z": "research-hermes",
+    "name": "Teknik araştırma",
+    "topic": "Python pathlib modülünün temel kullanımını resmi belgelerden araştır",
+    "purpose": "Kaynaklı ve kısa bir teknik rapor hazırla.",
+    "mode": "normal",
+    "x": 340,
+    "y": 140,
+    "wires": [
+      [
+        "mixed-build"
+      ]
+    ]
+  },
+  {
+    "id": "mixed-build",
+    "type": "avalon-hermes",
+    "z": "research-hermes",
+    "name": "Python projesi",
+    "prompt": "Seçilen araştırma raporunu oku. pathlib örnekleri ve README içeren küçük bir Python projesi oluştur. Mevcut kullanıcı dosyalarını değiştirmeden önce Hermes izinlerine uy.",
+    "reportInputs": [
+      "mixed-research"
+    ],
+    "workingDirectory": "avalon-ornek-proje",
+    "outputType": "files",
+    "requiredFiles": "README.md",
+    "maxAttempts": 3,
+    "timeoutMs": 1800000,
+    "onError": "stop",
+    "requireApproval": true,
+    "x": 560,
+    "y": 140,
+    "wires": [
+      [
+        "mixed-docs"
+      ],
+      []
+    ]
+  },
+  {
+    "id": "mixed-docs",
+    "type": "avalon-hermes",
+    "z": "research-hermes",
+    "name": "HTML dokümantasyonu",
+    "prompt": "Önceki görevin çıktı referanslarını ve proje dosyalarını incele. Projeyi açıklayan, dış kaynak yüklemeyen etkileşimli bir docs.html oluştur.",
+    "reportInputs": [
+      "mixed-build"
+    ],
+    "workingDirectory": "avalon-ornek-proje",
+    "outputType": "files",
+    "requiredFiles": "docs.html",
+    "maxAttempts": 3,
+    "timeoutMs": 1800000,
+    "onError": "stop",
+    "x": 780,
+    "y": 140,
+    "wires": [
+      [
+        "mixed-finish"
+      ],
+      []
+    ]
+  },
+  {
+    "id": "mixed-finish",
+    "type": "avalon-finish",
+    "z": "research-hermes",
+    "x": 1010,
+    "y": 140,
+    "wires": []
+  }
+]

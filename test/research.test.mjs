@@ -27,15 +27,15 @@ test("research input, source URLs and schedule data are bounded and structured",
   assert.equal(canonicalUrl("file:///private"), null);
 });
 
-test("scheduled runs reject overlap and replay of the same occurrence", () => {
+test("scheduled runs reject overlap and replay of the same occurrence", async () => {
   const { store, spec } = setup();
   const schedule = { id: "schedule_abcdef", spec };
   store.save(schedule);
-  const first = claimSchedule(store, schedule, "2026-10-29T09:00:00+03:00"); assert.equal(first.skipped, undefined);
-  assert.equal(claimSchedule(store, schedule, "another").reason, "already_running");
-  first.release();
-  assert.equal(claimSchedule(store, schedule, "2026-10-29T09:00:00+03:00").reason, "duplicate_occurrence");
-  const next = claimSchedule(store, schedule, "2026-10-30T09:00:00+03:00"); assert.equal(next.skipped, undefined); next.release();
+  const first = await claimSchedule(store, schedule, "2026-10-29T09:00:00+03:00"); assert.equal(first.skipped, undefined);
+  assert.equal((await claimSchedule(store, schedule, "another")).reason, "already_running");
+  await first.release();
+  assert.equal((await claimSchedule(store, schedule, "2026-10-29T09:00:00+03:00")).reason, "duplicate_occurrence");
+  const next = await claimSchedule(store, schedule, "2026-10-30T09:00:00+03:00"); assert.equal(next.skipped, undefined); await next.release();
 });
 
 test("orphaned runs are interrupted and research metadata remains bound to approval", () => {

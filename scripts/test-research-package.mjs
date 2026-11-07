@@ -14,7 +14,7 @@ const temp = fs.mkdtempSync(path.join(os.tmpdir(), "avalon-package-check-"));
 const runnerUrl = pathToFileURL(path.join(asar, "electron/researchRunner.mjs")).href;
 const resourceUrl = pathToFileURL(path.join(asar, "electron/resourcePaths.mjs")).href;
 const root = path.resolve(".");
-const files = ["electron/main.mjs", "electron/researchRunner.mjs", "electron/gptResearch.mjs", "electron/researchFiles.mjs", "electron/researchScheduler.mjs", "electron/researchService.mjs", "electron/windowLayout.mjs", "sidecar/research_scheduler.py"];
+const files = ["electron/main.mjs", "electron/researchRunner.mjs", "electron/automationRunner.mjs", "electron/automationService.mjs", "electron/brainModels.mjs", "electron/automationMemory.mjs", "electron/gptResearch.mjs", "electron/researchSearch.mjs", "electron/researchFiles.mjs", "electron/researchScheduler.mjs", "electron/researchLock.mjs", "electron/researchLauncher.mjs", "sidecar/research_lock.py", "electron/researchService.mjs", "electron/windowLayout.mjs", "sidecar/research_scheduler.py", "sidecar/research_search.py", "sidecar/gpt_researcher_worker.py"];
 const hashes = Object.fromEntries(files.map((name) => [name, createHash("sha256").update(fs.readFileSync(path.join(root, name))).digest("hex")]));
 const source = `import fs from 'node:fs';
 import assert from 'node:assert/strict';
@@ -24,7 +24,7 @@ for(const [name,hash] of Object.entries(${JSON.stringify(hashes)})) assert.equal
 const runner=await import(${JSON.stringify(runnerUrl)});
 const {nativeResourcePath}=await import(${JSON.stringify(resourceUrl)});
 assert.equal(typeof runner.runEntry,'function');
-for(const name of ['brain_provider.py','research_scheduler.py','gpt_researcher_worker.py']) assert.ok(fs.statSync(nativeResourcePath(${JSON.stringify(asar)},'sidecar',name)).size>100);
+for(const name of ['brain_provider.py','research_scheduler.py','research_lock.py','gpt_researcher_worker.py','research_search.py']) assert.ok(fs.statSync(nativeResourcePath(${JSON.stringify(asar)},'sidecar',name)).size>100);
 for(const name of ['setup.ps1','package.json','runtime-lock.json','host.cjs','flows.cjs','editor.css','nodes/avalon.js','nodes/avalon.html','nodes/examples/avalon-example.json']) assert.ok(fs.statSync(nativeResourcePath(${JSON.stringify(asar)},'automation',name)).size>0);
 assert.equal(fs.existsSync(nativeResourcePath(${JSON.stringify(asar)},'automation','node_modules')),false);
 console.log(JSON.stringify({ok:true,electron:process.versions.electron,node:process.versions.node,headlessImport:true,unpackedPython:true,automationInstaller:true}));`;

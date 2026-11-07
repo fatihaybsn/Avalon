@@ -4,6 +4,7 @@ import { HermesGatewayRpcError } from "./hermesGatewayClient.mjs";
 import { assertConversationTools, conversationInstructions } from "./voiceRelay.mjs";
 import { brainExecutionKey, brainProviderSlug } from "./brainReasoning.mjs";
 import { conversationLanguage } from "./conversationLanguage.mjs";
+import { abortable } from "./hermesLifecycle.mjs";
 
 const TERMINAL = new Set(["completed", "failed", "cancelled", "canceled", "error"]);
 
@@ -34,6 +35,9 @@ export class HermesInteractiveTransport extends EventEmitter {
     this.liveSessions = new Map();
     this.runs = new Map();
     this.reconnectTimer = null;
+    this.lifetime = new AbortController();
+    this.taskControllers = new WeakMap();
+    this.interactionControllers = new WeakMap();
     client.on("event", (event) => this.#onEvent(event));
     client.on("server-request", (frame) => this.#onServerRequest(frame));
     client.on("disconnected", () => {
@@ -44,8 +48,22 @@ export class HermesInteractiveTransport extends EventEmitter {
   }
 
   async start() {
+    if (this.lifetime.signal.aborted) this.lifetime = new AbortController();
+    const signal = this.lifetime.signal;
     await this.client.start();
+    signal.throwIfAborted();
     return this;
+  }
+
+  #scope(signal) {
+    return signal ? AbortSignal.any([this.lifetime.signal, signal]) : this.lifetime.signal;
+  }
+
+  #assertCurrent(state, item, signal) {
+    signal.throwIfAborted();
+    if (state.current !== item || item.cancelRequested || TERMINAL.has(item.status)) {
+      throw Object.assign(new Error("Hermes görevi artık bu oturumun sahibi değil."), { code: "CANCELLED" });
+    }
   }
 
   #permissionOperation(operation) {
@@ -54,13 +72,15 @@ export class HermesInteractiveTransport extends EventEmitter {
     return pending;
   }
 
-  async #applyPermissionMode(state, mode) {
+  async #applyPermissionMode(state, mode, signal = this.lifetime.signal) {
+    signal.throwIfAborted();
     if (mode == null) return;
     if (!state.liveId) throw new Error("Hermes görev oturumu bağlı değil.");
     const value = mode === "full" ? "1" : "0";
     const result = await this.client.request("config.set", {
       session_id: state.liveId, key: "yolo", value, scope: "session",
-    });
+    }, { signal });
+    signal.throwIfAborted();
     if (result.key !== "yolo" || result.scope !== "session" || String(result.value) !== value) {
       throw new Error("Hermes izin modunu doğrulamadı; ayar uygulanmadı.");
     }
@@ -68,18 +88,22 @@ export class HermesInteractiveTransport extends EventEmitter {
   }
 
   async setPermissionMode(mode) {
+    const signal = this.lifetime.signal;
+    signal.throwIfAborted();
     if (this.conversationOnly || !["standard", "full"].includes(mode)) throw new Error("Geçersiz görev izin modu.");
     return this.#permissionOperation(async () => {
+      signal.throwIfAborted();
       const previous = this.permissionMode || "standard";
       try {
-        for (const state of this.sessions.values()) if (state.liveId) await this.#applyPermissionMode(state, mode);
+        for (const state of this.sessions.values()) if (state.liveId) await this.#applyPermissionMode(state, mode, signal);
       } catch (error) {
         for (const state of this.sessions.values()) {
           if (!state.liveId) continue;
-          await this.#applyPermissionMode(state, previous).catch((rollback) => this.log(`İzin modu geri alınamadı: ${rollback.message}`));
+          await this.#applyPermissionMode(state, previous, signal).catch((rollback) => this.log(`İzin modu geri alınamadı: ${rollback.message}`));
         }
         throw error;
       }
+      signal.throwIfAborted();
       this.permissionMode = mode;
       // A gate already waiting for input needs a reply even after native bypass
       // is enabled. Only release ordinary approvals, never secrets or questions.
@@ -96,9 +120,12 @@ export class HermesInteractiveTransport extends EventEmitter {
     });
   }
 
-  async createSession({ parentSessionId, hidden = false, route } = {}) {
-    route ||= await this.getRoute?.();
-    if (route) await this.prepareRoute?.(route);
+  async createSession({ parentSessionId, hidden = false, route, signal: parentSignal } = {}) {
+    const signal = this.#scope(parentSignal);
+    signal.throwIfAborted();
+    route ||= await abortable(() => this.getRoute?.(), signal);
+    if (route) await abortable(() => this.prepareRoute?.(route), signal);
+    signal.throwIfAborted();
     const result = await this.client.request(
       "session.create",
       {
@@ -110,8 +137,9 @@ export class HermesInteractiveTransport extends EventEmitter {
         ...(hidden ? { hidden: true } : {}),
         ...(this.defaultCwd ? { cwd: this.defaultCwd } : {}),
       },
-      { timeoutMs: 45000 },
+      { timeoutMs: 45000, signal },
     );
+    signal.throwIfAborted();
     const state = this.#registerSession({
       storedId: result.stored_session_id,
       liveId: result.session_id,
@@ -121,12 +149,16 @@ export class HermesInteractiveTransport extends EventEmitter {
     return { id: state.storedId, liveSessionId: state.liveId, info: result.info };
   }
 
-  async switchModel(storedId, route, { preparing = false, confirm } = {}) {
-    const state = await this.ensureSession(storedId, { route });
+  async switchModel(storedId, route, { preparing = false, confirm, signal: parentSignal } = {}) {
+    const signal = this.#scope(parentSignal);
+    const state = await abortable(() => this.ensureSession(storedId, { route }), signal);
+    signal.throwIfAborted();
     if (state.route && brainExecutionKey(state.route) === brainExecutionKey(route)) return { id: state.storedId, deferred: Boolean(state.deferredRoute) };
     if ((state.current || state.queue.length) && !preparing) throw new Error("Hermes oturumu hâlâ çalışıyor.");
-    await this.prepareRoute?.(route);
-    const snapshot = await this.client.request("session.resume", { session_id: state.storedId });
+    await abortable(() => this.prepareRoute?.(route), signal);
+    signal.throwIfAborted();
+    const snapshot = await this.client.request("session.resume", { session_id: state.storedId }, { signal });
+    signal.throwIfAborted();
     const canonical = Number.isInteger(snapshot.revision) && Number.isInteger(snapshot.execution_generation);
     // The standalone `hermes serve` desktop protocol exposes session-scoped
     // config.set; the canonical owner exposes revision-fenced session.mutate.
@@ -135,10 +167,11 @@ export class HermesInteractiveTransport extends EventEmitter {
       session_id: state.storedId, request_id: crypto.randomUUID(),
       expected_revision: snapshot.revision, expected_generation: snapshot.execution_generation,
       operation: "model", payload: { provider: brainProviderSlug(route), model: route.modelId, ...(confirm ? { confirm } : {}) },
-    }, { timeoutMs: 45000 }) : await this.client.request("config.set", {
+    }, { timeoutMs: 45000, signal }) : await this.client.request("config.set", {
       session_id: state.liveId, key: "model", value: `${route.modelId} --provider ${brainProviderSlug(route)} --session`,
       confirm_expensive_model: Boolean(confirm && confirm === state.switchConfirm),
-    }, { timeoutMs: 45000 });
+    }, { timeoutMs: 45000, signal });
+    signal.throwIfAborted();
     if (receipt.status === "confirmation_required" || receipt.confirm_required) {
       state.switchConfirm = receipt.confirm || crypto.randomUUID();
       throw Object.assign(new Error(receipt.confirm_message || receipt.message || "Hermes model değişimi için onay istiyor."), {
@@ -169,15 +202,20 @@ export class HermesInteractiveTransport extends EventEmitter {
   }
 
   async ensureSession(storedId, { route } = {}) {
+    this.lifetime.signal.throwIfAborted();
     const key = String(storedId || "");
     if (!this.sessionPromises.has(key)) {
-      const promise = this.#ensureSession(storedId, route).finally(() => this.sessionPromises.delete(key));
+      const promise = this.#ensureSession(storedId, route).finally(() => {
+        if (this.sessionPromises.get(key) === promise) this.sessionPromises.delete(key);
+      });
       this.sessionPromises.set(key, promise);
     }
     return this.sessionPromises.get(key);
   }
 
   async #ensureSession(storedId, route) {
+    const signal = this.lifetime.signal;
+    signal.throwIfAborted();
     const requested = String(storedId || "").trim();
     const existing = requested ? this.sessions.get(requested) : null;
     if (existing?.liveId) return existing;
@@ -191,8 +229,9 @@ export class HermesInteractiveTransport extends EventEmitter {
             close_on_disconnect: false,
             cols: 110,
           },
-          { timeoutMs: 45000 },
+          { timeoutMs: 45000, signal },
         );
+        signal.throwIfAborted();
         const state = this.#registerSession({
           storedId: resumed.resumed || resumed.session_key || requested,
           liveId: resumed.session_id,
@@ -201,10 +240,12 @@ export class HermesInteractiveTransport extends EventEmitter {
         this.#replayRequests(resumed);
         return state;
       } catch (error) {
+        signal.throwIfAborted();
         if (!(error instanceof HermesGatewayRpcError) || error.code !== 4007) throw error;
       }
     }
-    const created = await this.createSession({ route });
+    const created = await this.createSession({ route, signal });
+    signal.throwIfAborted();
     return this.sessions.get(created.id);
   }
 
@@ -229,11 +270,14 @@ export class HermesInteractiveTransport extends EventEmitter {
     return state;
   }
 
-  async submit({ task, sessionId, urgency = "normal", instructions = "", kind = "task", context = "", turnId, ownerSessionId, route, language = conversationLanguage() }) {
+  async submit({ task, sessionId, urgency = "normal", instructions = "", kind = "task", context = "", turnId, ownerSessionId, route, language = conversationLanguage(), signal: parentSignal }) {
+    const signal = this.#scope(parentSignal);
+    signal.throwIfAborted();
     const conversational = kind === "conversation" || kind === "context";
     if (conversational && !this.conversationOnly) throw new Error("Conversation requires a restricted Hermes backend.");
     if (this.conversationOnly && !conversational) throw new Error("Work cannot run on the conversation backend.");
-    const state = await this.ensureSession(sessionId);
+    const state = await abortable(() => this.ensureSession(sessionId), signal);
+    signal.throwIfAborted();
     const runId = `iris_${crypto.randomUUID()}`;
     const item = {
       runId,
@@ -251,9 +295,14 @@ export class HermesInteractiveTransport extends EventEmitter {
       status: state.current ? "queued" : "starting",
       output: "",
       interaction: null,
+      dispatchStarted: false,
       submittedAt: Date.now(),
     };
     this.runs.set(runId, item);
+    const controller = new AbortController();
+    const cancel = () => { void this.stop(runId, { start: false }).catch((error) => this.log(`Hermes iptali doğrulanamadı: ${error.message}`)); };
+    parentSignal?.addEventListener("abort", cancel, { once: true });
+    this.taskControllers.set(item, { controller, release: () => parentSignal?.removeEventListener("abort", cancel) });
     state.queue.push(item);
     this.emit("run-update", { ...item });
     void this.#drain(state);
@@ -266,16 +315,20 @@ export class HermesInteractiveTransport extends EventEmitter {
   }
 
   async #drain(state) {
-    if (state.current || !state.queue.length) return;
+    if (this.lifetime.signal.aborted || state.current || !state.queue.length) return;
     const item = state.queue.shift();
     state.current = item;
     item.status = "running";
     item.liveSessionId = state.liveId;
     this.emit("run-update", { ...item });
+    const signal = this.#scope(this.taskControllers.get(item).controller.signal);
     try {
-      const route = item.route || await this.getRoute?.();
+      this.#assertCurrent(state, item, signal);
+      const route = item.route || await abortable(() => this.getRoute?.(), signal);
+      this.#assertCurrent(state, item, signal);
       if (route) {
-        await this.switchModel(state.storedId, route, { preparing: true });
+        await this.switchModel(state.storedId, route, { preparing: true, signal });
+        this.#assertCurrent(state, item, signal);
         item.brainProvider = route.provider;
         item.brainModel = route.modelId;
         item.brainReasoning = route.reasoning || "default";
@@ -285,9 +338,11 @@ export class HermesInteractiveTransport extends EventEmitter {
         if (!this.client.irisContractVersions?.some((version) => version === 1 || version === 2)) throw new Error("Hermes bağlantısı Avalon konuşma sözleşmesi v1/v2'yi desteklemiyor. Hermes'i yeniden başlat.");
         // Fail closed on old gateways and on ignored environment pins. Never
         // change the user's global tool configuration to make chat safe.
-        assertConversationTools(await this.client.request("tools.show", { session_id: state.liveId }));
+        assertConversationTools(await this.client.request("tools.show", { session_id: state.liveId }, { signal }));
+        this.#assertCurrent(state, item, signal);
       }
-      await this.#permissionOperation(() => this.#applyPermissionMode(state, this.permissionMode));
+      await abortable(() => this.#permissionOperation(() => this.#applyPermissionMode(state, this.permissionMode, signal)), signal);
+      this.#assertCurrent(state, item, signal);
       await this.client.request(
         "prompt.submit",
         {
@@ -302,12 +357,16 @@ export class HermesInteractiveTransport extends EventEmitter {
             } } : {}),
           ...(item.kind === "context" ? { display_kind: "hidden" } : {}),
         },
-        { timeoutMs: 45000 },
+        { timeoutMs: 45000, signal, onDispatch: () => {
+          this.#assertCurrent(state, item, signal);
+          item.dispatchStarted = true;
+        } },
       );
     } catch (error) {
       this.#finish(state, item, {
-        status: "failed",
+        status: item.cancelRequested ? "cancelled" : "failed",
         error: error?.message || String(error),
+        ...(item.dispatchStarted && !this.conversationOnly ? { dispatchUncertain: true } : {}),
       });
     }
   }
@@ -456,7 +515,9 @@ export class HermesInteractiveTransport extends EventEmitter {
   }
 
   #requestInteraction(item, interaction) {
+    if (this.lifetime.signal.aborted || item.cancelRequested || TERMINAL.has(item.status)) return;
     item.interaction = interaction;
+    this.interactionControllers.set(interaction, new AbortController());
     item.status =
       interaction.type === "approval" ? "waiting_for_approval" : "waiting_for_input";
     this.emit("interaction", {
@@ -474,6 +535,7 @@ export class HermesInteractiveTransport extends EventEmitter {
   #clearInteraction(item) {
     const interaction = item.interaction;
     if (!interaction) return;
+    this.interactionControllers.get(interaction)?.abort(new Error("Hermes interaction is no longer pending on this connection."));
     item.interaction = null;
     if (!TERMINAL.has(item.status) && !item.cancelRequested) item.status = "running";
     this.emit("interaction-resolved", { runId: item.runId, task: item.task, interactionId: interaction.id, type: interaction.type });
@@ -526,15 +588,19 @@ export class HermesInteractiveTransport extends EventEmitter {
     });
   }
 
-  async respond(runId, { interactionId, type, value }) {
+  async respond(runId, { interactionId, type, value }, { signal: parentSignal } = {}) {
+    this.#scope(parentSignal).throwIfAborted();
     const item = this.runs.get(String(runId));
-    if (!item || !item.interaction) throw new Error("No pending Hermes interaction for this run.");
+    if (!item || item.cancelRequested || TERMINAL.has(item.status) || !item.interaction) throw new Error("No pending Hermes interaction for this run.");
     const interaction = item.interaction;
+    const signal = this.#scope(AbortSignal.any([this.interactionControllers.get(interaction).signal,
+      ...(parentSignal ? [parentSignal] : [])]));
+    signal.throwIfAborted();
     if (interaction.id !== interactionId || interaction.type !== type) {
       throw new Error("Hermes interaction no longer matches this response.");
     }
     const state = this.sessions.get(item.storedSessionId);
-    if (!state) throw new Error("Hermes session is unavailable.");
+    if (!state || state.current !== item) throw new Error("Hermes session is unavailable.");
     if (interaction.responding) throw new Error("Hermes interaction is already being answered.");
     if (type === "approval" && !interaction.choices.includes(String(value || "deny"))) throw new Error("Approval choice is not offered by Hermes.");
     if (interaction.serverRequestId) {
@@ -558,32 +624,34 @@ export class HermesInteractiveTransport extends EventEmitter {
       await this.client.request("clarify.respond", {
         request_id: interaction.id,
         answer: String(value ?? ""),
-      });
+      }, { signal });
     } else if (type === "approval") {
       await this.client.request("approval.respond", {
         session_id: state.liveId,
         choice: String(value || "deny"),
-      });
+      }, { signal });
     } else if (type === "sudo") {
       await this.client.request("sudo.respond", {
         request_id: interaction.id,
         password: String(value ?? ""),
-      });
+      }, { signal });
     } else if (type === "secret") {
       await this.client.request("secret.respond", {
         request_id: interaction.id,
         value: String(value ?? ""),
-      });
+      }, { signal });
     } else {
       throw new Error(`Unsupported Hermes interaction: ${type}`);
     }
-    this.#clearInteraction(item);
+    signal.throwIfAborted();
+    if (item.interaction === interaction) this.#clearInteraction(item);
     return { status: "resolved", run_id: item.runId, type };
   }
 
-  async stop(runId) {
+  async stop(runId, { signal, start = true } = {}) {
     const item = this.runs.get(String(runId));
     if (!item) throw new Error("Hermes run not found.");
+    if (TERMINAL.has(item.status)) return { status: item.status };
     const state = this.sessions.get(item.storedSessionId);
     if (!state) throw new Error("Hermes session is unavailable.");
     if (state.current?.runId !== item.runId) {
@@ -592,9 +660,15 @@ export class HermesInteractiveTransport extends EventEmitter {
       return { status: "cancelled" };
     }
     item.cancelRequested = true;
+    if (!item.dispatchStarted) {
+      this.taskControllers.get(item)?.controller.abort(Object.assign(new Error("Hermes görevi gönderilmeden iptal edildi."), { code: "CANCELLED" }));
+      this.#finish(state, item, { status: "cancelled" });
+      return { status: "cancelled" };
+    }
     item.status = "cancelling";
+    this.#clearInteraction(item);
     this.emit("run-update", { ...item });
-    await this.client.request("session.interrupt", { session_id: state.liveId });
+    await this.client.request("session.interrupt", { session_id: state.liveId }, { signal: this.#scope(signal), start });
     return { status: "stopping" };
   }
 
@@ -609,6 +683,8 @@ export class HermesInteractiveTransport extends EventEmitter {
 
   #finish(state, item, updates) {
     if (TERMINAL.has(item.status) && TERMINAL.has(String(updates.status))) return;
+    this.taskControllers.get(item)?.release();
+    this.taskControllers.get(item)?.controller.abort(new Error("Hermes run ended."));
     if (item.interaction?.serverRequestId) {
       try { this.client.respondServerRequest(item.interaction.serverRequestId, undefined, { code: -32800, message: "Avalon run ended." }); } catch { /* disconnected or withdrawn */ }
     }
@@ -621,30 +697,36 @@ export class HermesInteractiveTransport extends EventEmitter {
   }
 
   #scheduleReconnect() {
-    if (this.reconnectTimer) return;
+    const signal = this.lifetime.signal;
+    if (signal.aborted || this.reconnectTimer) return;
     this.reconnectTimer = setTimeout(async () => {
       this.reconnectTimer = null;
       try {
         await this.client.connect();
+        signal.throwIfAborted();
         const states = [...this.sessions.values()];
         this.liveSessions.clear();
         for (const state of states) {
+          signal.throwIfAborted();
           const resumed = await this.client.request("session.resume", {
             session_id: state.storedId,
             source: "iris",
             close_on_disconnect: false,
             cols: 110,
-          });
+          }, { signal });
+          signal.throwIfAborted();
           state.liveId = resumed.session_id;
           state.observedRuntime = resumed.info ? { model: resumed.info.model || null, provider: resumed.info.provider || null } : null;
           state.route = null;
           this.liveSessions.set(state.liveId, state);
           if (state.current) state.current.liveSessionId = state.liveId;
-          await this.#permissionOperation(() => this.#applyPermissionMode(state, this.permissionMode));
+          await this.#permissionOperation(() => this.#applyPermissionMode(state, this.permissionMode, signal));
+          signal.throwIfAborted();
           this.#replayRequests(resumed);
         }
         this.emit("reconnected");
       } catch (error) {
+        if (signal.aborted) return;
         this.log(`Hermes interactive reconnect failed: ${error?.message || error}`);
         this.#scheduleReconnect();
       }
@@ -659,6 +741,7 @@ export class HermesInteractiveTransport extends EventEmitter {
         this.#finish(state, state.current, {
           status: "failed",
           error: `Hermes interactive backend exited (${detail.signal || detail.code || "unknown"}).`,
+          ...(state.current.dispatchStarted && !this.conversationOnly ? { dispatchUncertain: true } : {}),
         });
       }
       for (const item of queued) {
@@ -673,6 +756,10 @@ export class HermesInteractiveTransport extends EventEmitter {
 
   close({ force = false } = {}) {
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = null;
+    this.lifetime.abort(Object.assign(new Error("Hermes transport closed."), { code: "INTERRUPTED" }));
     this.client.close({ force });
+    this.#onBackendExit({ signal: "closed" });
+    this.sessionPromises.clear();
   }
 }

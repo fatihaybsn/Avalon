@@ -1,59 +1,62 @@
 <script type="text/javascript">
-  (function () {
-    const style = { category: "Avalon", color: "#9caeed", icon: "font-awesome/fa-book" };
-    RED.nodes.registerType("avalon-start", {
-      ...style, defaults: { name: { value: "" } }, inputs: 0, outputs: 1,
-      label: function () { return this.name || "Avalon Başlangıç"; }
+(function () {
+  const style = { category: "Avalon", color: "#9caeed", icon: "font-awesome/fa-book" };
+  function prepareInputs() {
+    const selected = this.reportInputs || [], list = $("#avalon-report-inputs").empty();
+    const incoming = new Map(), seen = new Set([this.id]);
+    RED.nodes.eachLink(({ source, target }) => {
+      if (source.z !== this.z || target.z !== this.z) return;
+      if (!incoming.has(target.id)) incoming.set(target.id, []);
+      incoming.get(target.id).push(source);
     });
-    RED.nodes.registerType("avalon-research", {
-      ...style, inputs: 1, outputs: 1,
-      defaults: {
-        name: { value: "" }, topic: { value: "", required: true }, purpose: { value: "" }, sites: { value: "" },
-        mode: { value: "deep" }, breadth: { value: 3 }, depth: { value: 2 }, reportInputs: { value: [] }
-      },
-      label: function () { return this.name || this.topic || "Avalon Araştırması"; },
-      oneditprepare: function () {
-        const selected = this.reportInputs || [];
-        const list = $("#avalon-report-inputs");
-        const incoming = new Map();
-        RED.nodes.eachLink(({ source, target }) => {
-          if (source.z !== this.z || target.z !== this.z) return;
-          if (!incoming.has(target.id)) incoming.set(target.id, []);
-          incoming.get(target.id).push(source);
-        });
-        const seen = new Set([this.id]);
-        const visit = (id) => {
-          for (const node of incoming.get(id) || []) {
-            if (seen.has(node.id)) continue;
-            seen.add(node.id);
-            visit(node.id);
-            if (node.type !== "avalon-research") continue;
-            const checkbox = $("<input>", { type: "checkbox", value: node.id }).prop("checked", selected.includes(node.id));
-            $("<label>").css({ display: "block", width: "auto" }).append(checkbox, document.createTextNode(" " + (node.name || node.topic || node.id))).appendTo(list);
-          }
-        };
-        visit(this.id);
-        if (!list.children().length) list.text("Önce araştırma adımlarını akışta birbirine bağlayın.");
-      },
-      oneditsave: function () {
-        this.reportInputs = $("#avalon-report-inputs input:checked").map(function () { return this.value; }).get();
+    const visit = (id) => {
+      for (const node of incoming.get(id) || []) {
+        if (seen.has(node.id)) continue;
+        seen.add(node.id); visit(node.id);
+        if (!["avalon-research", "avalon-hermes"].includes(node.type) || (this.type === "avalon-research" && node.type !== "avalon-research")) continue;
+        const checkbox = $("<input>", { type: "checkbox", value: node.id }).prop("checked", selected.includes(node.id));
+        $("<label>").css({ display: "block", width: "auto" }).append(checkbox, document.createTextNode(" " + (node.name || node.topic || node.id))).appendTo(list);
       }
-    });
-    RED.nodes.registerType("avalon-finish", {
-      ...style, defaults: { name: { value: "" } }, inputs: 1, outputs: 0,
-      label: function () { return this.name || "Avalon Bitiş"; }
-    });
-  })();
+    };
+    visit(this.id);
+    if (!list.children().length) list.text("Önce girdi üretecek görevleri ekleyin.");
+  }
+  function saveInputs() {
+    this.reportInputs = $("#avalon-report-inputs input:checked").map(function () { return this.value; }).get();
+  }
+  const taskDefaults = { reportInputs: { value: [] }, maxAttempts: { value: 3 }, timeoutMs: { value: 7200000 },
+    onError: { value: "stop" }, requireApproval: { value: false } };
+  RED.nodes.registerType("avalon-start", {
+    ...style, defaults: { name: { value: "" } }, inputs: 0, outputs: 1,
+    label: function () { return this.name || "Avalon Başlangıç"; }
+  });
+  RED.nodes.registerType("avalon-research", {
+    ...style, inputs: 1, outputs: 2, outputLabels: ["Tamamlandı", "Hata"],
+    defaults: { ...taskDefaults, name: { value: "" }, topic: { value: "", required: true }, purpose: { value: "" },
+      sites: { value: "" }, mode: { value: "deep" }, breadth: { value: 3 }, depth: { value: 2 } },
+    label: function () { return this.name || this.topic || "Avalon Araştırma"; },
+    oneditprepare: prepareInputs, oneditsave: saveInputs
+  });
+  RED.nodes.registerType("avalon-hermes", {
+    ...style, icon: "font-awesome/fa-cogs", inputs: 1, outputs: 2, outputLabels: ["Tamamlandı", "Hata"],
+    defaults: { ...taskDefaults, name: { value: "" }, prompt: { value: "", required: true },
+      workingDirectory: { value: "" }, outputType: { value: "text" }, requiredFields: { value: "" }, requiredFiles: { value: "" } },
+    label: function () { return this.name || "Hermes Görevi"; },
+    oneditprepare: prepareInputs, oneditsave: saveInputs
+  });
+  RED.nodes.registerType("avalon-finish", {
+    ...style, defaults: { name: { value: "" } }, inputs: 1, outputs: 0,
+    label: function () { return this.name || "Avalon Bitiş"; }
+  });
+})();
 </script>
 
 <script type="text/html" data-template-name="avalon-start">
   <div class="form-row"><label for="node-input-name">Ad</label><input id="node-input-name"></div>
 </script>
-
 <script type="text/html" data-template-name="avalon-finish">
   <div class="form-row"><label for="node-input-name">Ad</label><input id="node-input-name"></div>
 </script>
-
 <script type="text/html" data-template-name="avalon-research">
   <div class="form-row"><label for="node-input-name">Ad</label><input id="node-input-name"></div>
   <div class="form-row"><label for="node-input-topic">Konu</label><input id="node-input-topic" maxlength="12000"></div>
@@ -62,9 +65,33 @@
   <div class="form-row"><label for="node-input-mode">Tür</label><select id="node-input-mode"><option value="deep">Derin</option><option value="normal">Normal</option><option value="synthesis">Yalnızca sentez</option></select></div>
   <div class="form-row"><label for="node-input-breadth">Genişlik</label><select id="node-input-breadth"><option>3</option><option>4</option><option>5</option></select></div>
   <div class="form-row"><label for="node-input-depth">Derinlik</label><select id="node-input-depth"><option>1</option><option>2</option><option>3</option></select></div>
-  <div class="form-row"><strong>Girdi olarak kullanılacak raporlar</strong><div id="avalon-report-inputs"></div></div>
+  <div class="form-row"><strong>Girdi raporları</strong><div id="avalon-report-inputs"></div></div>
+  <div class="form-row"><label for="node-input-maxAttempts">Deneme sınırı</label><input id="node-input-maxAttempts" type="number" min="1" max="100"></div>
+  <div class="form-row"><label for="node-input-timeoutMs">Zaman aşımı (ms)</label><input id="node-input-timeoutMs" type="number" min="1000" max="7200000"></div>
+  <div class="form-row"><label for="node-input-onError">Hata sonucu</label><select id="node-input-onError"><option value="stop">Akışı durdur</option><option value="route">İkinci çıkışa gönder</option><option value="catch">Catch düğümüne gönder</option></select></div>
+  <div class="form-row"><label for="node-input-requireApproval">Başlatma onayı</label><input id="node-input-requireApproval" type="checkbox"></div>
 </script>
-
+<script type="text/html" data-template-name="avalon-hermes">
+  <div class="form-row"><label for="node-input-name">Görev adı</label><input id="node-input-name"></div>
+  <div class="form-row"><label for="node-input-prompt">Talimat</label><textarea id="node-input-prompt" rows="7" maxlength="12000"></textarea></div>
+  <div class="form-row"><strong>Önceki başarılı çıktı referansları</strong><div id="avalon-report-inputs"></div></div>
+  <div class="form-row"><label for="node-input-workingDirectory">Çalışma klasörü</label><input id="node-input-workingDirectory" placeholder="İzin verilen köke göre; boşsa kök klasör"></div>
+  <div class="form-row"><label for="node-input-outputType">Çıktı türü</label><select id="node-input-outputType"><option value="text">Metin</option><option value="json">JSON</option><option value="evaluation">Değerlendirme (JSON)</option><option value="files">Dosyalar</option></select></div>
+  <div class="form-row"><label for="node-input-requiredFields">Zorunlu JSON alanları</label><input id="node-input-requiredFields" placeholder="Virgülle ayrılmış alan adları"></div>
+  <div class="form-row"><label for="node-input-requiredFiles">Gerekli dosyalar</label><textarea id="node-input-requiredFiles" rows="3" placeholder="Her satıra çalışma klasörüne göre dosya yolu"></textarea></div>
+  <div class="form-row"><label for="node-input-maxAttempts">Deneme sınırı</label><input id="node-input-maxAttempts" type="number" min="1" max="100"></div>
+  <div class="form-row"><label for="node-input-timeoutMs">Zaman aşımı (ms)</label><input id="node-input-timeoutMs" type="number" min="1000" max="7200000"></div>
+  <div class="form-row"><label for="node-input-onError">Hata sonucu</label><select id="node-input-onError"><option value="stop">Akışı durdur</option><option value="route">İkinci çıkışa gönder</option><option value="catch">Catch düğümüne gönder</option></select></div>
+  <div class="form-row"><label for="node-input-requireApproval">Başlatma onayı</label><input id="node-input-requireApproval" type="checkbox"></div>
+  <p>Hermes'in standart araç onayları ayrıca geçerlidir. İptal ve zaman aşımında görev durdurulur; doğrulanamayan iptal kayda yazılır.</p>
+</script>
 <script type="text/html" data-help-name="avalon-research">
-  <p>Avalon’un GPT Researcher çalıştırıcısını kullanır. Seçilen raporların aynı turun tamamlanmış sonuçları olması gerekir.</p>
+  <p>Mevcut GPT Researcher çalıştırıcısını kullanır. Girdiler aynı kolda tamamlanmış raporlar olmalıdır. Yeni denemeler önceki raporu silmez.</p>
+</script>
+<script type="text/html" data-help-name="avalon-hermes">
+  <p>Hermes'in mevcut araçlarıyla genel amaçlı görev yürütür. Önceki çıktılar dosya referansı olarak aktarılır.</p>
+  <p>Koşul için switch: property = payload.value.outcome, propertyType = msg, check all rules kapalı.
+  Çıkışlar approved, revision_required, needs_review olabilir. Düzeltme talimatını change ile msg.feedback içine yazıp önceki göreve bağlayın.</p>
+  <p>Model değerlendirmesi doğruluk kanıtı değildir. Zorunlu alan ve dosya kontrollerini gerektiğinde kullanın.
+  Paylaşmak için Avalon'daki güvenli JSON şablonunu kullanın; talimatlar ve kişisel ayarlar şablondan çıkarılır.</p>
 </script>

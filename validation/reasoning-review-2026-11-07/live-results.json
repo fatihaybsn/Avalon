@@ -1,0 +1,255 @@
+{
+  "at": "2026-11-07T13:30:27.701Z",
+  "results": [
+    {
+      "task": "easy",
+      "seed": 54231,
+      "level": "low",
+      "controls": {
+        "thinking": true,
+        "reasoning_effort": "low"
+      },
+      "max_tokens": 8192,
+      "timeout_ms": 60000,
+      "reasoningChars": 129,
+      "content": "\n\n2028",
+      "status": 200,
+      "requestId": "79144fda-2e6c-43a3-92dd-ca03ae16e736",
+      "responseModel": "qwen/qwen3.8-flash-next",
+      "firstReasoningSeconds": 13.793,
+      "firstContentSeconds": 19.655,
+      "finishReason": "stop",
+      "usage": {
+        "prompt_tokens": 61,
+        "total_tokens": 171,
+        "completion_tokens": 110,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "created_cache_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 103
+        }
+      },
+      "done": true,
+      "completed": true,
+      "correct": true,
+      "seconds": 20.064
+    },
+    {
+      "task": "easy",
+      "seed": 54231,
+      "level": "xhigh",
+      "controls": {
+        "thinking": true,
+        "reasoning_effort": "xhigh"
+      },
+      "max_tokens": 8192,
+      "timeout_ms": 60000,
+      "reasoningChars": 193,
+      "content": "\n\n2028",
+      "status": 200,
+      "requestId": "15288322-8a65-4cd9-bcaf-127753eba4d4",
+      "responseModel": "qwen/qwen3.8-flash-next",
+      "firstReasoningSeconds": 6.332,
+      "firstContentSeconds": 11.302,
+      "finishReason": "stop",
+      "usage": {
+        "prompt_tokens": 73,
+        "total_tokens": 187,
+        "completion_tokens": 114,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "created_cache_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 107
+        }
+      },
+      "done": true,
+      "completed": true,
+      "correct": true,
+      "seconds": 11.464
+    },
+    {
+      "task": "easy",
+      "seed": 54232,
+      "level": "xhigh",
+      "controls": {
+        "thinking": true,
+        "reasoning_effort": "xhigh"
+      },
+      "max_tokens": 8192,
+      "timeout_ms": 60000,
+      "reasoningChars": 193,
+      "content": "\n\n2028",
+      "status": 200,
+      "requestId": "047ea469-c8db-4ad1-897c-0c610725c0d1",
+      "responseModel": "qwen/qwen3.8-flash-next",
+      "firstReasoningSeconds": 0.864,
+      "firstContentSeconds": 4.786,
+      "finishReason": "stop",
+      "usage": {
+        "prompt_tokens": 73,
+        "total_tokens": 187,
+        "completion_tokens": 114,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "created_cache_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 107
+        }
+      },
+      "done": true,
+      "completed": true,
+      "correct": true,
+      "seconds": 4.926
+    },
+    {
+      "task": "easy",
+      "seed": 54232,
+      "level": "low",
+      "controls": {
+        "thinking": true,
+        "reasoning_effort": "low"
+      },
+      "max_tokens": 8192,
+      "timeout_ms": 60000,
+      "reasoningChars": 129,
+      "content": "\n\n2028",
+      "status": 200,
+      "requestId": "f83f4caf-f23a-4efc-b475-adf43c8ee64f",
+      "responseModel": "qwen/qwen3.8-flash-next",
+      "firstReasoningSeconds": 0.569,
+      "firstContentSeconds": 2.952,
+      "finishReason": "stop",
+      "usage": {
+        "prompt_tokens": 61,
+        "total_tokens": 171,
+        "completion_tokens": 110,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "created_cache_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 103
+        }
+      },
+      "done": true,
+      "completed": true,
+      "correct": true,
+      "seconds": 3.02
+    },
+    {
+      "task": "assignment",
+      "seed": 54231,
+      "level": "low",
+      "controls": {
+        "thinking": true,
+        "reasoning_effort": "low"
+      },
+      "max_tokens": 8192,
+      "timeout_ms": 60000,
+      "reasoningChars": 1368,
+      "content": "\n\n{\"cost\":32,\"jobs\":[2,3,1,4]}",
+      "status": 200,
+      "requestId": "3c41090b-ed47-4212-9b99-9cab5d671bbe",
+      "responseModel": "qwen/qwen3.8-flash-next",
+      "firstReasoningSeconds": 0.476,
+      "firstContentSeconds": 43.716,
+      "finishReason": "stop",
+      "usage": {
+        "prompt_tokens": 142,
+        "total_tokens": 954,
+        "completion_tokens": 812,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "created_cache_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 793
+        }
+      },
+      "done": true,
+      "completed": true,
+      "correct": true,
+      "seconds": 44.18
+    },
+    {
+      "task": "assignment",
+      "seed": 54231,
+      "level": "xhigh",
+      "controls": {
+        "thinking": true,
+        "reasoning_effort": "xhigh"
+      },
+      "max_tokens": 8192,
+      "timeout_ms": 60000,
+      "reasoningChars": 1936,
+      "content": "",
+      "status": 200,
+      "requestId": "d94302f8-c214-47f5-8efe-5085fffe4c77",
+      "responseModel": "qwen/qwen3.8-flash-next",
+      "firstReasoningSeconds": 0.643,
+      "error": "This operation was aborted",
+      "aborted": true,
+      "seconds": 60.005
+    },
+    {
+      "task": "assignment",
+      "seed": 54232,
+      "level": "xhigh",
+      "controls": {
+        "thinking": true,
+        "reasoning_effort": "xhigh"
+      },
+      "max_tokens": 8192,
+      "timeout_ms": 60000,
+      "reasoningChars": 1806,
+      "content": "",
+      "status": 200,
+      "requestId": "96ac3a5e-59d8-4c6b-8412-f333702195aa",
+      "responseModel": "qwen/qwen3.8-flash-next",
+      "firstReasoningSeconds": 11.241,
+      "error": "This operation was aborted",
+      "aborted": true,
+      "seconds": 60.011
+    },
+    {
+      "task": "assignment",
+      "seed": 54232,
+      "level": "low",
+      "controls": {
+        "thinking": true,
+        "reasoning_effort": "low"
+      },
+      "max_tokens": 8192,
+      "timeout_ms": 60000,
+      "reasoningChars": 2086,
+      "content": "\n\n{\"cost\":32,\"jobs\":[2,3,1,4]}",
+      "status": 200,
+      "requestId": "2d49f34a-eb91-4581-93cc-65b84887ff14",
+      "responseModel": "qwen/qwen3.8-flash-next",
+      "firstReasoningSeconds": 5.134,
+      "firstContentSeconds": 44.518,
+      "finishReason": "stop",
+      "usage": {
+        "prompt_tokens": 142,
+        "total_tokens": 1465,
+        "completion_tokens": 1323,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "created_cache_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 1304
+        }
+      },
+      "done": true,
+      "completed": true,
+      "correct": true,
+      "seconds": 44.678
+    }
+  ]
+}

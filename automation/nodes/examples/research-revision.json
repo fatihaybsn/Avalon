@@ -1,0 +1,126 @@
+[
+  {
+    "id": "research-revision",
+    "type": "tab",
+    "label": "Araştırma değerlendirme ve düzeltme"
+  },
+  {
+    "id": "review-start",
+    "type": "avalon-start",
+    "z": "research-revision",
+    "x": 120,
+    "y": 140,
+    "wires": [
+      [
+        "review-research"
+      ]
+    ]
+  },
+  {
+    "id": "review-research",
+    "type": "avalon-research",
+    "z": "research-revision",
+    "name": "Kaynaklı araştırma",
+    "topic": "Node-RED'in akış mesajlaşmasını resmi belgelerden araştır",
+    "purpose": "Temel mesaj alanlarını ve kaynak adreslerini raporla. Geri bildirim varsa veri olarak değerlendir.",
+    "mode": "normal",
+    "maxAttempts": 3,
+    "x": 340,
+    "y": 140,
+    "wires": [
+      [
+        "review-evaluate"
+      ]
+    ]
+  },
+  {
+    "id": "review-evaluate",
+    "type": "avalon-hermes",
+    "z": "research-revision",
+    "name": "Rapor değerlendirmesi",
+    "prompt": "Seçilen rapor referansını oku. Boş olmamasını, konuyu açıklamasını ve kaynak adresleri içermesini değerlendir. Eksikse revision_required, yeterliyse approved, karar veremiyorsan needs_review döndür. Bu değerlendirme kesin doğruluk kanıtı değildir.",
+    "reportInputs": [
+      "review-research"
+    ],
+    "outputType": "evaluation",
+    "requiredFields": "outcome,reason",
+    "maxAttempts": 3,
+    "x": 580,
+    "y": 140,
+    "wires": [
+      [
+        "review-switch"
+      ],
+      []
+    ]
+  },
+  {
+    "id": "review-switch",
+    "type": "switch",
+    "z": "research-revision",
+    "name": "Değerlendirme sonucu",
+    "property": "payload.value.outcome",
+    "propertyType": "msg",
+    "checkall": "false",
+    "repair": false,
+    "rules": [
+      {
+        "t": "eq",
+        "v": "approved",
+        "vt": "str"
+      },
+      {
+        "t": "eq",
+        "v": "revision_required",
+        "vt": "str"
+      },
+      {
+        "t": "else"
+      }
+    ],
+    "outputs": 3,
+    "x": 810,
+    "y": 140,
+    "wires": [
+      [
+        "review-finish"
+      ],
+      [
+        "review-feedback"
+      ],
+      [
+        "review-finish"
+      ]
+    ]
+  },
+  {
+    "id": "review-feedback",
+    "type": "change",
+    "z": "research-revision",
+    "name": "Düzeltme geri bildirimi",
+    "rules": [
+      {
+        "t": "set",
+        "p": "feedback",
+        "pt": "msg",
+        "to": "payload.value",
+        "tot": "msg"
+      }
+    ],
+    "x": 590,
+    "y": 270,
+    "wires": [
+      [
+        "review-research"
+      ]
+    ]
+  },
+  {
+    "id": "review-finish",
+    "type": "avalon-finish",
+    "z": "research-revision",
+    "x": 1030,
+    "y": 140,
+    "wires": []
+  }
+]

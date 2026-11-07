@@ -1,0 +1,13 @@
+{
+  "at": "2026-11-05T14:58:01.899Z",
+  "selected": {
+    "provider": "evren",
+    "model": "qwen3.8-flash-next",
+    "reasoning": "xhigh"
+  },
+  "applied": {
+    "provider": "evren",
+    "model": "qwen3.8-flash-next",
+    "reasoning": "xhigh"
+  }
+}

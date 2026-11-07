@@ -1,0 +1,153 @@
+{
+  "at": "2026-11-05T14:47:47.877Z",
+  "optimum": 38,
+  "max_tokens": 2048,
+  "results": [
+    {
+      "model": "qwen3.8-flash-next",
+      "reasoning": "disabled",
+      "wire": {
+        "thinking": false
+      },
+      "httpStatus": 200,
+      "seconds": 6.12,
+      "responseModel": "qwen/qwen3.8-flash-next",
+      "finishReason": "stop",
+      "usage": {
+        "prompt_tokens": 168,
+        "total_tokens": 194,
+        "completion_tokens": 26,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "created_cache_tokens": 0,
+          "multimodal_tokens": null
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "evren": {
+          "routed_model": "qwen/qwen3.8-flash-next"
+        }
+      },
+      "reasoningFields": {
+        "reasoning": 0
+      },
+      "messageKeys": [
+        "role",
+        "content",
+        "refusal",
+        "annotations",
+        "audio",
+        "function_call",
+        "reasoning"
+      ],
+      "headers": {
+        "x-request-id": "30e2d1a9-ba41-4168-b391-6e32050ac152"
+      },
+      "content": "{\"cost\": 35, \"jobs\": [2, 3, 1, 4, 5]}",
+      "correct": false
+    },
+    {
+      "model": "qwen3.8-flash-next",
+      "reasoning": "enabled",
+      "wire": {
+        "thinking": true
+      },
+      "seconds": 120,
+      "error": "The operation was aborted due to timeout"
+    },
+    {
+      "model": "qwen3.8-flash-next",
+      "reasoning": "high",
+      "wire": {
+        "thinking": true,
+        "reasoning_effort": "xhigh"
+      },
+      "httpStatus": 200,
+      "seconds": 103.99,
+      "responseModel": "qwen/qwen3.8-flash-next",
+      "finishReason": "length",
+      "usage": {
+        "prompt_tokens": 204,
+        "total_tokens": 2252,
+        "completion_tokens": 2048,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "created_cache_tokens": 0,
+          "multimodal_tokens": null
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 2048
+        },
+        "evren": {
+          "routed_model": "qwen/qwen3.8-flash-next",
+          "reasoning_budget_exhausted": true
+        }
+      },
+      "reasoningFields": {
+        "reasoning": 3164
+      },
+      "messageKeys": [
+        "role",
+        "content",
+        "refusal",
+        "annotations",
+        "audio",
+        "function_call",
+        "reasoning"
+      ],
+      "headers": {
+        "x-request-id": "fce12b77-1234-4d7f-b487-e7dfa959cc8f"
+      },
+      "content": "",
+      "correct": false
+    },
+    {
+      "model": "qwen3.8-flash-next",
+      "reasoning": "xhigh",
+      "wire": {
+        "thinking": true,
+        "reasoning_effort": "xhigh"
+      },
+      "httpStatus": 200,
+      "seconds": 109.07,
+      "responseModel": "qwen/qwen3.8-flash-next",
+      "finishReason": "length",
+      "usage": {
+        "prompt_tokens": 204,
+        "total_tokens": 2252,
+        "completion_tokens": 2048,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "created_cache_tokens": 0,
+          "multimodal_tokens": null
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 2048
+        },
+        "evren": {
+          "routed_model": "qwen/qwen3.8-flash-next",
+          "reasoning_budget_exhausted": true
+        }
+      },
+      "reasoningFields": {
+        "reasoning": 3667
+      },
+      "messageKeys": [
+        "role",
+        "content",
+        "refusal",
+        "annotations",
+        "audio",
+        "function_call",
+        "reasoning"
+      ],
+      "headers": {
+        "x-request-id": "ba9bd9d3-9ec8-4925-84e3-3e4490914a6a"
+      },
+      "content": "",
+      "correct": false
+    }
+  ],
+  "scope": "Initial non-stream assignment audit deliberately stopped after Qwen disabled/enabled/high/xhigh; other models use the separate streaming audit. The enabled request timed out. Requests in the next batch were cancelled and are not results."
+}

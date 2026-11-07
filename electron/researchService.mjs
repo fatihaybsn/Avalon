@@ -49,7 +49,7 @@ export class ResearchService {
     const id = `schedule_${crypto.randomUUID()}`;
     const state = { id, spec: { ...spec, runtime: this.runtime() }, createdAt: Date.now(), paused: false, name: spec.topic, label: scheduleLabel(spec.schedule) };
     this.store.save(state);
-    const script = this.installScheduleLauncher(state);
+    const script = await this.installScheduleLauncher(state);
     const result = await this.scheduler.call({ action: "create", name: `Avalon: ${spec.topic.slice(0, 90)}`, schedule: spec.schedule, script });
     if (!result.success || !result.job?.job_id) { this.store.save({ ...state, removed: true, error: result.error || "Zamanlama kaydı doğrulanamadı." }); throw new Error(result.error || "Zamanlama kaydı doğrulanamadı."); }
     Object.assign(state, { nativeId: result.job.job_id, native: result.job, script }); this.store.save(state);
@@ -61,10 +61,12 @@ export class ResearchService {
     const spec = normalizeResearch({ ...input, language: state.spec.language }, { outputRoot: this.outputRoot, sessionId: state.spec.sessionId, route }); if (!spec.schedule) throw new Error("Zamanlama bilgisi gerekli.");
     if (state.spec.automationFlowId) spec.automationFlowId = state.spec.automationFlowId;
     await this.prepareRoute(spec.route);
+    // Migrate/backup the owned launcher before changing the native definition.
+    // Its stateFile remains authoritative for schedule settings and identity.
+    await this.installScheduleLauncher({ ...state, spec: { ...spec, runtime: this.runtime() } });
     const result = await this.scheduler.call({ action: "update", jobId: state.nativeId, name: `Avalon: ${spec.topic.slice(0, 90)}`, schedule: spec.schedule, script: state.script });
     if (!result.success) throw new Error(result.error || "Zamanlama güncellenemedi.");
     const updated = { ...state, spec: { ...spec, runtime: this.runtime() }, name: spec.topic, label: scheduleLabel(spec.schedule), native: result.job || state.native };
-    this.installScheduleLauncher(updated);
     this.store.save(updated);
     await this.refreshSchedules(); return { ok: true };
   }
@@ -79,6 +81,7 @@ export class ResearchService {
   async scheduleAction(id, action) {
     if (!["pause", "resume", "remove", "run"].includes(action)) throw new Error("Geçersiz zamanlama işlemi.");
     const state = this.requireSchedule(id);
+    if (["run", "resume"].includes(action)) await this.installScheduleLauncher(state);
     const result = await this.scheduler.call({ action, jobId: state.nativeId });
     if (!result.success) throw new Error(result.error || "Zamanlayıcı işlemi başarısız.");
     this.store.save({ ...state, ...(action === "remove" ? { removed: true } : action !== "run" ? { paused: action === "pause" } : {}), native: result.job || state.native });
@@ -88,7 +91,7 @@ export class ResearchService {
     const runs = allRuns.filter((run) => run.scheduleId === state.id);
     const last = runs[0];
     return { id: state.id, name: state.name, label: state.label, paused: state.paused, spec: { ...state.spec, runtime: undefined },
-      modelLabel: brainSelectionLabel(state.spec.route), nextRunAt: state.native?.next_run_at || null, lastRun: last ? researchCard(last) : null, history: runs.slice(0, 30).map(researchCard),
+      modelLabel: state.spec.automationFlowId ? "Her tur başlangıcındaki Beyin modeli ve düşünme ayarı" : brainSelectionLabel(state.spec.route), nextRunAt: state.native?.next_run_at || null, lastRun: last ? researchCard(last) : null, history: runs.slice(0, 30).map(researchCard),
       error: state.error || readJson(this.store.file(state.id, "dispatch-error.json"))?.error || state.native?.last_error || state.native?.last_fire_error || "", lastSkip: readJson(this.store.file(state.id, "last-skip.json")) };
   }
   async refreshSchedules() {
@@ -101,7 +104,12 @@ export class ResearchService {
         const listing = await this.scheduler.call({ action: "list" });
         if (listing.success) for (const state of this.store.list("schedule_").filter((job) => !job.removed)) {
           const native = (listing.jobs || []).find((job) => job.job_id === state.nativeId);
-          if (native) this.store.save({ ...state, native, paused: !native.enabled, error: "" });
+          if (native) {
+            let error = "";
+            try { await this.installScheduleLauncher(state); }
+            catch (migration) { error = migration.message; }
+            this.store.save({ ...state, native, paused: !native.enabled, error });
+          }
           else if (state.nativeId) this.store.save({ ...state, error: "Görev Hermes zamanlayıcısında bulunamadı." });
         }
       }

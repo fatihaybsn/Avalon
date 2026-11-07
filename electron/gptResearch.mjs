@@ -9,6 +9,7 @@ import { reasoningBody } from "./brainReasoning.mjs";
 import { nativeResourcePath } from "./resourcePaths.mjs";
 import { parseEnvFile, userConfigPath } from "./configStore.mjs";
 import { atomicWrite, canonicalUrl } from "./researchFiles.mjs";
+import { ResearchSearch } from "./researchSearch.mjs";
 
 export function researchScope(spec) {
   if (spec.mode !== "deep") return {};
@@ -48,8 +49,8 @@ export async function runGPTResearch({ state, store, writeJson, readJson, signal
     writeJson(store.file(state.id, "checkpoint.json"), record);
   };
   save();
-  let child, cancelled = false, workerError = "", reportComplete = false;
-  const stop = () => { cancelled = true; child?.kill(); };
+  let child, search, cancelled = false, workerError = "", reportComplete = false;
+  const stop = () => { cancelled = true; child?.kill(); search?.close(); };
   const monitor = setInterval(() => {
     if (signal.aborted || fs.existsSync(store.file(state.id, "cancel"))) stop();
     else save();
@@ -62,12 +63,13 @@ export async function runGPTResearch({ state, store, writeJson, readJson, signal
     if (!info.configured || !info.key || !info.baseUrl) throw new Error("Seçili sağlayıcının model bağlantısı bulunamadı.");
     if (cancelled || signal.aborted || fs.existsSync(store.file(state.id, "cancel"))) stop();
     if (!cancelled) {
+      search = new ResearchSearch({ bridge, repoRoot: root });
       const userEnv = Object.create(null);
       parseEnvFile(userConfigPath(), userEnv);
       const tavilyKey = userEnv.TAVILY_API_KEY ?? (process.env.TAVILY_API_KEY || info.tavilyKey || "");
       const python = path.join(os.homedir(), ".iris", "gpt-researcher-0.16.0", process.platform === "win32" ? "Scripts/python.exe" : "bin/python");
       const script = nativeResourcePath(root, "sidecar", "gpt_researcher_worker.py");
-      child = spawnWorker(python, ["-I", "-u", script], { windowsHide: true, cwd: state.outputPath, stdio: ["pipe", "pipe", "ignore"],
+      child = spawnWorker(python, ["-I", "-X", "utf8", "-u", script], { windowsHide: true, cwd: state.outputPath, stdio: ["pipe", "pipe", "ignore"],
         env: Object.fromEntries(Object.entries(process.env).filter(([key]) => /^(?:SYSTEMROOT|WINDIR|PATH|TEMP|TMP|USERPROFILE|HOME|LOCALAPPDATA|APPDATA|PROGRAMDATA|HTTPS?_PROXY|NO_PROXY|SSL_CERT_FILE|REQUESTS_CA_BUNDLE)$/i.test(key))) });
       const finished = new Promise((resolve, reject) => { child.once("error", reject); child.once("close", resolve); });
       const lines = createInterface({ input: child.stdout });
@@ -75,7 +77,17 @@ export async function runGPTResearch({ state, store, writeJson, readJson, signal
         if (cancelled || signal.aborted || workerError || line.length > 12_000_000) return;
         try {
           const event = JSON.parse(line);
-          if (event.kind === "source") {
+          if (event.kind === "search_request") {
+            const requestId = event.id;
+            if (!Number.isSafeInteger(requestId) || requestId < 1) throw new Error("Geçersiz arama kimliği.");
+            const reply = (value) => {
+              if (!cancelled && !signal.aborted && !child.stdin.destroyed) {
+                child.stdin.write(JSON.stringify({ id: requestId, ...value }) + "\n");
+              }
+            };
+            void search.search(event.query, event.limit).then((results) => reply({ results }))
+              .catch((error) => reply({ error: error.message }));
+          } else if (event.kind === "source") {
             const url = canonicalUrl(event.source?.url || event.source?.href);
             const text = event.source?.raw_content || event.source?.content || event.source?.text;
             if (!url || typeof text !== "string" || !text.trim()) return;
@@ -93,23 +105,26 @@ export async function runGPTResearch({ state, store, writeJson, readJson, signal
           } else if (event.kind === "progress" && state.phase === "collecting") {
             save({ lastActivity: `GPT Researcher kaynak topluyor. ${event.completed}/${event.total} arama kolu tamamlandı.` });
           } else if (event.kind === "search") {
-            const message = event.reason === "quota" ? "Tavily kotası doldu. Arama DuckDuckGo ile devam ediyor." :
+            const message = event.reason === "quota" && event.provider === "hermes" ? "Tavily yedeğinin kotası doldu. Sonraki sorgular Hermes ile denenecek." :
+              event.reason === "hermes_error" ? "Hermes bu sorguyu tamamlayamadı. Tavily yedeği deneniyor." :
+              event.provider === "hermes" ? "Arama Hermes’in yapılandırılmış web aracıyla yapılıyor." :
+              event.reason === "quota" ? "Tavily kotası doldu. Arama DuckDuckGo ile devam ediyor." :
               event.reason === "missing_key" ? "Tavily anahtarı bulunamadı. DuckDuckGo kullanılıyor." : "";
-            if (message) limitations.push(message);
+            if (message && event.reason && !limitations.includes(message)) limitations.push(message);
             save({ searchProvider: event.provider, searchCounts: event.counts,
               ...(message ? { searchNotice: message, lastActivity: message } : {}) });
           } else if (event.kind === "warning") {
             if (!limitations.includes(event.message)) limitations.push(event.message);
             save({ lastActivity: event.message });
-          } else if (event.kind === "error") workerError = event.message;
+          } else if (event.kind === "error" && !workerError) workerError = event.message;
         } catch {
           workerError = "Araştırmanın ara kaydı yazılamadı veya okunamadı.";
           child.kill();
         }
       });
       child.stdin.on("error", () => {});
-      child.stdin.end(JSON.stringify({ ...state.spec, runtime: undefined, ...researchScope(state.spec), runId: state.id, parentPid: process.pid, baseUrl: info.baseUrl,
-        apiKey: info.key, tavilyKey, reasoning: reasoningBody(route), reports }));
+      child.stdin.write(JSON.stringify({ ...state.spec, runtime: undefined, ...researchScope(state.spec), runId: state.id, parentPid: process.pid, baseUrl: info.baseUrl,
+        apiKey: info.key, tavilyKey, searchProvider: "hermes", reasoning: reasoningBody(route), reports }) + "\n");
       const exitCode = await finished;
       lines.close();
       if (signal.aborted || fs.existsSync(store.file(state.id, "cancel"))) cancelled = true;
@@ -118,6 +133,7 @@ export async function runGPTResearch({ state, store, writeJson, readJson, signal
   } catch (error) {
     workerError = error.code === "ENOENT" ? "GPT Researcher çalışma ortamı bulunamadı. Avalon araştırma kurulumunu çalıştırın." : error.message;
   } finally {
+    search?.close();
     clearInterval(monitor);
     signal.removeEventListener("abort", stop);
   }

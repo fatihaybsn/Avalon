@@ -1,0 +1,62 @@
+{
+  "messages": [
+    {
+      "role": "system",
+      "content": "Solve the user's problem accurately. Return only the requested JSON, without an explanation. Do not use external tools."
+    },
+    {
+      "role": "user",
+      "content": "Assign five workers (rows 1..5) to five jobs (columns 1..5), each job used exactly once. Cost matrix: [[17,8,21,14,11],[9,19,7,16,13],[12,6,18,9,20],[15,11,13,5,8],[10,14,9,18,6]]. Minimize total cost. Return only JSON with keys cost (integer minimum) and jobs (array of five 1-based column numbers, in row order)."
+    }
+  ],
+  "costs": [
+    [
+      17,
+      8,
+      21,
+      14,
+      11
+    ],
+    [
+      9,
+      19,
+      7,
+      16,
+      13
+    ],
+    [
+      12,
+      6,
+      18,
+      9,
+      20
+    ],
+    [
+      15,
+      11,
+      13,
+      5,
+      8
+    ],
+    [
+      10,
+      14,
+      9,
+      18,
+      6
+    ]
+  ],
+  "optimum": 38,
+  "solutions": [
+    [
+      2,
+      3,
+      1,
+      4,
+      5
+    ]
+  ],
+  "temperature": 0,
+  "seed": 54231,
+  "max_tokens": 2048
+}

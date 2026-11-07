@@ -1,0 +1,382 @@
+{
+  "global_reasoning_effort": "none",
+  "parsed_reasoning_config": {
+    "enabled": false
+  },
+  "method": "Installed Hermes ChatCompletionsTransport + provider profile + custom-provider overrides + actual OpenAI SDK; httpx MockTransport captures final JSON, no network or config writes.",
+  "results": [
+    {
+      "model": "gemma-4-31b",
+      "selection": "default",
+      "builder_top_level_reasoning_effort": "none",
+      "extra_body": null,
+      "serialized_controls": {
+        "reasoning_effort": "none"
+      }
+    },
+    {
+      "model": "gemma-4-31b",
+      "selection": "enabled",
+      "builder_top_level_reasoning_effort": "none",
+      "extra_body": {
+        "thinking": true
+      },
+      "serialized_controls": {
+        "reasoning_effort": "none",
+        "thinking": true
+      }
+    },
+    {
+      "model": "gemma-4-31b",
+      "selection": "disabled",
+      "builder_top_level_reasoning_effort": "none",
+      "extra_body": {
+        "thinking": false
+      },
+      "serialized_controls": {
+        "reasoning_effort": "none",
+        "thinking": false
+      }
+    },
+    {
+      "model": "qwen3.8-flash-next",
+      "selection": "default",
+      "builder_top_level_reasoning_effort": "none",
+      "extra_body": null,
+      "serialized_controls": {
+        "reasoning_effort": "none"
+      }
+    },
+    {
+      "model": "qwen3.8-flash-next",
+      "selection": "enabled",
+      "builder_top_level_reasoning_effort": "none",
+      "extra_body": {
+        "thinking": true
+      },
+      "serialized_controls": {
+        "reasoning_effort": "none",
+        "thinking": true
+      }
+    },
+    {
+      "model": "qwen3.8-flash-next",
+      "selection": "disabled",
+      "builder_top_level_reasoning_effort": "none",
+      "extra_body": {
+        "thinking": false
+      },
+      "serialized_controls": {
+        "reasoning_effort": "none",
+        "thinking": false
+      }
+    },
+    {
+      "model": "qwen3.8-flash-next",
+      "selection": "high",
+      "builder_top_level_reasoning_effort": "none",
+      "extra_body": {
+        "thinking": true,
+        "reasoning_effort": "xhigh"
+      },
+      "serialized_controls": {
+        "reasoning_effort": "xhigh",
+        "thinking": true
+      }
+    },
+    {
+      "model": "qwen3.8-flash-next",
+      "selection": "xhigh",
+      "builder_top_level_reasoning_effort": "none",
+      "extra_body": {
+        "thinking": true,
+        "reasoning_effort": "xhigh"
+      },
+      "serialized_controls": {
+        "reasoning_effort": "xhigh",
+        "thinking": true
+      }
+    },
+    {
+      "model": "mimo-v2.6-pro",
+      "selection": "default",
+      "builder_top_level_reasoning_effort": "none",
+      "extra_body": null,
+      "serialized_controls": {
+        "reasoning_effort": "none"
+      }
+    },
+    {
+      "model": "mimo-v2.6-pro",
+      "selection": "enabled",
+      "builder_top_level_reasoning_effort": "none",
+      "extra_body": {
+        "thinking": true
+      },
+      "serialized_controls": {
+        "reasoning_effort": "none",
+        "thinking": true
+      }
+    },
+    {
+      "model": "mimo-v2.6-pro",
+      "selection": "disabled",
+      "builder_top_level_reasoning_effort": "none",
+      "extra_body": {
+        "thinking": false
+      },
+      "serialized_controls": {
+        "reasoning_effort": "none",
+        "thinking": false
+      }
+    },
+    {
+      "model": "mimo-v2.6-pro",
+      "selection": "none",
+      "builder_top_level_reasoning_effort": "none",
+      "extra_body": {
+        "thinking": false,
+        "reasoning_effort": "none"
+      },
+      "serialized_controls": {
+        "reasoning_effort": "none",
+        "thinking": false
+      }
+    },
+    {
+      "model": "mimo-v2.6-pro",
+      "selection": "minimal",
+      "builder_top_level_reasoning_effort": "none",
+      "extra_body": {
+        "thinking": true,
+        "reasoning_effort": "minimal"
+      },
+      "serialized_controls": {
+        "reasoning_effort": "minimal",
+        "thinking": true
+      }
+    },
+    {
+      "model": "mimo-v2.6-pro",
+      "selection": "low",
+      "builder_top_level_reasoning_effort": "none",
+      "extra_body": {
+        "thinking": true,
+        "reasoning_effort": "low"
+      },
+      "serialized_controls": {
+        "reasoning_effort": "low",
+        "thinking": true
+      }
+    },
+    {
+      "model": "mimo-v2.6-pro",
+      "selection": "medium",
+      "builder_top_level_reasoning_effort": "none",
+      "extra_body": {
+        "thinking": true,
+        "reasoning_effort": "medium"
+      },
+      "serialized_controls": {
+        "reasoning_effort": "medium",
+        "thinking": true
+      }
+    },
+    {
+      "model": "mimo-v2.6-pro",
+      "selection": "high",
+      "builder_top_level_reasoning_effort": "none",
+      "extra_body": {
+        "thinking": true,
+        "reasoning_effort": "high"
+      },
+      "serialized_controls": {
+        "reasoning_effort": "high",
+        "thinking": true
+      }
+    },
+    {
+      "model": "mimo-v2.6-pro",
+      "selection": "xhigh",
+      "builder_top_level_reasoning_effort": "none",
+      "extra_body": {
+        "thinking": true,
+        "reasoning_effort": "xhigh"
+      },
+      "serialized_controls": {
+        "reasoning_effort": "xhigh",
+        "thinking": true
+      }
+    },
+    {
+      "model": "deepseek-v4.1-flash",
+      "selection": "default",
+      "builder_top_level_reasoning_effort": "none",
+      "extra_body": null,
+      "serialized_controls": {
+        "reasoning_effort": "none"
+      }
+    },
+    {
+      "model": "deepseek-v4.1-flash",
+      "selection": "enabled",
+      "builder_top_level_reasoning_effort": "none",
+      "extra_body": {
+        "thinking": true
+      },
+      "serialized_controls": {
+        "reasoning_effort": "none",
+        "thinking": true
+      }
+    },
+    {
+      "model": "deepseek-v4.1-flash",
+      "selection": "disabled",
+      "builder_top_level_reasoning_effort": "none",
+      "extra_body": {
+        "thinking": false
+      },
+      "serialized_controls": {
+        "reasoning_effort": "none",
+        "thinking": false
+      }
+    },
+    {
+      "model": "deepseek-v4.1-flash",
+      "selection": "minimal",
+      "builder_top_level_reasoning_effort": "none",
+      "extra_body": {
+        "thinking": true,
+        "reasoning_effort": "low"
+      },
+      "serialized_controls": {
+        "reasoning_effort": "low",
+        "thinking": true
+      }
+    },
+    {
+      "model": "deepseek-v4.1-flash",
+      "selection": "low",
+      "builder_top_level_reasoning_effort": "none",
+      "extra_body": {
+        "thinking": true,
+        "reasoning_effort": "low"
+      },
+      "serialized_controls": {
+        "reasoning_effort": "low",
+        "thinking": true
+      }
+    },
+    {
+      "model": "deepseek-v4.1-flash",
+      "selection": "medium",
+      "builder_top_level_reasoning_effort": "none",
+      "extra_body": {
+        "thinking": true,
+        "reasoning_effort": "high"
+      },
+      "serialized_controls": {
+        "reasoning_effort": "high",
+        "thinking": true
+      }
+    },
+    {
+      "model": "deepseek-v4.1-flash",
+      "selection": "high",
+      "builder_top_level_reasoning_effort": "none",
+      "extra_body": {
+        "thinking": true,
+        "reasoning_effort": "high"
+      },
+      "serialized_controls": {
+        "reasoning_effort": "high",
+        "thinking": true
+      }
+    },
+    {
+      "model": "glm-5.3",
+      "selection": "default",
+      "builder_top_level_reasoning_effort": "none",
+      "extra_body": null,
+      "serialized_controls": {
+        "reasoning_effort": "none"
+      }
+    },
+    {
+      "model": "glm-5.3",
+      "selection": "enabled",
+      "builder_top_level_reasoning_effort": "none",
+      "extra_body": {
+        "thinking": true
+      },
+      "serialized_controls": {
+        "reasoning_effort": "none",
+        "thinking": true
+      }
+    },
+    {
+      "model": "glm-5.3",
+      "selection": "disabled",
+      "builder_top_level_reasoning_effort": "none",
+      "extra_body": {
+        "thinking": false
+      },
+      "serialized_controls": {
+        "reasoning_effort": "none",
+        "thinking": false
+      }
+    },
+    {
+      "model": "glm-5.3",
+      "selection": "minimal",
+      "builder_top_level_reasoning_effort": "none",
+      "extra_body": {
+        "thinking": true,
+        "reasoning_effort": "low"
+      },
+      "serialized_controls": {
+        "reasoning_effort": "low",
+        "thinking": true
+      }
+    },
+    {
+      "model": "glm-5.3",
+      "selection": "low",
+      "builder_top_level_reasoning_effort": "none",
+      "extra_body": {
+        "thinking": true,
+        "reasoning_effort": "low"
+      },
+      "serialized_controls": {
+        "reasoning_effort": "low",
+        "thinking": true
+      }
+    },
+    {
+      "model": "glm-5.3",
+      "selection": "medium",
+      "builder_top_level_reasoning_effort": "none",
+      "extra_body": {
+        "thinking": true,
+        "reasoning_effort": "high"
+      },
+      "serialized_controls": {
+        "reasoning_effort": "high",
+        "thinking": true
+      }
+    },
+    {
+      "model": "glm-5.3",
+      "selection": "high",
+      "builder_top_level_reasoning_effort": "none",
+      "extra_body": {
+        "thinking": true,
+        "reasoning_effort": "high"
+      },
+      "serialized_controls": {
+        "reasoning_effort": "high",
+        "thinking": true
+      }
+    }
+  ]
+}

@@ -30,7 +30,9 @@ export async function installAutomation(root, repoRoot) {
   if (!fs.existsSync(editorFile)) {
     const example = readJson(resource(repoRoot, "nodes", "examples", "avalon-example.json"));
     if (!example) throw new Error("Örnek otomasyon akışı bulunamadı.");
-    writeJson(editorFile, example);
+    const mixed = readJson(resource(repoRoot, "nodes", "examples", "research-hermes.json"), []);
+    const revision = readJson(resource(repoRoot, "nodes", "examples", "research-revision.json"), []);
+    writeJson(editorFile, [...example, ...mixed, ...revision]);
   }
   if (!automationInstalled(root, repoRoot)) {
     const result = await new Promise((resolve, reject) => {

@@ -1,0 +1,16 @@
+[
+  {
+    "model": "qwen3.8-flash-next",
+    "message": "Unexpected reasoning effort none. Supported types are xhigh (default), medium, and low.",
+    "classification": "FailoverReason.format_error",
+    "reasoning_field_recovery": false,
+    "reasoning_level_recovery": false
+  },
+  {
+    "model": "gemma-4-31b",
+    "message": "model 'gemma-4-31b' 'reasoning_effort' parametresini desteklemiyor",
+    "classification": "FailoverReason.format_error",
+    "reasoning_field_recovery": false,
+    "reasoning_level_recovery": false
+  }
+]

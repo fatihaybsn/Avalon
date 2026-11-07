@@ -1,0 +1,635 @@
+{
+  "at": "2026-11-05T14:50:08.010Z",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Compute 37*43 + 19*23. Return only the final integer."
+    }
+  ],
+  "max_tokens": 512,
+  "results": [
+    {
+      "model": "qwen3.8-flash-next",
+      "reasoning": "disabled",
+      "controls": {
+        "thinking": false
+      },
+      "max_tokens": 512,
+      "injectedHermesNone": false,
+      "reasoningChars": 0,
+      "content": "2028",
+      "chunks": 6,
+      "httpStatus": 200,
+      "headerSeconds": 1.37,
+      "requestId": "4fd18a41-9792-4a20-af00-15efab56fc06",
+      "responseModel": "qwen/qwen3.8-flash-next",
+      "firstContentSeconds": 5.61,
+      "finishReason": "stop",
+      "usage": {
+        "prompt_tokens": 33,
+        "total_tokens": 38,
+        "completion_tokens": 5,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "created_cache_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        }
+      },
+      "completed": true,
+      "seconds": 6.15,
+      "correct": true
+    },
+    {
+      "model": "qwen3.8-flash-next",
+      "reasoning": "xhigh",
+      "controls": {
+        "thinking": true,
+        "reasoning_effort": "xhigh"
+      },
+      "max_tokens": 512,
+      "injectedHermesNone": false,
+      "reasoningChars": 193,
+      "content": "\n\n2028",
+      "chunks": 36,
+      "httpStatus": 200,
+      "headerSeconds": 1.35,
+      "requestId": "301ebd78-0c50-4861-915f-ec6b35a8050c",
+      "responseModel": "qwen/qwen3.8-flash-next",
+      "firstReasoningSeconds": 5.59,
+      "firstContentSeconds": 12.21,
+      "finishReason": "stop",
+      "usage": {
+        "prompt_tokens": 73,
+        "total_tokens": 187,
+        "completion_tokens": 114,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "created_cache_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 107
+        }
+      },
+      "completed": true,
+      "seconds": 12.45,
+      "correct": true
+    },
+    {
+      "model": "qwen3.8-flash-next",
+      "reasoning": "enabled",
+      "controls": {
+        "thinking": true
+      },
+      "max_tokens": 512,
+      "injectedHermesNone": false,
+      "reasoningChars": 193,
+      "content": "\n\n2028",
+      "chunks": 36,
+      "httpStatus": 200,
+      "headerSeconds": 0.21,
+      "requestId": "fe17cdb0-abee-495f-a5c1-2297eba01439",
+      "responseModel": "qwen/qwen3.8-flash-next",
+      "firstReasoningSeconds": 0.95,
+      "firstContentSeconds": 5.33,
+      "finishReason": "stop",
+      "usage": {
+        "prompt_tokens": 73,
+        "total_tokens": 187,
+        "completion_tokens": 114,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "created_cache_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 107
+        }
+      },
+      "completed": true,
+      "seconds": 5.58,
+      "correct": true
+    },
+    {
+      "model": "qwen3.8-flash-next",
+      "reasoning": "enabled",
+      "controls": {
+        "thinking": true,
+        "reasoning_effort": "none"
+      },
+      "max_tokens": 512,
+      "injectedHermesNone": true,
+      "reasoningChars": 0,
+      "content": "",
+      "chunks": 0,
+      "httpStatus": 400,
+      "headerSeconds": 0.23,
+      "requestId": "9cbefe94-d95d-4ff8-adfb-b7cf6ab2bb3b",
+      "error": {
+        "error": {
+          "message": "Unexpected reasoning effort none. Supported types are xhigh (default), medium, and low.",
+          "type": "invalid_request_error",
+          "param": null,
+          "code": "bad_request"
+        }
+      },
+      "seconds": 0.23
+    },
+    {
+      "model": "mimo-v2.6-pro",
+      "reasoning": "low",
+      "controls": {
+        "thinking": true,
+        "reasoning_effort": "low"
+      },
+      "max_tokens": 512,
+      "injectedHermesNone": false,
+      "reasoningChars": 0,
+      "content": "",
+      "chunks": 0,
+      "httpStatus": 503,
+      "headerSeconds": 5.2,
+      "requestId": "85bbb83d-86bd-4a90-9814-2ffb6354b7c1",
+      "error": {
+        "error": {
+          "message": "Model şu anda dolu, lütfen kısa bir süre sonra tekrar deneyin.",
+          "type": "api_error",
+          "param": null,
+          "code": "model_capacity_exhausted",
+          "evren": {
+            "resets_at": "2026-11-05T14:49:23.879232Z"
+          }
+        }
+      },
+      "seconds": 5.2
+    },
+    {
+      "model": "mimo-v2.6-pro",
+      "reasoning": "xhigh",
+      "controls": {
+        "thinking": true,
+        "reasoning_effort": "xhigh"
+      },
+      "max_tokens": 512,
+      "injectedHermesNone": false,
+      "reasoningChars": 0,
+      "content": "",
+      "chunks": 0,
+      "httpStatus": 503,
+      "headerSeconds": 5.21,
+      "requestId": "814753d5-d09a-4fe8-a001-1421a1ff23e4",
+      "error": {
+        "error": {
+          "message": "Model şu anda dolu, lütfen kısa bir süre sonra tekrar deneyin.",
+          "type": "api_error",
+          "param": null,
+          "code": "model_capacity_exhausted",
+          "evren": {
+            "resets_at": "2026-11-05T14:49:23.889796Z"
+          }
+        }
+      },
+      "seconds": 5.21
+    },
+    {
+      "model": "mimo-v2.6-pro",
+      "reasoning": "enabled",
+      "controls": {
+        "thinking": true
+      },
+      "max_tokens": 512,
+      "injectedHermesNone": false,
+      "reasoningChars": 0,
+      "content": "",
+      "chunks": 0,
+      "httpStatus": 503,
+      "headerSeconds": 5.15,
+      "requestId": "62a2ee62-8680-4e35-9c56-638484981020",
+      "error": {
+        "error": {
+          "message": "Model şu anda dolu, lütfen kısa bir süre sonra tekrar deneyin.",
+          "type": "api_error",
+          "param": null,
+          "code": "model_capacity_exhausted",
+          "evren": {
+            "resets_at": "2026-11-05T14:49:29.044494Z"
+          }
+        }
+      },
+      "seconds": 5.15
+    },
+    {
+      "model": "mimo-v2.6-pro",
+      "reasoning": "enabled",
+      "controls": {
+        "thinking": true,
+        "reasoning_effort": "none"
+      },
+      "max_tokens": 512,
+      "injectedHermesNone": true,
+      "reasoningChars": 0,
+      "content": "",
+      "chunks": 0,
+      "httpStatus": 503,
+      "headerSeconds": 5.16,
+      "requestId": "60401b01-43f0-43b6-a00a-9ca8542593e2",
+      "error": {
+        "error": {
+          "message": "Model şu anda dolu, lütfen kısa bir süre sonra tekrar deneyin.",
+          "type": "api_error",
+          "param": null,
+          "code": "model_capacity_exhausted",
+          "evren": {
+            "resets_at": "2026-11-05T14:49:29.052649Z"
+          }
+        }
+      },
+      "seconds": 5.16
+    },
+    {
+      "model": "deepseek-v4.1-flash",
+      "reasoning": "low",
+      "controls": {
+        "thinking": true,
+        "reasoning_effort": "low"
+      },
+      "max_tokens": 512,
+      "injectedHermesNone": false,
+      "reasoningChars": 122,
+      "content": "2028",
+      "chunks": 15,
+      "httpStatus": 200,
+      "headerSeconds": 7.62,
+      "requestId": "aaa51479-b8dd-4007-b61e-eb85d6fb6085",
+      "responseModel": "deepseek/deepseek-v4.1-flash",
+      "firstReasoningSeconds": 9.02,
+      "firstContentSeconds": 14.97,
+      "finishReason": "stop",
+      "usage": {
+        "prompt_tokens": 47,
+        "total_tokens": 97,
+        "completion_tokens": 50,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "created_cache_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 46
+        }
+      },
+      "completed": true,
+      "seconds": 14.99,
+      "correct": true
+    },
+    {
+      "model": "deepseek-v4.1-flash",
+      "reasoning": "high",
+      "controls": {
+        "thinking": true,
+        "reasoning_effort": "high"
+      },
+      "max_tokens": 512,
+      "injectedHermesNone": false,
+      "reasoningChars": 122,
+      "content": "2028",
+      "chunks": 15,
+      "httpStatus": 200,
+      "headerSeconds": 7.62,
+      "requestId": "af1bfbfc-a433-41fa-9c6e-cd692e378d55",
+      "responseModel": "deepseek/deepseek-v4.1-flash",
+      "firstReasoningSeconds": 9.01,
+      "firstContentSeconds": 14.97,
+      "finishReason": "stop",
+      "usage": {
+        "prompt_tokens": 47,
+        "total_tokens": 97,
+        "completion_tokens": 50,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "created_cache_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 46
+        }
+      },
+      "completed": true,
+      "seconds": 15,
+      "correct": true
+    },
+    {
+      "model": "deepseek-v4.1-flash",
+      "reasoning": "disabled",
+      "controls": {
+        "thinking": false
+      },
+      "max_tokens": 512,
+      "injectedHermesNone": false,
+      "reasoningChars": 0,
+      "content": "2038",
+      "chunks": 5,
+      "httpStatus": 200,
+      "headerSeconds": 0.82,
+      "requestId": "c2b2dd57-54e0-4fdc-8c57-3b7ecb05925a",
+      "responseModel": "deepseek/deepseek-v4.1-flash",
+      "firstContentSeconds": 2.7,
+      "finishReason": "stop",
+      "usage": {
+        "prompt_tokens": 21,
+        "total_tokens": 24,
+        "completion_tokens": 3,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "created_cache_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        }
+      },
+      "completed": true,
+      "seconds": 3.57,
+      "correct": false
+    },
+    {
+      "model": "glm-5.3",
+      "reasoning": "disabled",
+      "controls": {
+        "thinking": false
+      },
+      "max_tokens": 512,
+      "injectedHermesNone": false,
+      "reasoningChars": 0,
+      "content": "",
+      "chunks": 0,
+      "httpStatus": 503,
+      "headerSeconds": 5.2,
+      "requestId": "2506c1bb-5c88-4844-ac3f-003e21f67efc",
+      "error": {
+        "error": {
+          "message": "Model şu anda dolu, lütfen kısa bir süre sonra tekrar deneyin.",
+          "type": "api_error",
+          "param": null,
+          "code": "model_capacity_exhausted",
+          "evren": {
+            "resets_at": "2026-11-05T14:49:49.259231Z"
+          }
+        }
+      },
+      "seconds": 5.2
+    },
+    {
+      "model": "glm-5.3",
+      "reasoning": "low",
+      "controls": {
+        "thinking": true,
+        "reasoning_effort": "low"
+      },
+      "max_tokens": 512,
+      "injectedHermesNone": false,
+      "reasoningChars": 34,
+      "content": "2028",
+      "chunks": 13,
+      "httpStatus": 200,
+      "headerSeconds": 4.67,
+      "requestId": "bd1e074e-a269-47e9-9601-5dc6c20335ac",
+      "responseModel": "zai/glm-5.3-fp8",
+      "firstReasoningSeconds": 6.02,
+      "firstContentSeconds": 11.79,
+      "finishReason": "stop",
+      "usage": {
+        "prompt_tokens": 29,
+        "total_tokens": 53,
+        "completion_tokens": 24,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "created_cache_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 20
+        }
+      },
+      "completed": true,
+      "seconds": 12.72,
+      "correct": true
+    },
+    {
+      "model": "glm-5.3",
+      "reasoning": "high",
+      "controls": {
+        "thinking": true,
+        "reasoning_effort": "high"
+      },
+      "max_tokens": 512,
+      "injectedHermesNone": false,
+      "reasoningChars": 0,
+      "content": "",
+      "chunks": 0,
+      "httpStatus": 503,
+      "headerSeconds": 5.23,
+      "requestId": "bed706ad-986f-4208-b1b0-587967393e8d",
+      "error": {
+        "error": {
+          "message": "Model şu anda dolu, lütfen kısa bir süre sonra tekrar deneyin.",
+          "type": "api_error",
+          "param": null,
+          "code": "model_capacity_exhausted",
+          "evren": {
+            "resets_at": "2026-11-05T14:49:54.472025Z"
+          }
+        }
+      },
+      "seconds": 5.23
+    },
+    {
+      "model": "gemma-4-31b",
+      "reasoning": "disabled",
+      "controls": {
+        "thinking": false
+      },
+      "max_tokens": 512,
+      "injectedHermesNone": false,
+      "reasoningChars": 0,
+      "content": "2028",
+      "chunks": 6,
+      "httpStatus": 200,
+      "headerSeconds": 0.19,
+      "requestId": "1ea58317-be6e-4ac6-8b24-40370ce6cce9",
+      "responseModel": "google/gemma-4-31b",
+      "firstContentSeconds": 5.22,
+      "finishReason": "stop",
+      "usage": {
+        "prompt_tokens": 34,
+        "total_tokens": 39,
+        "completion_tokens": 5,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "created_cache_tokens": 32
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        }
+      },
+      "completed": true,
+      "seconds": 5.4,
+      "correct": true
+    },
+    {
+      "model": "gemma-4-31b",
+      "reasoning": "enabled",
+      "controls": {
+        "thinking": true
+      },
+      "max_tokens": 512,
+      "injectedHermesNone": false,
+      "reasoningChars": 782,
+      "content": "2028",
+      "chunks": 123,
+      "httpStatus": 200,
+      "headerSeconds": 0.21,
+      "requestId": "41ca6e0c-2278-46f8-acf6-c154aa02e71f",
+      "responseModel": "google/gemma-4-31b",
+      "firstReasoningSeconds": 5.26,
+      "firstContentSeconds": 10.83,
+      "finishReason": "stop",
+      "usage": {
+        "prompt_tokens": 37,
+        "total_tokens": 469,
+        "completion_tokens": 432,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "created_cache_tokens": 32
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 425
+        }
+      },
+      "completed": true,
+      "seconds": 10.9,
+      "correct": true
+    },
+    {
+      "model": "gemma-4-31b",
+      "reasoning": "enabled",
+      "controls": {
+        "thinking": true,
+        "reasoning_effort": "none"
+      },
+      "max_tokens": 512,
+      "injectedHermesNone": true,
+      "reasoningChars": 0,
+      "content": "",
+      "chunks": 0,
+      "httpStatus": 400,
+      "headerSeconds": 0.14,
+      "requestId": "0f5ab2a4-53ad-433a-91a8-0e4fecef6fe0",
+      "error": {
+        "error": {
+          "message": "model 'gemma-4-31b' 'reasoning_effort' parametresini desteklemiyor",
+          "type": "invalid_request_error",
+          "param": null,
+          "code": "bad_request"
+        }
+      },
+      "seconds": 0.14
+    },
+    {
+      "model": "qwen3.8-flash-next",
+      "reasoning": "default",
+      "controls": {},
+      "max_tokens": 512,
+      "injectedHermesNone": false,
+      "reasoningChars": 182,
+      "content": "\n\n2028",
+      "chunks": 35,
+      "httpStatus": 200,
+      "headerSeconds": 0.19,
+      "requestId": "596763ca-f79b-4cea-820b-700549c60b89",
+      "responseModel": "qwen/qwen3.8-flash-next",
+      "firstReasoningSeconds": 0.5,
+      "firstContentSeconds": 5.29,
+      "finishReason": "stop",
+      "usage": {
+        "prompt_tokens": 73,
+        "total_tokens": 184,
+        "completion_tokens": 111,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "created_cache_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 104
+        }
+      },
+      "completed": true,
+      "seconds": 5.45,
+      "correct": true
+    },
+    {
+      "model": "qwen3.8-flash-next",
+      "reasoning": "default",
+      "controls": {
+        "reasoning_effort": "none"
+      },
+      "max_tokens": 512,
+      "injectedHermesNone": true,
+      "reasoningChars": 0,
+      "content": "2028",
+      "chunks": 6,
+      "httpStatus": 200,
+      "headerSeconds": 0.32,
+      "requestId": "dd37203e-f6d3-428e-bb45-6d637416efe2",
+      "responseModel": "qwen/qwen3.8-flash-next",
+      "firstContentSeconds": 0.9,
+      "finishReason": "stop",
+      "usage": {
+        "prompt_tokens": 33,
+        "total_tokens": 38,
+        "completion_tokens": 5,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "created_cache_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        }
+      },
+      "completed": true,
+      "seconds": 1.26,
+      "correct": true
+    },
+    {
+      "model": "qwen3.8-flash-next",
+      "reasoning": "low",
+      "controls": {
+        "thinking": true,
+        "reasoning_effort": "low"
+      },
+      "max_tokens": 512,
+      "injectedHermesNone": false,
+      "reasoningChars": 129,
+      "content": "\n\n2028",
+      "chunks": 32,
+      "httpStatus": 200,
+      "headerSeconds": 0.32,
+      "requestId": "24310f2d-2343-4692-9dc0-001588e46779",
+      "responseModel": "qwen/qwen3.8-flash-next",
+      "firstReasoningSeconds": 0.9,
+      "firstContentSeconds": 4.39,
+      "finishReason": "stop",
+      "usage": {
+        "prompt_tokens": 61,
+        "total_tokens": 171,
+        "completion_tokens": 110,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "created_cache_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 103
+        }
+      },
+      "completed": true,
+      "seconds": 4.63,
+      "correct": true
+    }
+  ]
+}

@@ -13,6 +13,8 @@ export const APPLICATION_METHODS = Object.freeze({
   listResearch: "research:list", researchDefaults: "research:defaults", listResearchSchedules: "research:schedules",
   listAutomations: "automation:mobile-list", saveAutomationSchedule: "automation:mobile-schedule",
   cancelAutomationRun: "automation:cancel-run",
+  respondAutomation: "automation:respond",
+  acknowledgeAutomationReview: "automation:reviewed",
   loadBrain: "brain:load", readBrainNote: "brain:read", searchBrain: "brain:search", filterBrain: "brain:filter", syncBrainIndex: "brain:sync-index",
   searchMemory: "memory:search", readMemoryNote: "memory:read",
 });

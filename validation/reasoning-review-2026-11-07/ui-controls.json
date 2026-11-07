@@ -1,0 +1,548 @@
+[
+  {
+    "provider": "evren",
+    "model": "gemma-4-31b",
+    "selection": "default",
+    "body": {},
+    "baseUrl": "https://evren-llmapi.ssyz.org.tr/v1"
+  },
+  {
+    "provider": "evren",
+    "model": "gemma-4-31b",
+    "selection": "enabled",
+    "body": {
+      "thinking": true
+    },
+    "baseUrl": "https://evren-llmapi.ssyz.org.tr/v1"
+  },
+  {
+    "provider": "evren",
+    "model": "gemma-4-31b",
+    "selection": "disabled",
+    "body": {
+      "thinking": false
+    },
+    "baseUrl": "https://evren-llmapi.ssyz.org.tr/v1"
+  },
+  {
+    "provider": "evren",
+    "model": "qwen3.8-flash-next",
+    "selection": "default",
+    "body": {},
+    "baseUrl": "https://evren-llmapi.ssyz.org.tr/v1"
+  },
+  {
+    "provider": "evren",
+    "model": "qwen3.8-flash-next",
+    "selection": "enabled",
+    "body": {
+      "thinking": true
+    },
+    "baseUrl": "https://evren-llmapi.ssyz.org.tr/v1"
+  },
+  {
+    "provider": "evren",
+    "model": "qwen3.8-flash-next",
+    "selection": "disabled",
+    "body": {
+      "thinking": false
+    },
+    "baseUrl": "https://evren-llmapi.ssyz.org.tr/v1"
+  },
+  {
+    "provider": "evren",
+    "model": "qwen3.8-flash-next",
+    "selection": "high",
+    "body": {
+      "thinking": true,
+      "reasoning_effort": "xhigh"
+    },
+    "baseUrl": "https://evren-llmapi.ssyz.org.tr/v1"
+  },
+  {
+    "provider": "evren",
+    "model": "qwen3.8-flash-next",
+    "selection": "xhigh",
+    "body": {
+      "thinking": true,
+      "reasoning_effort": "xhigh"
+    },
+    "baseUrl": "https://evren-llmapi.ssyz.org.tr/v1"
+  },
+  {
+    "provider": "evren",
+    "model": "mimo-v2.6-pro",
+    "selection": "default",
+    "body": {},
+    "baseUrl": "https://evren-llmapi.ssyz.org.tr/v1"
+  },
+  {
+    "provider": "evren",
+    "model": "mimo-v2.6-pro",
+    "selection": "enabled",
+    "body": {
+      "thinking": true
+    },
+    "baseUrl": "https://evren-llmapi.ssyz.org.tr/v1"
+  },
+  {
+    "provider": "evren",
+    "model": "mimo-v2.6-pro",
+    "selection": "disabled",
+    "body": {
+      "thinking": false
+    },
+    "baseUrl": "https://evren-llmapi.ssyz.org.tr/v1"
+  },
+  {
+    "provider": "evren",
+    "model": "mimo-v2.6-pro",
+    "selection": "none",
+    "body": {
+      "thinking": false,
+      "reasoning_effort": "none"
+    },
+    "baseUrl": "https://evren-llmapi.ssyz.org.tr/v1"
+  },
+  {
+    "provider": "evren",
+    "model": "mimo-v2.6-pro",
+    "selection": "minimal",
+    "body": {
+      "thinking": true,
+      "reasoning_effort": "minimal"
+    },
+    "baseUrl": "https://evren-llmapi.ssyz.org.tr/v1"
+  },
+  {
+    "provider": "evren",
+    "model": "mimo-v2.6-pro",
+    "selection": "low",
+    "body": {
+      "thinking": true,
+      "reasoning_effort": "low"
+    },
+    "baseUrl": "https://evren-llmapi.ssyz.org.tr/v1"
+  },
+  {
+    "provider": "evren",
+    "model": "mimo-v2.6-pro",
+    "selection": "medium",
+    "body": {
+      "thinking": true,
+      "reasoning_effort": "medium"
+    },
+    "baseUrl": "https://evren-llmapi.ssyz.org.tr/v1"
+  },
+  {
+    "provider": "evren",
+    "model": "mimo-v2.6-pro",
+    "selection": "high",
+    "body": {
+      "thinking": true,
+      "reasoning_effort": "high"
+    },
+    "baseUrl": "https://evren-llmapi.ssyz.org.tr/v1"
+  },
+  {
+    "provider": "evren",
+    "model": "mimo-v2.6-pro",
+    "selection": "xhigh",
+    "body": {
+      "thinking": true,
+      "reasoning_effort": "xhigh"
+    },
+    "baseUrl": "https://evren-llmapi.ssyz.org.tr/v1"
+  },
+  {
+    "provider": "evren",
+    "model": "deepseek-v4.1-flash",
+    "selection": "default",
+    "body": {},
+    "baseUrl": "https://evren-llmapi.ssyz.org.tr/v1"
+  },
+  {
+    "provider": "evren",
+    "model": "deepseek-v4.1-flash",
+    "selection": "enabled",
+    "body": {
+      "thinking": true
+    },
+    "baseUrl": "https://evren-llmapi.ssyz.org.tr/v1"
+  },
+  {
+    "provider": "evren",
+    "model": "deepseek-v4.1-flash",
+    "selection": "disabled",
+    "body": {
+      "thinking": false
+    },
+    "baseUrl": "https://evren-llmapi.ssyz.org.tr/v1"
+  },
+  {
+    "provider": "evren",
+    "model": "deepseek-v4.1-flash",
+    "selection": "minimal",
+    "body": {
+      "thinking": true,
+      "reasoning_effort": "low"
+    },
+    "baseUrl": "https://evren-llmapi.ssyz.org.tr/v1"
+  },
+  {
+    "provider": "evren",
+    "model": "deepseek-v4.1-flash",
+    "selection": "low",
+    "body": {
+      "thinking": true,
+      "reasoning_effort": "low"
+    },
+    "baseUrl": "https://evren-llmapi.ssyz.org.tr/v1"
+  },
+  {
+    "provider": "evren",
+    "model": "deepseek-v4.1-flash",
+    "selection": "medium",
+    "body": {
+      "thinking": true,
+      "reasoning_effort": "high"
+    },
+    "baseUrl": "https://evren-llmapi.ssyz.org.tr/v1"
+  },
+  {
+    "provider": "evren",
+    "model": "deepseek-v4.1-flash",
+    "selection": "high",
+    "body": {
+      "thinking": true,
+      "reasoning_effort": "high"
+    },
+    "baseUrl": "https://evren-llmapi.ssyz.org.tr/v1"
+  },
+  {
+    "provider": "evren",
+    "model": "glm-5.3",
+    "selection": "default",
+    "body": {},
+    "baseUrl": "https://evren-llmapi.ssyz.org.tr/v1"
+  },
+  {
+    "provider": "evren",
+    "model": "glm-5.3",
+    "selection": "enabled",
+    "body": {
+      "thinking": true
+    },
+    "baseUrl": "https://evren-llmapi.ssyz.org.tr/v1"
+  },
+  {
+    "provider": "evren",
+    "model": "glm-5.3",
+    "selection": "disabled",
+    "body": {
+      "thinking": false
+    },
+    "baseUrl": "https://evren-llmapi.ssyz.org.tr/v1"
+  },
+  {
+    "provider": "evren",
+    "model": "glm-5.3",
+    "selection": "minimal",
+    "body": {
+      "thinking": true,
+      "reasoning_effort": "low"
+    },
+    "baseUrl": "https://evren-llmapi.ssyz.org.tr/v1"
+  },
+  {
+    "provider": "evren",
+    "model": "glm-5.3",
+    "selection": "low",
+    "body": {
+      "thinking": true,
+      "reasoning_effort": "low"
+    },
+    "baseUrl": "https://evren-llmapi.ssyz.org.tr/v1"
+  },
+  {
+    "provider": "evren",
+    "model": "glm-5.3",
+    "selection": "medium",
+    "body": {
+      "thinking": true,
+      "reasoning_effort": "high"
+    },
+    "baseUrl": "https://evren-llmapi.ssyz.org.tr/v1"
+  },
+  {
+    "provider": "evren",
+    "model": "glm-5.3",
+    "selection": "high",
+    "body": {
+      "thinking": true,
+      "reasoning_effort": "high"
+    },
+    "baseUrl": "https://evren-llmapi.ssyz.org.tr/v1"
+  },
+  {
+    "provider": "opencode",
+    "model": "beam-free",
+    "selection": "default",
+    "body": {},
+    "baseUrl": "https://opencode.ai/inference/openai/v1"
+  },
+  {
+    "provider": "opencode",
+    "model": "beam-free",
+    "selection": "low",
+    "body": {
+      "reasoning_effort": "low"
+    },
+    "baseUrl": "https://opencode.ai/inference/openai/v1"
+  },
+  {
+    "provider": "opencode",
+    "model": "beam-free",
+    "selection": "medium",
+    "body": {
+      "reasoning_effort": "medium"
+    },
+    "baseUrl": "https://opencode.ai/inference/openai/v1"
+  },
+  {
+    "provider": "opencode",
+    "model": "beam-free",
+    "selection": "high",
+    "body": {
+      "reasoning_effort": "high"
+    },
+    "baseUrl": "https://opencode.ai/inference/openai/v1"
+  },
+  {
+    "provider": "opencode",
+    "model": "beam-free",
+    "selection": "xhigh",
+    "body": {
+      "reasoning_effort": "xhigh"
+    },
+    "baseUrl": "https://opencode.ai/inference/openai/v1"
+  },
+  {
+    "provider": "opencode",
+    "model": "beam-free",
+    "selection": "max",
+    "body": {
+      "reasoning_effort": "max"
+    },
+    "baseUrl": "https://opencode.ai/inference/openai/v1"
+  },
+  {
+    "provider": "opencode",
+    "model": "big-pickle",
+    "selection": "default",
+    "body": {},
+    "baseUrl": "https://opencode.ai/inference/openai/v1"
+  },
+  {
+    "provider": "opencode",
+    "model": "deepseek-v4.1-flash-free",
+    "selection": "default",
+    "body": {},
+    "baseUrl": "https://opencode.ai/inference/openai/v1"
+  },
+  {
+    "provider": "opencode",
+    "model": "deepseek-v4.1-flash-free",
+    "selection": "low",
+    "body": {
+      "reasoning_effort": "low"
+    },
+    "baseUrl": "https://opencode.ai/inference/openai/v1"
+  },
+  {
+    "provider": "opencode",
+    "model": "deepseek-v4.1-flash-free",
+    "selection": "high",
+    "body": {
+      "reasoning_effort": "high"
+    },
+    "baseUrl": "https://opencode.ai/inference/openai/v1"
+  },
+  {
+    "provider": "opencode",
+    "model": "deepseek-v4.1-flash-free",
+    "selection": "max",
+    "body": {
+      "reasoning_effort": "max"
+    },
+    "baseUrl": "https://opencode.ai/inference/openai/v1"
+  },
+  {
+    "provider": "opencode",
+    "model": "flint-40b-free",
+    "selection": "default",
+    "body": {},
+    "baseUrl": "https://opencode.ai/inference/openai/v1"
+  },
+  {
+    "provider": "opencode",
+    "model": "flint-40b-free",
+    "selection": "low",
+    "body": {
+      "reasoning_effort": "low"
+    },
+    "baseUrl": "https://opencode.ai/inference/openai/v1"
+  },
+  {
+    "provider": "opencode",
+    "model": "flint-40b-free",
+    "selection": "medium",
+    "body": {
+      "reasoning_effort": "medium"
+    },
+    "baseUrl": "https://opencode.ai/inference/openai/v1"
+  },
+  {
+    "provider": "opencode",
+    "model": "flint-40b-free",
+    "selection": "high",
+    "body": {
+      "reasoning_effort": "high"
+    },
+    "baseUrl": "https://opencode.ai/inference/openai/v1"
+  },
+  {
+    "provider": "opencode",
+    "model": "flint-40b-free",
+    "selection": "xhigh",
+    "body": {
+      "reasoning_effort": "xhigh"
+    },
+    "baseUrl": "https://opencode.ai/inference/openai/v1"
+  },
+  {
+    "provider": "opencode",
+    "model": "flint-40b-free",
+    "selection": "max",
+    "body": {
+      "reasoning_effort": "max"
+    },
+    "baseUrl": "https://opencode.ai/inference/openai/v1"
+  },
+  {
+    "provider": "opencode",
+    "model": "glm-5.3-flash-free",
+    "selection": "default",
+    "body": {},
+    "baseUrl": "https://opencode.ai/inference/openai/v1"
+  },
+  {
+    "provider": "opencode",
+    "model": "glm-5.3-flash-free",
+    "selection": "low",
+    "body": {
+      "reasoning_effort": "low"
+    },
+    "baseUrl": "https://opencode.ai/inference/openai/v1"
+  },
+  {
+    "provider": "opencode",
+    "model": "glm-5.3-flash-free",
+    "selection": "high",
+    "body": {
+      "reasoning_effort": "high"
+    },
+    "baseUrl": "https://opencode.ai/inference/openai/v1"
+  },
+  {
+    "provider": "opencode",
+    "model": "glm-5.3-flash-free",
+    "selection": "max",
+    "body": {
+      "reasoning_effort": "max"
+    },
+    "baseUrl": "https://opencode.ai/inference/openai/v1"
+  },
+  {
+    "provider": "opencode",
+    "model": "mimo-v2.6-flash-free",
+    "selection": "default",
+    "body": {},
+    "baseUrl": "https://opencode.ai/inference/openai/v1"
+  },
+  {
+    "provider": "opencode",
+    "model": "nemotron-3-ultra-free",
+    "selection": "default",
+    "body": {},
+    "baseUrl": "https://opencode.ai/inference/openai/v1"
+  },
+  {
+    "provider": "opencode",
+    "model": "nemotron-3.5-lightning-free",
+    "selection": "default",
+    "body": {},
+    "baseUrl": "https://opencode.ai/inference/openai/v1"
+  },
+  {
+    "provider": "opencode",
+    "model": "nemotron-3.5-super-vl-free",
+    "selection": "default",
+    "body": {},
+    "baseUrl": "https://opencode.ai/inference/openai/v1"
+  },
+  {
+    "provider": "opencode",
+    "model": "nemotron-3.5-super-vl-free",
+    "selection": "none",
+    "body": {
+      "reasoning_effort": "none"
+    },
+    "baseUrl": "https://opencode.ai/inference/openai/v1"
+  },
+  {
+    "provider": "opencode",
+    "model": "nemotron-3.5-super-vl-free",
+    "selection": "minimal",
+    "body": {
+      "reasoning_effort": "minimal"
+    },
+    "baseUrl": "https://opencode.ai/inference/openai/v1"
+  },
+  {
+    "provider": "opencode",
+    "model": "nemotron-3.5-super-vl-free",
+    "selection": "low",
+    "body": {
+      "reasoning_effort": "low"
+    },
+    "baseUrl": "https://opencode.ai/inference/openai/v1"
+  },
+  {
+    "provider": "opencode",
+    "model": "nemotron-3.5-super-vl-free",
+    "selection": "medium",
+    "body": {
+      "reasoning_effort": "medium"
+    },
+    "baseUrl": "https://opencode.ai/inference/openai/v1"
+  },
+  {
+    "provider": "opencode",
+    "model": "nemotron-3.5-super-vl-free",
+    "selection": "high",
+    "body": {
+      "reasoning_effort": "high"
+    },
+    "baseUrl": "https://opencode.ai/inference/openai/v1"
+  },
+  {
+    "provider": "opencode",
+    "model": "nemotron-3.5-super-vl-free",
+    "selection": "xhigh",
+    "body": {
+      "reasoning_effort": "xhigh"
+    },
+    "baseUrl": "https://opencode.ai/inference/openai/v1"
+  }
+]

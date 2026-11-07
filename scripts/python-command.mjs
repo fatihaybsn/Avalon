@@ -24,7 +24,9 @@ function tryRun(index = 0) {
           "sidecar/voice_server.py",
           "sidecar/brain_provider.py",
           "sidecar/research_scheduler.py",
+          "sidecar/research_lock.py",
           "sidecar/gpt_researcher_worker.py",
+          "sidecar/research_search.py",
         ]
       : ["sidecar/voice_server.py", "--mode", "none", ...extraArgs];
 

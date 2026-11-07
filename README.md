@@ -2,7 +2,7 @@
 
 **A personal AI workspace for conversation, research, and computer tasks, available on the desktop and an Android phone.**
 
-[Download Avalon 1.2.1 for Windows x64](https://github.com/fatihaybsn/Avalon/releases/tag/v1.2.1). See [Install from the Windows ZIP](#install-from-the-windows-zip) for first-time setup and API keys.
+[Download Avalon 1.3.0 for Windows x64](https://github.com/fatihaybsn/Avalon/releases/tag/v1.3.0). See [Install from the Windows ZIP](#install-from-the-windows-zip) for first-time setup and API keys.
 
 Avalon brings a conversational assistant, background workers, connected notes, research reports, reminders, and a planning workspace into one application. A request can begin as a typed message or a voice conversation, become a reviewed task, and continue in the background while the conversation remains available.
 
@@ -50,6 +50,8 @@ This route is **optional and configured separately from the Hermes installer**. 
 
 Research accepts a topic, purpose, preferred sources, output directory, model and reasoning setting. Deep mode also accepts breadth and depth. GPT Researcher plans, collects sources and writes the Markdown report. Avalon saves the report and research archive.
 
+Search queries use the installed Hermes web-search tool and its configured providers. **Tavily is optional:** when a key is supplied, it serves as a backup for queries that fail through Hermes. Research can run without a Tavily account. The selected language model and any search providers still have their own access and usage limits.
+
 Research can run immediately or be scheduled once, daily, or weekly. The planning workspace shows upcoming runs, previous results, and controls for editing, pausing, resuming, removing, or running a schedule immediately. New and changed source counts help compare repeated investigations.
 
 For a sequence of research tasks that pass reports from one step to the next, see [workflow automation with Node-RED](#workflow-automation-with-node-red).
@@ -76,7 +78,10 @@ Voice selection, microphone choice, startup sounds, and pitch-preserving playbac
 |---|---|
 | Electron | Runs the desktop application and connects its interface to local services. |
 | React and TypeScript | Build the desktop and mobile interfaces. |
-| Hermes Agent | Maintains conversations, connects a brain model, and executes approved work with tools. |
+| Hermes Agent | Maintains conversations, connects a brain model, executes approved work, and supplies web-search and scheduling services. |
+| GPT Researcher | Plans research queries, reads sources, selects context, and writes research reports. |
+| Node-RED | Routes research and general Hermes tasks, conditions, error branches and bounded revision loops. |
+| Tavily, optional | Provides backup search when a Hermes search query fails and a Tavily key is configured. |
 | Jev Windows pilot, via MCP | Optionally executes bounded desktop tasks under a Hermes worker; installed separately. |
 | Gemini Live | Receives speech and voices the prepared answers. |
 | Evren and OpenCode | Provide the model endpoints configured in the brain selector, subject to provider access. |
@@ -90,7 +95,7 @@ Voice selection, microphone choice, startup sounds, and pitch-preserving playbac
 
 A zero-cost setup is possible only when every selected service grants the required free access and usage remains within its limits. Unlimited free operation cannot be promised by this repository.
 
-Provider information below was checked on **30 October 2026**:
+Provider-policy references were last checked on **30 October 2026**. Component roles and key requirements below describe the current application; confirm account-specific access and limits with each provider.
 
 | Service | Role | Account or key | Cost and availability |
 |---|---|---|---|
@@ -100,6 +105,7 @@ Provider information below was checked on **30 October 2026**:
 | Gemini API | Real-time voice; optional semantic note indexing | A Google AI Studio API key | The documented Live models have a free tier, with provider limits; paid usage also exists. [Current pricing](https://ai.google.dev/gemini-api/docs/pricing). |
 | Tailscale | Optional Android connectivity | A Tailscale account on the computer and phone | A free Personal plan is available for eligible personal use. [Plan terms](https://tailscale.com/pricing). |
 | Web, browser, and other Hermes tools | Search, extraction, or additional task capabilities | Depends on the configured tool | Some tools need separate credentials or paid services. These are not included in the brain or voice keys. |
+| Tavily, optional | Backup search for GPT Researcher | A Tavily API key only if the backup is wanted | Separate provider quota and billing apply. A missing key does not prevent research through Hermes. |
 
 ### How many API keys are needed
 
@@ -113,6 +119,8 @@ Enabling the optional Jev executor adds an **OpenCode credential stored for Jev*
 
 An OpenCode Console key is optional and separate. A provider key from one platform must not be reused against another platform's endpoint. A direct OpenAI API key, Azure subscription, Firebase project, OpenCode CLI installation, or additional speech-to-text subscription is not required by the default setup.
 
+Research reuses the selected brain-provider credential and Hermes's web-search configuration. It does not require an additional research-model key or a Tavily key. A Tavily backup can be added later through [research runtime settings](#gpt-researcher-research-runtime).
+
 The current brain selector supports the explicit Evren/OpenCode list documented below. OpenAI-compatible request formatting does not mean that every OpenAI, Azure, or Google model can be selected. There is no general-purpose OpenAI or Azure brain-provider selector in this release.
 
 ### Where credentials are obtained
@@ -121,6 +129,7 @@ The current brain selector supports the explicit Evren/OpenCode list documented 
 - **Evren:** [Evren platform](https://evren.ssyz.org.tr). The account holder must complete the platform's account, eligibility, key-generation, and any applicable terms steps. The API description is available at the [Evren OpenAPI endpoint](https://evren-llmapi.ssyz.org.tr/openapi.json).
 - **OpenCode:** [OpenCode Console](https://opencode.ai). Current external-client access restrictions must be checked before this route is selected.
 - **Hermes local API:** A strong random secret is generated locally during setup. It is not obtained from a model provider.
+- **Tavily, optional:** [Tavily dashboard](https://app.tavily.com/). Its key is configured separately as a research-search backup; it is not a brain-model credential.
 - **Phone push:** Avalon generates its own VAPID keys and registers the browser subscription. No separate Firebase API key is entered by the user.
 
 Secrets belong in the local settings described below. They must not be committed to the repository or included in screenshots.
@@ -129,7 +138,9 @@ Secrets belong in the local settings described below. They must not be committed
 
 ### Install from the Windows ZIP
 
-1. Download `Avalon-1.2.1-Windows-x64.zip` from the release and extract the entire archive into a folder you own. Keep `Avalon.exe`, `resources`, and the other extracted files together. This package already contains the built desktop and mobile app.
+This README describes the current source. Check the release notes for the features included in a particular Windows ZIP. Source changes take effect in a packaged application only after that application has been rebuilt and distributed.
+
+1. Download `Avalon-1.3.0-Windows-x64.zip` from the release and extract the entire archive into a folder you own. Keep `Avalon.exe`, `resources`, and the other extracted files together. This package already contains the built desktop and mobile app.
 2. On a new installation, open PowerShell in the folder containing `Avalon.exe` and run the bundled Hermes setup. Use the same compatible Hermes home when upgrading an existing installation.
 
    ```powershell
@@ -139,7 +150,7 @@ Secrets belong in the local settings described below. They must not be committed
    The default Hermes home is `%LOCALAPPDATA%\Avalon\Hermes`. The script downloads the pinned runtime and creates the local API secret in that home's `.env`. For a custom home, pass `-HermesHome` and use that path in the following steps.
 3. Open `Avalon.exe`. In the setup wizard or **Settings**, enter the [Google AI Studio key](https://aistudio.google.com/apikey) in **Gemini API key** for voice. In the Hermes fields, enter the selected home, the full path to its `avalon-bin\avalon-hermes.exe`, the local URL `http://127.0.0.1:<API_SERVER_PORT>` using the port in the Hermes `.env`, and the generated `API_SERVER_KEY` from that same file. Save the settings and use **Test Gemini** and **Test Hermes** to check the connections.
 4. Open **Settings → Brain**, choose **Evren** or your configured provider, enter that provider's API key, test it, and **Apply** the model. An installation agent can run the setup and check the local paths. Sign in to the provider yourself and enter real keys in the application or pass them through a private setup channel.
-5. To enable research, run the bundled research setup from the extracted folder. Then use **Planlama → Otomasyonlar → Kur** if you want multi-step automations. Node-RED setup uses an existing Node.js 24 with npm or downloads a verified portable copy.
+5. To enable research, run the bundled research setup from the extracted folder. Research uses Hermes web search; a Tavily key is optional. Then use **Planlama → Otomasyonlar → Kur** if you want multi-step automations. Node-RED setup uses an existing Node.js 24 with npm or downloads a verified portable copy.
 
    ```powershell
    $env:HERMES_HOME = Join-Path $env:LOCALAPPDATA 'Avalon\Hermes'
@@ -166,7 +177,7 @@ Required components:
 
 An NVIDIA GPU, local model server, OpenCode CLI, and separate Hermes Desktop application are not prerequisites. Optional tools can introduce their own requirements.
 
-PowerShell examples use `npm.cmd` to avoid the common `npm.ps1` execution-policy conflict. The clone example uses the GitHub owner **Avalon** and repository **avalon**.
+PowerShell examples use `npm.cmd` to avoid the common `npm.ps1` execution-policy conflict. The clone example uses the GitHub repository **fatihaybsn/Avalon**.
 
 ### 1 Obtain and build Avalon
 
@@ -309,7 +320,7 @@ $env:HERMES_HOME = Join-Path $env:LOCALAPPDATA 'Avalon\Hermes'
 npm.cmd run setup:research
 ```
 
-For a custom Hermes installation, set `HERMES_HOME` to the absolute path used with `-HermesHome`. The research installer uses that runtime's uv to prepare a separate Python environment and checks that GPT Researcher loads. See [research setup and Tavily options](#gpt-researcher-research-runtime).
+For a custom Hermes installation, set `HERMES_HOME` to the absolute path used with `-HermesHome`. The research installer uses that runtime's uv to prepare a separate Python environment and checks that GPT Researcher loads. No Tavily key is needed for this setup. See [research setup and optional backup search](#gpt-researcher-research-runtime).
 
 For multi-step research, install [the optional Node-RED runtime](#workflow-automation-with-node-red) from Avalon's Planning screen after launch.
 
@@ -515,7 +526,7 @@ The agent's procedure is:
 1. Inspect installed software, the project root, existing processes, ports, and configuration locations without overwriting a working installation.
 2. Verify that the required Hermes compatibility package is present. If it is absent, report that specific missing prerequisite and stop dependent steps; do not substitute an unmodified or arbitrary latest runtime.
 3. Prepare the pinned source runtime, apply/verify the supplied compatibility package, and confirm the actual loaded source and advertised contract.
-4. Install the locked Avalon dependencies and build desktop/mobile assets. If research is requested, set `HERMES_HOME` to the resolved Hermes installation path and run `npm.cmd run setup:research` from the Avalon project root.
+4. Install the locked Avalon dependencies and build desktop/mobile assets. If research is requested, set `HERMES_HOME` to the resolved Hermes installation path and run `npm.cmd run setup:research` from the Avalon project root. Reuse Hermes web search; configure Tavily only if the user wants that optional backup. For multi-step workflows, complete the separate Node-RED setup from Planning.
 5. Generate or retain the matching local API secret; place provider keys only in their intended settings.
 6. Configure the real absolute Hermes home/executable, user name, voice, and brain route. Apply the route through the model panel rather than marking it applied by hand.
 7. If Jev is requested, follow [the complete Jev procedure](docs/JEV-WINDOWS.md): require the reviewed source, use its independent locked environment, store the OpenCode key privately, merge the MCP entry and routing skill, and verify worker discovery/cancellation and host handoffs. Keep this status separate from the already verified Hermes base.
@@ -683,9 +694,22 @@ Optional hand tracking is processed on the device with MediaPipe. Point-and-hold
 
 ### Research execution
 
-Avalon starts one isolated GPT Researcher process per investigation. The same runner serves immediate and scheduled research. Hermes receives requests from chat and dispatches native schedules. The research process sends model requests directly to the selected Evren or OpenCode endpoint.
+Avalon starts one isolated GPT Researcher process per investigation. The same runner serves immediate and scheduled research, including research steps inside Node-RED workflows. Model requests go directly to the selected Evren or OpenCode endpoint using the saved model and reasoning setting.
 
-Normal research uses the standard GPT Researcher report flow. Deep research offers breadth 3–5 and depth 1–3. The task card displays elapsed time and reports a switch to DuckDuckGo when Tavily is unavailable because its key is missing or its quota is exhausted. Individual network calls have bounded waits and retries.
+| Component | Responsibility in research |
+|---|---|
+| GPT Researcher | Plans queries, follows research branches, retrieves page content, selects findings, and writes the report. |
+| Hermes web-search tool | Executes search queries through Hermes's configured providers and their existing fallback behavior. It does not take over research planning or report writing. |
+| Tavily, optional | Retries an individual search query after the Hermes search tool reports an error. |
+| Avalon | Connects the runtimes, passes inputs, saves progress and files, and presents status and results. |
+
+Each online search starts with Hermes. When Hermes reports an error and a Tavily key is available, Avalon tries Tavily Advanced for that query. The next query starts with Hermes again. A successful search with no matches does not automatically trigger Tavily. If Tavily reports an exhausted quota or invalid access, that backup is skipped for the remainder of the investigation; later queries still try Hermes. The current immediate and scheduled research paths do not add a direct DuckDuckGo fallback.
+
+The Hermes search helper runs in the installed Hermes environment, while GPT Researcher keeps its separate environment. This reuses Hermes's web tool without starting another model conversation to perform each search. Its free providers remain subject to availability and rate limits; a configured paid Hermes provider can have its own charges. The task card and run summary show search-service counts and fallback notices.
+
+The initial lookup uses the research topic instead of sending the full task and attached documents as a search query. Generated search queries are kept short. Full task instructions and supplied documents remain available to the research model; they can be sent to the selected model provider as research context.
+
+Model responses have an approximately **15-minute wait/retry budget per call**, including retries for transient connection, timeout, rate-limit, and service errors. This is not a 15-minute limit for the whole investigation or workflow. Permanent credential errors are not retried indefinitely. Search requests have separate bounded waits. If no usable research context is obtained, the investigation fails rather than claiming a completed report.
 
 Each run has its own output folder, under `Avalon/Araştırmalar` on the Desktop by default:
 
@@ -697,17 +721,35 @@ report.md       GPT Researcher Markdown or a summary of available material
 summary.json    Scope, elapsed time, search counts and final state
 ```
 
-Sources and available report text are saved during execution. Cancellation and interruption preserve the saved material.
+Sources and available report text are saved during execution. The output folder is created automatically for each run. Cancellation and interruption preserve saved material, and a fallback `report.md` can describe incomplete work; the file's existence alone does not establish a completed research report. Normal research uses GPT Researcher's standard report flow; Deep mode follows the configured breadth and depth.
 
 #### Why GPT Researcher
 
 The hardest part of Avalon's earlier Hermes-based research pipeline was turning findings from separate steps into a coherent, cited report. GPT Researcher brings query planning, source collection, context selection, and report writing into one research pipeline. An initial trial in Avalon produced a more useful report, which motivated the switch. [GPT Researcher architecture](https://github.com/assafelovic/gpt-researcher#architecture)
+
+Hermes remains the search-tool and scheduling integration. Reusing those services preserves its existing configuration while GPT Researcher owns the investigation. This division does not guarantee that every retrieved source will appear in the final report or that every model interpretation is correct.
+
+### GPT Researcher research runtime
+
+Follow [step 5](#5-configure-avalon) to install the research runtime. The installer provisions a separate Python 3.12 environment at `%USERPROFILE%\.iris\gpt-researcher-0.16.0`, installs the pinned dependencies, and checks that the worker imports successfully. The Windows app uses that environment for both immediate and scheduled research. Existing Evren/OpenCode credentials are reused; provider access remains subject to the [account restrictions](#accounts-and-costs).
+
+**Tavily is an optional backup, not an installation requirement.** To enable it, obtain a key from the [Tavily dashboard](https://app.tavily.com/) and add this line to `%USERPROFILE%\.iris\.env`:
+
+```dotenv
+TAVILY_API_KEY=your_key_here
+```
+
+To replace the key, edit the existing line and save before starting a new investigation. Avalon rereads this file at each investigation's start, giving it precedence over an inherited terminal/Windows key or a key supplied by the Hermes configuration. An already running investigation keeps its starting key. `TAVILY_API_KEY=` explicitly disables the backup; omitting the line can still allow a key from those other locations. Hermes remains the primary search tool in either case. See [Tavily credit pricing](https://docs.tavily.com/documentation/api-credits) for the backup's current usage costs.
+
+Deep Research offers **breadth 3, 4, or 5** and **depth 1, 2, or 3**. Breadth controls how many lines of inquiry the engine opens initially; depth controls how many levels it follows within them. The defaults are **breadth 3 and depth 2**. These settings belong to GPT Researcher and apply with either search service. Increasing them can increase runtime, model usage, and search usage; it does not guarantee a more accurate report.
 
 ### Scheduled research and reminders
 
 Research scheduling uses Hermes' native cron capability through `sidecar/research_scheduler.py`. Avalon saves its own run definition and installs an Avalon-owned launcher in the selected Hermes home's `scripts` directory. The native job starts that launcher without an extra model deciding how to dispatch it.
 
 The scheduler verifies liveness, uses an occurrence identity and OS-owned lock to avoid duplicate/overlapping launches, and distinguishes successful dispatch from actual research completion. All research stages use the route saved in the schedule. Editing a schedule affects future runs; an active run keeps its existing specification.
+
+Saving a new schedule sets up future starts at its selected day/time. **Şimdi çalıştır** requests an immediate run; it does not create or activate the recurrence. **Duraklat** pauses future starts, while **Devam et** re-enables them. A paused automation must be resumed before its immediate-run button becomes available. Resuming a schedule does not continue an interrupted research step. Starting again creates a new run.
 
 Schedules and reminders use **Europe/Istanbul**. Recurring research verifies the scheduler's timezone or an equivalent system-clock configuration instead of silently changing global timezone settings.
 
@@ -725,25 +767,46 @@ Personal reminders use `electron/reminders.mjs`, persisted occurrence IDs and re
 
 Missed reminder occurrences can be summarized after startup/resume. The application does not claim to wake a powered-off PC or provide an independent cloud scheduler.
 
+Running without the Avalon window still requires an awake, online PC, a live Hermes scheduler, the installed research runtime, and valid saved launcher paths. Automatic gateway startup at Windows sign-in must be configured separately as described in [gateway setup](#4-verify-the-intended-hermes-gateway); the installer does not create that startup task automatically. Node-RED is started on demand for workflows, so it does not need a separate manual launch.
+
 <!-- SCREENSHOT SLOT: Planning, reminders, and scheduled research on desktop. -->
 ![Avalon planning workspace](docs/images/planning-desktop.png)
 
 ### Workflow automation with Node-RED
 
-Node-RED provides an open-source visual editor for arranging research steps and an engine for running them in order. Avalon uses it as a separate local runtime so it can offer a visual editor without building one from scratch. Hermes starts the workflow at the scheduled time, GPT Researcher researches and writes each report, and Avalon shows the schedule, step status, and saved reports. [Node-RED editor](https://nodered.org/docs/user-guide/editor/)
+Node-RED owns workflow order, conditional routing, bounded revision loops and error branches. Hermes schedules starts; GPT Researcher performs research; the new **Hermes Görevi** node executes general tasks through the existing native Hermes transport. Avalon supplies references, preserves permissions, persists attempts and results, and displays progress. No new workflow engine or dependency is added.
 
-**Install on Windows x64.** After [setting up Hermes and GPT Researcher](#5-configure-avalon), open **Planlama → Otomasyonlar** and click **Kur**. The first installation needs internet access. Avalon installs Node-RED 5.0.9 and its locked dependencies in your Windows user profile. The installer uses Node.js 24 with npm from PATH when available, or downloads a portable Windows x64 copy of Node.js 24 and verifies its SHA-256 checksum before extracting it. The Node-RED setup requires no administrator rights, Docker, WSL, or global npm installation. If setup fails, click **Kur** again to retry. Avalon starts Node-RED when you open the editor or run a workflow.
+**Install:** on Windows x64, finish the existing Hermes/GPT Researcher setup, then open **Planlama → Otomasyonlar → Kur**. The pinned Node-RED 5.0.9 runtime and existing installer are unchanged. First setup seeds research-only, research + Hermes, and revision-loop examples; existing saved flows are preserved.
 
-**Create and run a workflow.**
+**Create:** click **Yeni otomasyon oluştur / düzenle**, connect **Avalon Başlangıç → Avalon Araştırma → Hermes Görevi → Avalon Bitiş**, enter research settings and task prompts, and select previous successful outputs. Hermes receives file references; research keeps its existing report-content and synthesis adapters. Use **switch** for conditions, **change** for msg.feedback, and **catch** or the task's second output for errors. Switch uses the first matching output. Each output connects to one target; parallel fan-out, subflows, function/exec/inject and arbitrary nodes are outside this scope.
 
-1. Click **Akışı düzenle** to open the local editor in a separate Avalon window. The first installation includes a two-step example. Use **+** to create a separate workflow tab.
-2. Connect **Avalon Başlangıç**, one or more **Avalon Araştırması** nodes, and **Avalon Bitiş** in a single chain. Double-click each research node and enter its required topic in **Konu** and its detailed prompt in **Amaç**.
-3. To pass a report to a later step, open that step and select the earlier research under **Girdi olarak kullanılacak raporlar**. The list shows connected research steps that come before the current one. It is empty for the first step. Avalon passes the contents of selected reports from the same run only after those reports are complete. A failed or incomplete step stops the sequence, and any saved material remains in the archive.
-4. Click **Done** in the node form and **Deploy** in the editor. Back in **Planlama → Otomasyonlar**, each valid published workflow appears as its own card. Use **Zamanla** to save one start schedule for the whole workflow, then **Şimdi çalıştır** to test it immediately. The PC must be awake and the Hermes scheduler running for a timed start, including when Avalon has exited.
+**Run:** Deploy, then use **Şimdi çalıştır** without needing a schedule. **Zamanla** uses only the existing Hermes scheduler. Every automation run reads the saved Brain selection once and retains it for that run. Standalone scheduled research keeps its existing model behavior. Active runs use immutable flow snapshots, and the existing Deploy lock remains.
 
-**Scope.** Avalon supports linear research workflows. The editor displays Node-RED's **Subflows** section, but Avalon does not support Subflows (reusable groups of nodes) or branching.
+**Upgrade existing installations:** let active workers finish (or cancel them and wait for cleanup), fully exit Avalon, update the application, then restart Avalon and its Node-RED editor. An already open editor host keeps its loaded node definitions. No Hermes reinstall or Node-RED runtime reinstall is needed for the Hermes task card. Existing flows are preserved; new example flows can be imported separately.
 
-**Mobile controls.** In the connected mobile app, open **Görevler → Planlama → Otomasyonlar**. Cards with a saved schedule show the next start, current or last run, step statuses, and available reports. **Zamanlamayı düzenle** changes the day, time, or recurrence. Under **Diğer işlemler**, **Duraklat** pauses future starts and **Devam et** restores them. **Bu turu iptal et** stops the active run after confirmation, preserves saved reports, and keeps the schedule. Create cards, edit flows, and set up Node-RED on the Windows desktop. The PC still hosts and runs the automation.
+Avalon-owned cron launchers use **protocol v2**. Refresh Planning schedules with the updated application before relying on unattended starts. Known launchers are backed up under `HERMES_HOME/scripts/avalon-backups/<scheduleId>/` and atomically renewed without changing native schedule IDs/settings. An active resource defers migration (`LAUNCHER_BUSY`); retry after it finishes. Confirm saved executable/runner paths still exist. Mixed old/new launcher and runner versions fail closed and may skip a cron firing. For rollback, stop active workers and restore the matching application version and backed-up launcher `.py`/`.json` together; preserve current reports, occurrence history, native job definitions and user settings. See the [upgrade/recovery procedure](docs/AUTOMATION.md#yükseltme-ve-güvenli-kurtarma).
+
+**Review:** results, file references, all attempts and earlier reports remain available on the card. Required dispatch approvals and native Hermes tool approvals wait for explicit user input. Cancelled or interrupted runs never silently start another step. Interrupted runs are recorded durably and are not automatically resumed; a new user-started run starts from the beginning. Hermes timeouts and ambiguous dispatch acknowledgements stop for review. Subsequent starts are blocked until the user reviews the affected native task and acknowledges that run on its card. External effects are not guaranteed to execute exactly once.
+
+Losing the OS lock helper cancels the current worker; it does not authorize a replacement while that worker is still draining. A terminal task status alone does not mean cleanup has ended. If a worker is stuck, cancel it first; if necessary identify and stop that specific Avalon runner process, check any Hermes/external effects, then acknowledge the affected run. Do not delete lock/journal files or use elapsed time as proof that work stopped. Independent workflows remain available.
+
+**Share:** use **Güvenli JSON şablonu** and **JSON içe aktar**. Shared templates remove prompts, free-text conditions, credentials, personal paths and unknown fields; recipients configure their own task details. Hermes tasks require the local interactive transport and existing native tool permissions; remote runs_api is not supported by this node.
+
+See the [automation architecture and usage guide](docs/AUTOMATION.md) for node settings, workspace limits, message contracts, examples, recovery behavior, and offline test coverage.
+
+#### Local documents and persistent workflow memory
+
+Advanced workflow configuration can supply local Markdown documents and structured records under `%USERPROFILE%\.iris\automation\inputs\<flowId>\`. `inputs.json` selects the documents and record/coverage rules; `records.json` stores discovered entities and which processing steps are complete or pending. This configuration is separate from the node editor: the Start node's form only has a name, and no general document-upload or memory-setup form is provided there.
+
+At run start, Avalon loads the configured documents and records. Each stage receives the relevant inputs and previous-step reports. It does not automatically scan old report folders or replay the entire conversation history. Pending work can be supplied to later runs; completed work and significant changes are tracked according to the configured rules. This provides context and queue tracking, but does not guarantee that a model will never mention an old company or always find new ones.
+
+Company websites use domain identity. LinkedIn company records use their specific company profile, so two companies sharing `linkedin.com` remain separate. Country subdomains and profile subpages for the same LinkedIn company resolve to one identity; existing keys and processing references are preserved. Source-based identity does not by itself verify a company's eligibility, size, technology, or current vacancies.
+
+Report history and persistent memory are separate. Deleting reports does not reset `records.json`. For an explicitly requested fresh start, stop the active run before clearing that workflow's records; preserve its `inputs.json`, profile documents, editor flow, and schedule to retain the card. This is an advanced data-maintenance operation, not a reset button in the current interface. Personal flows, prompts, documents, and records are stored outside the source checkout by default and are not bundled as everyone's starter automation.
+
+#### Mobile controls
+
+In the connected mobile app, open **Görevler → Planlama → Otomasyonlar**. Cards with a saved schedule show the next start, current or last run, step statuses, and available reports. **Zamanlamayı düzenle** changes the day, time, or recurrence. Under **Diğer işlemler**, **Duraklat** pauses future starts and **Devam et** restores them. **Turu iptal et** stops the active run, preserves saved reports, and keeps the schedule. Approval and clarification requests can also be answered from the automation card. Workflow creation, editor access, and immediate-start controls are desktop operations. The PC still hosts and runs the automation.
 
 ### Notes and the knowledge graph
 
@@ -810,6 +873,11 @@ iOS, phone/WhatsApp calls, mobile desktop gestures, and continuous lock-screen v
 | `%USERPROFILE%\.iris\run-registry.json` | Local task metadata and delivery state. |
 | `%USERPROFILE%\.iris\reminders.json` | Reminder definitions, occurrences, revisions, and history. |
 | `%USERPROFILE%\.iris\research\` | Research/schedule records and worker coordination. |
+| `%USERPROFILE%\.iris\gpt-researcher-0.16.0\` | Separate pinned GPT Researcher Python environment. |
+| `%USERPROFILE%\.iris\automation\editor\flows.json` | Saved Node-RED workflow definitions used to build automation cards. |
+| `%USERPROFILE%\.iris\automation\runs\` | Per-run workflow snapshots, stage states, and Node-RED logs. |
+| `%USERPROFILE%\.iris\automation\inputs\<flowId>\` | Optional local input configuration, Markdown documents, and persistent records. |
+| `%USERPROFILE%\.iris\automation\node-red-5.0.9\` | Separately installed Node-RED runtime and locked dependencies. |
 | `%USERPROFILE%\.iris\brain-index\` | Cached note index, separated from the vault. |
 | `%USERPROFILE%\.iris\window-layout.json` | Normal desktop bounds and maximized state. |
 | Selected `HERMES_HOME` | Hermes configuration, sessions, memory, cron records, and tool state. |
@@ -873,7 +941,7 @@ hermes sessions list --source iris --limit 100
 
 Use the conversation title, date, and session ID to identify the conversation you want to delete. Replace `SESSION_ID` in the commands below with that ID. If the list shows a shortened ID, Hermes also accepts a unique prefix that matches only one session. If multiple sessions match, use a longer prefix or the full ID.
 
-The commands must use the same data folder selected in Avalon's **Hermes home** field. In a standard Windows installation, this folder is `%LOCALAPPDATA%\hermes`. If you use a custom Hermes folder, set it in the current PowerShell window before running the commands:
+The commands must use the same data folder selected in Avalon's **Hermes home** field. The bundled installer defaults to `%LOCALAPPDATA%\Avalon\Hermes`; an existing installation can use another home. Set the actual folder in the current PowerShell window before running the commands:
 
 ```powershell
 $env:HERMES_HOME = "YOUR_ACTUAL_HERMES_DATA_FOLDER"
@@ -909,13 +977,15 @@ The deleted session should no longer appear in the list. Reopen Avalon. If neede
 
 Do not open `state.db` in a text editor and empty its contents to delete conversations. It is a SQLite database; use the Hermes commands above to remove sessions.
 
-### Clear all local task records
+### Clear local Hermes task-card records
 
-To clear all records in Avalon's local task registry, use the following command. **This clears the entire registry, so use it carefully.**
+To clear Avalon's local Hermes task registry, close Avalon after its tasks have finished or been stopped, then use the following command. **This clears the entire registry.** Research and automation data use separate stores; this command does not reset their history, schedules, or persistent workflow memory.
 
 ```powershell
 Remove-Item "$env:USERPROFILE\.iris\run-registry.json" -ErrorAction SilentlyContinue
 ```
+
+For research and automation, consult the [data locations](#configuration-and-local-data) and [workflow memory behavior](#local-documents-and-persistent-workflow-memory). Keep workflow definitions, schedule definitions, and input documents when retaining automation cards. Resuming a paused schedule and clearing its research memory are separate operations.
 
 
 ## Hermes compatibility package design
@@ -1038,7 +1108,7 @@ The configured Windows target is a directory package; an MSI/NSIS installer shou
 
 Real-service commands include `test:brain`, `test:brain-models`, `test:relay`, `test:research`, `test:research-schedule`, and `test:live-search`. They can use credentials, model quota, live network services, and temporary test sessions/files. They should be invoked deliberately, not bundled silently into a basic install. The older live sleep/speech checks exercise the legacy architecture and do not establish current relay readiness.
 
-The prior isolated validation for this source passed 272 Node tests, both builds and syntax checks, plus six scheduler-adapter tests. Simulated interface and PWA-upgrade checks also passed. These results are not evidence of current provider access, physical microphone quality, or Android notification delivery on a new PC.
+Targeted research checks include `scripts/test-gpt-researcher-offline.py` for the pinned research pipeline and Hermes/Tavily fallback behavior, `node scripts/test-automation.mjs` for Node-RED handoff and persistent records, and `node scripts/test-research-package.mjs <package-folder>` for packaged runtime resources. Run them with their documented dependencies; a source-only check does not prove that a distributed executable includes the same changes. Automated or simulated checks do not establish current provider access, physical microphone quality, or Android notification delivery on a new PC.
 
 ### Screenshot locations
 
@@ -1076,32 +1146,15 @@ An additional model-selection slot is marked by an HTML comment in the technical
 | Test queued but no phone notice | Check Chrome/Android notification settings, internet, subscription status, and the running desktop push sender. Confirm actual delivery. |
 | Mobile interface remains old | Confirm which desktop instance serves `dist-mobile`, then use the safe UI update flow; the one-time build query can migrate a legacy navigation cache. |
 | Scheduled research did not start | Check PC availability, actual Hermes scheduler liveness, Istanbul timezone compatibility, saved launcher/runtime paths, and last dispatch/run errors. |
+| Research has no Tavily key | Tavily is optional. Check the Hermes runtime and its configured web-search tool first; add a Tavily key only if the backup is wanted. |
+| Hermes search and Tavily backup both fail | Inspect the recorded search notices, provider availability, credentials and quotas. The worker can preserve partial material; it cannot complete a grounded report without usable context. |
+| Model waits a long time | A model call can wait/retry for approximately 15 minutes. Check the saved activity/error before treating the entire workflow as stuck; that budget is per call. |
+| Report exists but the next workflow step waits | Check whether research fully completed and whether its persistent-record block passed validation. An archived report file alone is not a successful stage. |
+| Old companies still appear after deleting reports | Persistent workflow memory is in the flow's `records.json`, separate from report history. Review the configured records and prompt behavior. |
+| Card says Duraklatıldı and offers Devam et | The schedule is paused. Devam et re-enables future starts; it does not reset history or resume an old research step. |
 | Notes look stale | Check the vault path and index status; use manual sync or the intentional automatic-index setting. Lexical and semantic indexes have different maintenance needs. |
 | Verification cannot find Python | Provide the supported `python`/`py` command for compile checks without modifying Hermes' managed packages. |
 
 ## License
 
 Avalon is distributed under the [MIT license](LICENSE). The repository and any distributed dependencies must retain their applicable license and copyright notices.
-
-### GPT Researcher research runtime
-
-Follow [step 5](#5-configure-avalon) to install the research runtime. The installer provisions a separate Python 3.12 environment using uv, installs the pinned dependencies and checks that the worker imports successfully. The Windows app uses that environment for both immediate and scheduled research. Existing Evren and OpenCode model credentials are reused.
-
-**OpenCode status:** The most recent live checks still returned HTTP 429. We are investigating and working to resolve OpenCode rate limiting for both Avalon research tasks and regular Hermes API usage. Current live research validation is limited to Evren.
-
-For Tavily Advanced search, get an API key from the [Tavily dashboard](https://app.tavily.com/). Add the following line to `%USERPROFILE%\.iris\.env`. To replace your key, edit the existing line, save the file and restart Avalon.
-
-```dotenv
-TAVILY_API_KEY=your_key_here
-```
-
-Avalon reads this value when each research run starts. It takes precedence over a key inherited from the terminal or Windows. When the line is absent, Avalon can still use the inherited key. To explicitly use DuckDuckGo, set `TAVILY_API_KEY=` in this file.
-
-Tavily Advanced uses two credits per search query. Tavily's free plan includes 1,000 credits per month, and the same key works after the monthly quota renews. If Tavily reports that the quota is exhausted during a run, the remaining searches switch to DuckDuckGo without restarting the task. If no key is configured, the task starts with DuckDuckGo. Avalon shows the reason in the task card and records it in the run summary. [Tavily credit pricing](https://docs.tavily.com/documentation/api-credits)
-
-In Deep Research mode, you can choose:
-
-- **Breadth (3, 4 or 5)** controls how many different lines of inquiry the engine opens initially. For example, a wider company search can explore more candidates or technical areas.
-- **Depth (1, 2 or 3)** controls how many levels the engine follows each line of inquiry. For example, it can start with a company's product page and then follow up on its technical documentation.
-
-The default is **breadth 3 and depth 2**. Increasing either setting can increase runtime and search usage. Avalon shows elapsed time and saves partial material if you stop the task.

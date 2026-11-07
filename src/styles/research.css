@@ -93,7 +93,7 @@
 .automation-status[data-status="failed"] { color: var(--coral); background: rgba(var(--coral-rgb), .10); }
 .automation-steps { display: grid; gap: 6px; list-style: none; margin: 0; padding: 0; }
 .automation-steps:empty { display: none; }
-.automation-steps li {
+.automation-steps > li {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
@@ -114,6 +114,10 @@
 }
 .automation-step-name { overflow-wrap: anywhere; color: var(--text); }
 .automation-step-actions { grid-column: 2 / -1; }
+.automation-step-actions p, .automation-step-actions pre { width: 100%; margin: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.automation-steps > li > ul { grid-column: 2 / -1; margin: 0; padding-left: 18px; overflow-wrap: anywhere; }
+.automation-toolbar input[type="file"] { max-width: 180px; }
+.automation-status:is([data-status="needs_review"], [data-status="waiting_for_approval"], [data-status="waiting_for_input"]) { color: var(--amber); background: rgba(var(--amber-rgb), .10); }
 .automation-schedule-form {
   display: grid;
   gap: 12px;

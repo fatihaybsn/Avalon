@@ -1,6 +1,6 @@
 import type { TaskCard, TaskStep } from "../types";
 
-export const TERMINAL = new Set(["completed", "failed", "cancelled", "canceled", "error", "partial", "interrupted", "needs_access"]);
+export const TERMINAL = new Set(["completed", "failed", "cancelled", "canceled", "error", "partial", "interrupted", "needs_access", "needs_review"]);
 
 export function tasksForSession(
   tasks: TaskCard[],

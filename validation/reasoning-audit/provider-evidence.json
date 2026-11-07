@@ -1,0 +1,234 @@
+{
+  "at": "2026-11-05T14:43:00.600Z",
+  "requestSchema": {
+    "properties": {
+      "model": {
+        "type": "string",
+        "title": "Model",
+        "description": "ID of the model to use. See `GET /v1/models`."
+      },
+      "messages": {
+        "items": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "type": "array",
+        "title": "Messages",
+        "description": "Conversation so far, as a list of `{role, content}` objects."
+      },
+      "stream": {
+        "type": "boolean",
+        "title": "Stream",
+        "description": "If true, partial message deltas are sent as server-sent events.",
+        "default": false
+      },
+      "max_tokens": {
+        "anyOf": [
+          {
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "title": "Max Tokens",
+        "description": "Maximum number of tokens to generate."
+      },
+      "evren_tools": {
+        "type": "boolean",
+        "title": "Evren Tools",
+        "description": "EVREN extension (non-standard): opt-in to server-executed live-data tools when `tools` is not supplied.",
+        "default": false
+      }
+    },
+    "additionalProperties": true,
+    "type": "object",
+    "required": [
+      "model",
+      "messages"
+    ],
+    "title": "ChatCompletionRequest",
+    "description": "OpenAI sözleşmesinin GEREKLİ alanları - diğer tüm parametreler\n(reasoning_effort, tools, seed, top_k, stop...) `extra='allow'` ile\nolduğu gibi vLLM'e geçer; yetenek doğrulaması chat_service'te ayrıca yapılır."
+  },
+  "models": [
+    {
+      "id": "gemma-4-31b",
+      "object": "model",
+      "created": 1789343625,
+      "owned_by": "evren",
+      "task": "chat",
+      "modalities": [
+        "text",
+        "image"
+      ],
+      "pricing": {
+        "prompt_token_price": 0,
+        "completion_token_price": 0,
+        "currency": "CR",
+        "free_until": "2026-12-01"
+      },
+      "context_length": 262144,
+      "default_max_output_tokens": 16384,
+      "capabilities": {
+        "tools": true,
+        "thinking": true,
+        "reasoning_effort": false,
+        "reasoning_effort_values": null,
+        "reasoning_effort_aliases": null,
+        "vision": true,
+        "max_images_per_request": 8,
+        "response_format": true,
+        "seed": true,
+        "top_k": true,
+        "stop": true
+      },
+      "precision": null
+    },
+    {
+      "id": "glm-5.3",
+      "object": "model",
+      "created": 1789343625,
+      "owned_by": "evren",
+      "task": "chat",
+      "modalities": [
+        "text"
+      ],
+      "pricing": {
+        "prompt_token_price": 0,
+        "completion_token_price": 0,
+        "currency": "CR",
+        "free_until": "2026-12-01"
+      },
+      "context_length": 524288,
+      "default_max_output_tokens": 16384,
+      "capabilities": {
+        "tools": true,
+        "thinking": true,
+        "reasoning_effort": true,
+        "reasoning_effort_values": null,
+        "reasoning_effort_aliases": {
+          "medium": "high",
+          "minimal": "low"
+        },
+        "vision": false,
+        "max_images_per_request": null,
+        "response_format": true,
+        "seed": true,
+        "top_k": true,
+        "stop": true
+      },
+      "precision": "FP8"
+    },
+    {
+      "id": "qwen3.8-flash-next",
+      "object": "model",
+      "created": 1789343625,
+      "owned_by": "evren",
+      "task": "chat",
+      "modalities": [
+        "text",
+        "image"
+      ],
+      "pricing": {
+        "prompt_token_price": 0,
+        "completion_token_price": 0,
+        "currency": "CR",
+        "free_until": "2026-12-01"
+      },
+      "context_length": 262144,
+      "default_max_output_tokens": 16384,
+      "capabilities": {
+        "tools": true,
+        "thinking": true,
+        "reasoning_effort": true,
+        "reasoning_effort_values": null,
+        "reasoning_effort_aliases": {
+          "high": "xhigh"
+        },
+        "vision": true,
+        "max_images_per_request": null,
+        "response_format": true,
+        "seed": true,
+        "top_k": true,
+        "stop": true
+      },
+      "precision": null
+    },
+    {
+      "id": "mimo-v2.6-pro",
+      "object": "model",
+      "created": 1790378660,
+      "owned_by": "evren",
+      "task": "chat",
+      "modalities": [
+        "text",
+        "image"
+      ],
+      "pricing": {
+        "prompt_token_price": 0,
+        "completion_token_price": 0,
+        "currency": "CR",
+        "free_until": "2026-12-01"
+      },
+      "context_length": 1048576,
+      "default_max_output_tokens": 16384,
+      "capabilities": {
+        "tools": true,
+        "thinking": true,
+        "reasoning_effort": true,
+        "reasoning_effort_values": [
+          "none",
+          "minimal",
+          "low",
+          "medium",
+          "high",
+          "xhigh"
+        ],
+        "reasoning_effort_aliases": null,
+        "vision": true,
+        "max_images_per_request": 8,
+        "response_format": true,
+        "seed": true,
+        "top_k": true,
+        "stop": true
+      },
+      "precision": null
+    },
+    {
+      "id": "deepseek-v4.1-flash",
+      "object": "model",
+      "created": 1790178343,
+      "owned_by": "evren",
+      "task": "chat",
+      "modalities": [
+        "text",
+        "image"
+      ],
+      "pricing": {
+        "prompt_token_price": 0,
+        "completion_token_price": 0,
+        "currency": "CR",
+        "free_until": "2026-12-01"
+      },
+      "context_length": 1048576,
+      "default_max_output_tokens": 65536,
+      "capabilities": {
+        "tools": true,
+        "thinking": true,
+        "reasoning_effort": true,
+        "reasoning_effort_values": null,
+        "reasoning_effort_aliases": {
+          "medium": "high",
+          "minimal": "low"
+        },
+        "vision": true,
+        "max_images_per_request": null,
+        "response_format": true,
+        "seed": true,
+        "top_k": true,
+        "stop": true
+      },
+      "precision": null
+    }
+  ]
+}

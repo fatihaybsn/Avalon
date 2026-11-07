@@ -1,0 +1,140 @@
+{
+  "at": "2026-11-05T14:53:18.019Z",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Compute 37*43 + 19*23. Return only the final integer."
+    }
+  ],
+  "max_tokens": 512,
+  "results": [
+    {
+      "model": "qwen3.8-flash-next",
+      "reasoning": "disabled",
+      "controls": {
+        "thinking": false,
+        "reasoning_effort": "none"
+      },
+      "max_tokens": 512,
+      "injectedHermesNone": true,
+      "reasoningChars": 0,
+      "content": "1998",
+      "chunks": 6,
+      "httpStatus": 200,
+      "headerSeconds": 0.55,
+      "requestId": "f61d3c8e-b303-4655-aeea-01487946bcc4",
+      "responseModel": "qwen/qwen3.8-flash-next",
+      "firstContentSeconds": 1.77,
+      "finishReason": "stop",
+      "usage": {
+        "prompt_tokens": 33,
+        "total_tokens": 38,
+        "completion_tokens": 5,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "created_cache_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        }
+      },
+      "completed": true,
+      "seconds": 2.08,
+      "correct": false
+    },
+    {
+      "model": "gemma-4-31b",
+      "reasoning": "disabled",
+      "controls": {
+        "thinking": false,
+        "reasoning_effort": "none"
+      },
+      "max_tokens": 512,
+      "injectedHermesNone": true,
+      "reasoningChars": 0,
+      "content": "",
+      "chunks": 0,
+      "httpStatus": 400,
+      "headerSeconds": 0.19,
+      "requestId": "f43c7903-f1bb-4554-b2b6-ac29f4148004",
+      "error": {
+        "error": {
+          "message": "model 'gemma-4-31b' 'reasoning_effort' parametresini desteklemiyor",
+          "type": "invalid_request_error",
+          "param": null,
+          "code": "bad_request"
+        }
+      },
+      "seconds": 0.19
+    },
+    {
+      "model": "deepseek-v4.1-flash",
+      "reasoning": "enabled",
+      "controls": {
+        "thinking": true,
+        "reasoning_effort": "none"
+      },
+      "max_tokens": 512,
+      "injectedHermesNone": true,
+      "reasoningChars": 0,
+      "content": "2038",
+      "chunks": 5,
+      "httpStatus": 200,
+      "headerSeconds": 0.8,
+      "requestId": "fa32a57a-e866-484d-9b31-30e19029ba46",
+      "responseModel": "deepseek/deepseek-v4.1-flash",
+      "firstContentSeconds": 1.78,
+      "finishReason": "stop",
+      "usage": {
+        "prompt_tokens": 21,
+        "total_tokens": 24,
+        "completion_tokens": 3,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "created_cache_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        }
+      },
+      "completed": true,
+      "seconds": 2.76,
+      "correct": false
+    },
+    {
+      "model": "glm-5.3",
+      "reasoning": "enabled",
+      "controls": {
+        "thinking": true,
+        "reasoning_effort": "none"
+      },
+      "max_tokens": 512,
+      "injectedHermesNone": true,
+      "reasoningChars": 42,
+      "content": "2028",
+      "chunks": 15,
+      "httpStatus": 200,
+      "headerSeconds": 3.35,
+      "requestId": "d68918c4-164e-4304-a71d-2d3c20258784",
+      "responseModel": "zai/glm-5.3-fp8",
+      "firstReasoningSeconds": 4.78,
+      "firstContentSeconds": 8.37,
+      "finishReason": "stop",
+      "usage": {
+        "prompt_tokens": 29,
+        "total_tokens": 59,
+        "completion_tokens": 30,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "created_cache_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 26
+        }
+      },
+      "completed": true,
+      "seconds": 8.44,
+      "correct": true
+    }
+  ]
+}

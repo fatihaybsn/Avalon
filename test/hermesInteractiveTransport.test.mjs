@@ -12,7 +12,9 @@ class FakeGatewayClient extends EventEmitter {
 
   async start() {}
 
-  async request(method, params) {
+  async request(method, params, options) {
+    options?.signal?.throwIfAborted();
+    options?.onDispatch?.();
     this.calls.push({ method, params });
     if (method === "session.resume") {
       return {
@@ -32,6 +34,189 @@ class FakeGatewayClient extends EventEmitter {
 
   respondServerRequest(id, result, error) { this.calls.push({ responseId: id, result, error }); }
   receiveServerRequest(frame) { this.emit("server-request", frame); }
+}
+
+test("cancelling deferred preparation never dispatches it or releases another turn's ownership", async () => {
+  const client = new FakeGatewayClient();
+  let release, entered;
+  const waiting = new Promise((resolve) => { entered = resolve; });
+  const gate = new Promise((resolve) => { release = resolve; });
+  const original = client.request.bind(client);
+  let blocked = true;
+  client.request = async (method, params, options) => {
+    const result = await original(method, params, options);
+    if (method === "config.set" && blocked) { blocked = false; entered(); await gate; }
+    return result;
+  };
+  const transport = new HermesInteractiveTransport({ client, permissionMode: "standard" });
+  const completions = [];
+  transport.on("complete", (run) => completions.push(run.runId));
+  const first = await transport.submit({ task: "cancel before dispatch", sessionId: "stored" });
+  await waiting;
+  const second = await transport.submit({ task: "next owner", sessionId: "stored" });
+  await transport.stop(first.run_id);
+  release();
+  await new Promise(setImmediate);
+  assert.equal(transport.getRun(first.run_id).status, "cancelled");
+  const prompts = client.calls.filter((call) => call.method === "prompt.submit");
+  assert.equal(prompts.length, 1);
+  assert.match(prompts[0].params.text, /next owner/);
+  assert.equal(client.calls.some((call) => call.method === "session.interrupt"), false);
+  assert.equal(transport.sessions.get("stored").current.runId, second.run_id);
+  client.emit("event", { type: "message.complete", session_id: "live-1", payload: { text: "done" } });
+  await new Promise(setImmediate);
+  assert.deepEqual(completions, [first.run_id, second.run_id]);
+  transport.close();
+});
+
+test("cancel while prompt RPC awaits the socket prevents send and does not interrupt the next owner", async () => {
+  const client = new FakeGatewayClient();
+  let entered, release;
+  const waiting = new Promise((resolve) => { entered = resolve; });
+  const gate = new Promise((resolve) => { release = resolve; });
+  const original = client.request.bind(client);
+  let blocked = true;
+  client.request = async (method, params, options) => {
+    if (method === "prompt.submit" && blocked) { blocked = false; entered(); await gate; }
+    return original(method, params, options);
+  };
+  const transport = new HermesInteractiveTransport({ client });
+  const first = await transport.submit({ task: "cancel at socket boundary", sessionId: "stored" });
+  await waiting;
+  const second = await transport.submit({ task: "next owner", sessionId: "stored" });
+  await transport.stop(first.run_id);
+  release();
+  await new Promise(setImmediate);
+  assert.equal(transport.getRun(first.run_id).status, "cancelled");
+  assert.equal(client.calls.some((call) => call.method === "session.interrupt"), false);
+  assert.equal(client.calls.filter((call) => call.method === "prompt.submit").length, 1);
+  assert.equal(transport.sessions.get("stored").current.runId, second.run_id);
+  transport.close();
+});
+
+for (const stage of ["route", "model", "voice-tools"]) {
+  test(`cancel during ${stage} preparation fences all later operations`, async () => {
+    const client = new FakeGatewayClient();
+    client.irisContractVersions = [1, 2];
+    let entered, release;
+    const waiting = new Promise((resolve) => { entered = resolve; });
+    const gate = new Promise((resolve) => { release = resolve; });
+    const blocked = async () => { entered(); await gate; };
+    const original = client.request.bind(client);
+    client.request = async (method, params, options) => {
+      if (method === "tools.show") { await blocked(); return { sections: [{ tools: [] }] }; }
+      return original(method, params, options);
+    };
+    const route = { provider: "opencode", modelId: "beam-free" };
+    const transport = new HermesInteractiveTransport({ client, conversationOnly: stage === "voice-tools",
+      getRoute: stage === "route" ? async () => { await blocked(); return route; } : undefined,
+      prepareRoute: stage === "model" ? blocked : undefined });
+    const run = await transport.submit({ task: "cancelled preparation", sessionId: "stored",
+      ...(stage === "model" ? { route } : {}), ...(stage === "voice-tools" ? { kind: "conversation" } : {}) });
+    await waiting;
+    await transport.stop(run.run_id);
+    release();
+    await new Promise(setImmediate);
+    assert.equal(transport.getRun(run.run_id).status, "cancelled");
+    assert.equal(client.calls.some((call) => call.method === "prompt.submit" || call.method === "session.interrupt" || call.method === "config.set"), false);
+    transport.close();
+  });
+}
+
+test("stopping a queued or terminal task never interrupts the active owner", async () => {
+  const client = new FakeGatewayClient();
+  const transport = new HermesInteractiveTransport({ client });
+  const first = await transport.submit({ task: "running", sessionId: "stored" });
+  await new Promise(setImmediate);
+  const second = await transport.submit({ task: "queued", sessionId: "stored" });
+  await transport.stop(second.run_id);
+  await transport.stop(second.run_id);
+  assert.equal(transport.getRun(second.run_id).status, "cancelled");
+  assert.equal(client.calls.some((call) => call.method === "session.interrupt"), false);
+  await transport.stop(first.run_id);
+  assert.equal(client.calls.at(-1).method, "session.interrupt");
+  assert.equal(transport.getRun(first.run_id).status, "cancelling");
+  client.emit("event", { type: "message.complete", session_id: "live-1", payload: { text: "late completion" } });
+  await transport.stop(first.run_id);
+  assert.equal(transport.getRun(first.run_id).status, "cancelled");
+  assert.equal(client.calls.filter((call) => call.method === "session.interrupt").length, 1);
+  transport.close();
+});
+
+test("normal reconnect clears stale approval and replays the native request without resubmitting work", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const client = new FakeGatewayClient();
+  client.connect = async () => {};
+  const original = client.request.bind(client);
+  let replay = false;
+  client.request = async (method, params, options) => {
+    const result = await original(method, params, options);
+    return method === "session.resume" && replay ? { ...result, open_requests: [{ id: "new-approval", method: "approval", params: { session_id: "live-1", choices: ["once", "deny"] } }] } : result;
+  };
+  const transport = new HermesInteractiveTransport({ client, permissionMode: "standard" });
+  t.after(() => transport.close());
+  const run = await transport.submit({ task: "ordinary work", sessionId: "stored" });
+  await new Promise(setImmediate);
+  client.emit("server-request", { id: "old-approval", method: "approval", params: { session_id: "live-1", choices: ["once", "deny"] } });
+  client.emit("disconnected");
+  assert.equal(transport.getRun(run.run_id).interaction, null);
+  await assert.rejects(transport.respond(run.run_id, { interactionId: "old-approval", type: "approval", value: "once" }), /No pending/);
+  replay = true;
+  t.mock.timers.tick(1000);
+  await new Promise(setImmediate);
+  assert.equal(transport.getRun(run.run_id).interaction.id, "new-approval");
+  await transport.respond(run.run_id, { interactionId: "new-approval", type: "approval", value: "deny" });
+  assert.equal(client.calls.at(-1).responseId, "new-approval");
+  assert.equal(client.calls.filter((call) => call.method === "prompt.submit").length, 1);
+  assert.equal(client.calls.filter((call) => call.method === "config.set").length, 2);
+});
+
+test("a legacy approval response awaiting the socket is invalidated by disconnect", async (t) => {
+  const client = new FakeGatewayClient();
+  let entered, release;
+  const waiting = new Promise((resolve) => { entered = resolve; });
+  const gate = new Promise((resolve) => { release = resolve; });
+  const original = client.request.bind(client);
+  client.request = async (method, params, options) => {
+    if (method === "approval.respond") { entered(); await gate; }
+    return original(method, params, options);
+  };
+  const transport = new HermesInteractiveTransport({ client });
+  t.after(() => transport.close());
+  const run = await transport.submit({ task: "ordinary work", sessionId: "stored" });
+  await new Promise(setImmediate);
+  client.emit("event", { type: "approval.request", session_id: "live-1", payload: {} });
+  const interaction = transport.getRun(run.run_id).interaction;
+  const responding = transport.respond(run.run_id, { interactionId: interaction.id, type: "approval", value: "once" });
+  const rejected = assert.rejects(responding, /interaction|connection/i);
+  await waiting;
+  client.emit("disconnected");
+  release();
+  await rejected;
+  assert.equal(client.calls.some((call) => call.method === "approval.respond"), false);
+});
+
+for (const failed of [false, true]) {
+  test(`a reconnect already awaiting connect cannot resume or re-arm after close (${failed ? "failure" : "success"})`, async (t) => {
+    t.mock.timers.enable({ apis: ["setTimeout"] });
+    const client = new FakeGatewayClient();
+    let release, entered;
+    const waiting = new Promise((resolve) => { entered = resolve; });
+    client.connect = async () => { entered(); await new Promise((resolve, reject) => { release = failed ? () => reject(new Error("lost")) : resolve; }); };
+    const transport = new HermesInteractiveTransport({ client });
+    await transport.ensureSession("stored");
+    client.emit("disconnected");
+    t.mock.timers.tick(1000);
+    await waiting;
+    transport.close();
+    const count = client.calls.length;
+    release();
+    await new Promise(setImmediate);
+    t.mock.timers.tick(5000);
+    await new Promise(setImmediate);
+    assert.equal(client.calls.length, count);
+    assert.equal(transport.reconnectTimer, null);
+  });
 }
 
 test("full access applies to existing and new workers and standard restores native gates before work", async () => {
@@ -73,8 +258,8 @@ test("enabling full access releases an existing approval but preserves clarifica
 test("a rejected native mode change rolls back and never submits work with an unconfirmed mode", async () => {
   const client = new FakeGatewayClient();
   const original = client.request.bind(client);
-  client.request = async (method, params) => {
-    const result = await original(method, params);
+  client.request = async (method, params, options) => {
+    const result = await original(method, params, options);
     return method === "config.set" && params.value === "1" ? { key: "yolo", scope: "global", value: "1" } : result;
   };
   const transport = new HermesInteractiveTransport({ client, permissionMode: "standard" });
@@ -153,8 +338,8 @@ test("sudo and secret remain masked and unsupported UI bridges return an explici
 
 test("native route changes preserve transcript identity and include revision/generation fences", async () => {
   class RoutedGateway extends FakeGatewayClient {
-    async request(method, params) {
-      const result = await super.request(method, params);
+    async request(method, params, options) {
+      const result = await super.request(method, params, options);
       if (method === "session.resume") return { ...result, revision: 4, execution_generation: 2 };
       return result;
     }
@@ -187,8 +372,8 @@ test("new workers receive an explicit provider/model and never inherit a parent'
 test("a reasoning-only switch uses an isolated native provider and waits for its committed identity", async () => {
   const client = new FakeGatewayClient();
   const original = client.request.bind(client);
-  client.request = async (method, params) => {
-    const result = await original(method, params);
+  client.request = async (method, params, options) => {
+    const result = await original(method, params, options);
     return method === "config.set" ? { ...result, deferred: true } : result;
   };
   const effective = [];
@@ -207,8 +392,8 @@ test("a reasoning-only switch uses an isolated native provider and waits for its
 test("standalone desktop model changes stay session-scoped and deferred picks are not advertised as active", async () => {
   const client = new FakeGatewayClient();
   const request = client.request.bind(client);
-  client.request = async (method, params) => {
-    const value = await request(method, params);
+  client.request = async (method, params, options) => {
+    const value = await request(method, params, options);
     return method === "config.set" ? { key: "model", value: params.value, scope: "session", deferred: true } : value;
   };
   const effective = [];
@@ -227,8 +412,8 @@ test("standalone desktop model changes stay session-scoped and deferred picks ar
 test("a model guard does not emit an effective route until its token is confirmed", async () => {
   const client = new FakeGatewayClient();
   const original = client.request.bind(client);
-  client.request = async (method, params) => {
-    const result = await original(method, params);
+  client.request = async (method, params, options) => {
+    const result = await original(method, params, options);
     if (method === "session.resume") return { ...result, revision: 3, execution_generation: 1 };
     if (method === "session.mutate" && !params.payload.confirm) return { status: "confirmation_required", confirm: "token", confirm_message: "Context warning" };
     return result;
@@ -417,9 +602,9 @@ test("conversation forwards literal speech into a real session only after checki
   const client = new FakeGatewayClient();
   client.irisContractVersions = [1];
   const original = client.request.bind(client);
-  client.request = async (method, params) => method === "tools.show"
+  client.request = async (method, params, options) => method === "tools.show"
     ? { sections: [{ tools: [{ name: "web_search" }, { name: "clarify" }] }] }
-    : original(method, params);
+    : original(method, params, options);
   const transport = new HermesInteractiveTransport({ client, conversationOnly: true });
   const text = "Kuyruk kullanmayalım. Bütçe 15.000 TL; /src/main.ts dosyasını tartışalım.";
   await transport.submit({ task: text, sessionId: "stored-1", kind: "conversation", context: "Read-only context" });
@@ -438,8 +623,8 @@ test("ignored tool restrictions fail closed before any user speech reaches the a
   const client = new FakeGatewayClient();
   client.irisContractVersions = [1];
   const original = client.request.bind(client);
-  client.request = async (method, params) => method === "tools.show"
-    ? { sections: [{ tools: [{ name: "terminal" }] }] } : original(method, params);
+  client.request = async (method, params, options) => method === "tools.show"
+    ? { sections: [{ tools: [{ name: "terminal" }] }] } : original(method, params, options);
   const transport = new HermesInteractiveTransport({ client, conversationOnly: true });
   const run = await transport.submit({ task: "Explain the architecture", sessionId: "stored-1", kind: "conversation" });
   await new Promise((resolve) => setImmediate(resolve));
@@ -451,9 +636,9 @@ test("v2 requests one final-text recovery only for a visible conversation and ke
   const client = new FakeGatewayClient();
   client.irisContractVersions = [1, 2];
   const original = client.request.bind(client);
-  client.request = async (method, params) => method === "tools.show"
+  client.request = async (method, params, options) => method === "tools.show"
     ? { sections: [{ tools: [{ name: "web_search" }, { name: "web_extract" }, { name: "clarify" }] }] }
-    : original(method, params);
+    : original(method, params, options);
   const transport = new HermesInteractiveTransport({ client, conversationOnly: true });
   const completions = [];
   transport.on("complete", (item) => completions.push(item));
@@ -480,8 +665,8 @@ test("stop during a v2 turn discards a late repaired completion", async () => {
   const client = new FakeGatewayClient();
   client.irisContractVersions = [1, 2];
   const original = client.request.bind(client);
-  client.request = async (method, params) => method === "tools.show"
-    ? { sections: [{ tools: [] }] } : original(method, params);
+  client.request = async (method, params, options) => method === "tools.show"
+    ? { sections: [{ tools: [] }] } : original(method, params, options);
   const transport = new HermesInteractiveTransport({ client, conversationOnly: true });
   const run = await transport.submit({ task: "Selam", sessionId: "stored-1", kind: "conversation" });
   await new Promise(setImmediate);
@@ -497,8 +682,8 @@ test("a backend exit while awaiting recovery cannot become a later successful co
   const client = new FakeGatewayClient();
   client.irisContractVersions = [1, 2];
   const original = client.request.bind(client);
-  client.request = async (method, params) => method === "tools.show"
-    ? { sections: [{ tools: [] }] } : original(method, params);
+  client.request = async (method, params, options) => method === "tools.show"
+    ? { sections: [{ tools: [] }] } : original(method, params, options);
   const transport = new HermesInteractiveTransport({ client, conversationOnly: true });
   const completed = [];
   transport.on("complete", (item) => completed.push(item));
@@ -527,7 +712,7 @@ test("consecutive conversation turns keep their literal text, context and contra
   const client = new FakeGatewayClient();
   client.irisContractVersions = [1];
   const original = client.request.bind(client);
-  client.request = (method, params) => method === "tools.show" ? { sections: [{ tools: [{ name: "clarify" }] }] } : original(method, params);
+  client.request = (method, params, options) => method === "tools.show" ? { sections: [{ tools: [{ name: "clarify" }] }] } : original(method, params, options);
   const transport = new HermesInteractiveTransport({ client, conversationOnly: true });
   await transport.submit({ task: "Edge AI", sessionId: "stored-1", kind: "conversation", context: "first" });
   await transport.submit({ task: "Türkiye için", sessionId: "stored-1", kind: "conversation", context: "second" });
@@ -545,7 +730,7 @@ test("queued conversation turns retain their selected language without changing 
   const client = new FakeGatewayClient();
   client.irisContractVersions = [1];
   const original = client.request.bind(client);
-  client.request = (method, params) => method === "tools.show" ? { sections: [{ tools: [{ name: "clarify" }] }] } : original(method, params);
+  client.request = (method, params, options) => method === "tools.show" ? { sections: [{ tools: [{ name: "clarify" }] }] } : original(method, params, options);
   const transport = new HermesInteractiveTransport({ client, conversationOnly: true });
   await transport.submit({ task: "Birlikte düşünelim", sessionId: "stored-1", kind: "conversation", language: "en" });
   await transport.submit({ task: "Devam edelim", sessionId: "stored-1", kind: "conversation", language: "tr" });
@@ -558,4 +743,22 @@ test("queued conversation turns retain their selected language without changing 
   assert.match(turns[1].iris_contract.instructions, /Talk directly to the user in their language/);
   assert.doesNotMatch(turns[1].iris_contract.instructions, /English mode is selected/);
   assert.equal(turns[0].iris_contract.version, turns[1].iris_contract.version);
+});
+
+test("a lost prompt.submit acknowledgement preserves uncertainty instead of authorizing a blind retry", async () => {
+  const client = new FakeGatewayClient();
+  const original = client.request.bind(client);
+  client.request = async (method, params, options) => {
+    if (method === "prompt.submit") {
+      options.onDispatch();
+      throw new Error("RPC prompt.submit timed out");
+    }
+    return original(method, params, options);
+  };
+  const transport = new HermesInteractiveTransport({ client, permissionMode: "standard" });
+  const run = await transport.submit({ task: "Simulated work", sessionId: "stored" });
+  await new Promise(setImmediate);
+  assert.equal(transport.getRun(run.run_id).status, "failed");
+  assert.equal(transport.getRun(run.run_id).dispatchUncertain, true);
+  transport.close();
 });

@@ -34,7 +34,9 @@ for (const scheduled of [false, true]) {
     const args = [scheduled ? "--schedule" : "--run", store.file(id), ...(scheduled ? ["--occurrence", "one"] : [])];
     const result = await runEntry(args, {
       resolveModel: async () => ({ configured: true, key: "private-test-key", baseUrl: "https://example.com/v1" }),
-      spawnWorker() {
+      spawnWorker(_python, pythonArgs) {
+        assert.deepEqual(pythonArgs.slice(0, 4), ["-I", "-X", "utf8", "-u"]);
+        assert.ok(pythonArgs[4].endsWith("gpt_researcher_worker.py"));
         const child = Object.assign(new EventEmitter(), { stdin: new PassThrough(), stdout: new PassThrough(), kill() {} });
         child.stdin.once("data", (input) => {
           const job = JSON.parse(input);
@@ -44,8 +46,9 @@ for (const scheduled of [false, true]) {
           assert.equal(job.breadth, 4); assert.equal(job.depth, 2);
           assert.equal(job.minutes, undefined);
           assert.equal(job.tavilyKey, scheduled ? "old-terminal-key" : "new-file-key");
+          assert.equal(job.searchProvider, "hermes");
           const emit = (event) => child.stdout.write(JSON.stringify(event) + "\n");
-          emit({ kind: "search", provider: "duckduckgo", reason: "quota", counts: { tavily: 1, duckduckgo: 1 } });
+          emit({ kind: "search", provider: "hermes", reason: "quota", counts: { tavily: 1, hermes: 2 } });
           emit({ kind: "source", source: { url: "https://example.com", content: "Captured content" } });
           emit({ kind: "findings", findings: ["A finding"] });
           if (!scheduled) emit({ kind: "report", markdown: "# Report\n\nA plain report." });
@@ -61,11 +64,11 @@ for (const scheduled of [false, true]) {
       },
     });
     assert.equal(result.status, scheduled ? "partial" : "completed");
-    assert.match(result.searchNotice, /Tavily kotası doldu/);
+    assert.match(result.searchNotice, /Tavily yedeğinin kotası doldu/);
     assert.equal(result.sourceCount, 1);
     const summary = fs.readFileSync(path.join(result.outputPath, "summary.json"), "utf8");
     assert.doesNotMatch(summary, /private-test-key/);
-    assert.equal(JSON.parse(summary).searchCounts.duckduckgo, 1);
+    assert.equal(JSON.parse(summary).searchCounts.hermes, 2);
     const checkpoint = JSON.parse(fs.readFileSync(store.file(result.id, "checkpoint.json"), "utf8"));
     assert.equal(checkpoint.findings[0], "A finding");
     if (scheduled) {

@@ -6,6 +6,29 @@ as historical release notes.
 This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 and the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [1.3.0](https://github.com/fatihaybsn/Avalon/releases/tag/v1.3.0) — 2026-11-07
+
+### Added
+
+- Conditional Node-RED research workflows with Hermes steps, bounded revision loops,
+  approval controls, and portable workflow import/export.
+- Desktop and mobile automation controls for inspecting runs, handling approvals,
+  and reviewing interrupted work.
+- Research process locking, a versioned launcher, and shared search fallback handling.
+- Regression coverage and validation reports for automation, research, conversation
+  notes, model reasoning controls, and Hermes task lifecycles.
+
+### Fixed
+
+- Cancellation during task preparation, stale approvals after disconnects, and
+  late cleanup reconnecting a closed Hermes client.
+- Automation admission after uncertain task delivery or interrupted execution.
+- Research scheduling and output handoff across workflow steps.
+
+### Changed
+
+- Publish Windows x64 portable EXE and complete ZIP packages as version 1.3.0.
+
 ## [1.1.2](https://github.com/fatihaybsn/Avalon/releases/tag/v1.1.2) — 2026-11-01
 
 ### Added

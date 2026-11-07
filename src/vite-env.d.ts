@@ -57,10 +57,13 @@ type ResearchScheduledJob = { id: string; name: string; label: string; modelLabe
 type ResearchScheduleSnapshot = { jobs: ResearchScheduledJob[]; scheduler: { available: boolean; error?: string; timezone?: string } };
 type AutomationFlow = {
   id: string; name: string; error?: string;
+  needsReview?: { runId: string };
   steps?: { id: string; name: string }[];
   schedule?: { id: string; spec: ResearchSchedule; paused: boolean; nextRunAt: string | null; error?: string; lastSkip?: ResearchScheduledJob["lastSkip"] };
-  history: { id: string; status: string; startedAt: number; error?: string;
-    steps: { id: string; name: string; status: string; task?: import("./types").TaskCard }[] }[];
+  history: { id: string; status: string; startedAt: number; error?: string; modelLabel?: string;
+    steps: { id: string; name: string; status: string; kind?: string; attemptId?: string; attempt?: number; files?: string[];
+      interaction?: { id: string; type: string; question: string; command?: string; choices: string[] };
+      task?: import("./types").TaskCard }[] }[];
 };
 type AutomationSnapshot = { installed: boolean; supported: boolean; flows: AutomationFlow[] };
 type BrainReasoningOption = { value: string; label: string; wire: { thinking?: boolean; reasoning_effort?: string } };
@@ -241,6 +244,12 @@ type IrisApi = {
   listAutomations?: () => Promise<AutomationSnapshot>;
   installAutomation?: () => Promise<void>;
   openAutomationEditor?: () => Promise<void>;
+  runAutomation?: (id: string) => Promise<unknown>;
+  acknowledgeAutomationReview?: (flowId: string, runId: string) => Promise<unknown>;
+  exportAutomation?: (id: string) => Promise<unknown>;
+  openAutomationOutput?: (flowId: string, runId: string, attemptId: string) => Promise<unknown>;
+  importAutomation?: (value: unknown) => Promise<unknown>;
+  respondAutomation?: (flowId: string, runId: string, attemptId: string, interactionId: string, value: string) => Promise<unknown>;
   saveAutomationSchedule?: (id: string, schedule: ResearchSchedule) => Promise<unknown>;
   cancelAutomationRun?: (flowId: string, runId: string) => Promise<unknown>;
   proposeResearch: (input: ResearchInput) => Promise<{ ok: boolean; proposalId: string }>;

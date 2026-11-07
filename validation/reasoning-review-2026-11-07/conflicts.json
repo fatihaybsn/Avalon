@@ -1,0 +1,68 @@
+{
+  "at": "2026-11-07T13:27:58.822Z",
+  "results": [
+    {
+      "controls": {
+        "model": "qwen3.8-flash-next",
+        "thinking": true,
+        "reasoning_effort": "none"
+      },
+      "status": 400,
+      "seconds": 0.843,
+      "requestId": "b54cc0f0-a47b-4fc2-82dd-bbf869a31005",
+      "reasoningChars": null,
+      "error": {
+        "message": "Unexpected reasoning effort none. Supported types are xhigh (default), medium, and low.",
+        "type": "invalid_request_error",
+        "param": null,
+        "code": "bad_request"
+      }
+    },
+    {
+      "controls": {
+        "model": "gemma-4-31b",
+        "thinking": true,
+        "reasoning_effort": "none"
+      },
+      "status": 400,
+      "seconds": 0.149,
+      "requestId": "a8e65e42-a5a5-4fa8-ac7e-ffe8ce612566",
+      "reasoningChars": null,
+      "error": {
+        "message": "model 'gemma-4-31b' 'reasoning_effort' parametresini desteklemiyor",
+        "type": "invalid_request_error",
+        "param": null,
+        "code": "bad_request"
+      }
+    },
+    {
+      "controls": {
+        "model": "deepseek-v4.1-flash",
+        "thinking": true,
+        "reasoning_effort": "none"
+      },
+      "status": 200,
+      "seconds": 9.767,
+      "requestId": "8418fa63-28f2-4b1c-8cf2-f9a3b9c80bd4",
+      "usage": {
+        "prompt_tokens": 21,
+        "total_tokens": 24,
+        "completion_tokens": 3,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "created_cache_tokens": 0,
+          "multimodal_tokens": null
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "evren": {
+          "routed_model": "deepseek/deepseek-v4.1-flash"
+        }
+      },
+      "finishReason": "stop",
+      "content": "2038",
+      "reasoningChars": null
+    }
+  ]
+}

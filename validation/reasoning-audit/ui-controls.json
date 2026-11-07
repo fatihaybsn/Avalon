@@ -1,0 +1,256 @@
+[
+  {
+    "model": "gemma-4-31b",
+    "selection": "default",
+    "body": {},
+    "validated": true
+  },
+  {
+    "model": "gemma-4-31b",
+    "selection": "enabled",
+    "body": {
+      "thinking": true
+    },
+    "validated": true
+  },
+  {
+    "model": "gemma-4-31b",
+    "selection": "disabled",
+    "body": {
+      "thinking": false
+    },
+    "validated": true
+  },
+  {
+    "model": "qwen3.8-flash-next",
+    "selection": "default",
+    "body": {},
+    "validated": true
+  },
+  {
+    "model": "qwen3.8-flash-next",
+    "selection": "enabled",
+    "body": {
+      "thinking": true
+    },
+    "validated": true
+  },
+  {
+    "model": "qwen3.8-flash-next",
+    "selection": "disabled",
+    "body": {
+      "thinking": false
+    },
+    "validated": true
+  },
+  {
+    "model": "qwen3.8-flash-next",
+    "selection": "high",
+    "body": {
+      "thinking": true,
+      "reasoning_effort": "xhigh"
+    },
+    "validated": true
+  },
+  {
+    "model": "qwen3.8-flash-next",
+    "selection": "xhigh",
+    "body": {
+      "thinking": true,
+      "reasoning_effort": "xhigh"
+    },
+    "validated": true
+  },
+  {
+    "model": "mimo-v2.6-pro",
+    "selection": "default",
+    "body": {},
+    "validated": true
+  },
+  {
+    "model": "mimo-v2.6-pro",
+    "selection": "enabled",
+    "body": {
+      "thinking": true
+    },
+    "validated": true
+  },
+  {
+    "model": "mimo-v2.6-pro",
+    "selection": "disabled",
+    "body": {
+      "thinking": false
+    },
+    "validated": true
+  },
+  {
+    "model": "mimo-v2.6-pro",
+    "selection": "none",
+    "body": {
+      "thinking": false,
+      "reasoning_effort": "none"
+    },
+    "validated": true
+  },
+  {
+    "model": "mimo-v2.6-pro",
+    "selection": "minimal",
+    "body": {
+      "thinking": true,
+      "reasoning_effort": "minimal"
+    },
+    "validated": true
+  },
+  {
+    "model": "mimo-v2.6-pro",
+    "selection": "low",
+    "body": {
+      "thinking": true,
+      "reasoning_effort": "low"
+    },
+    "validated": true
+  },
+  {
+    "model": "mimo-v2.6-pro",
+    "selection": "medium",
+    "body": {
+      "thinking": true,
+      "reasoning_effort": "medium"
+    },
+    "validated": true
+  },
+  {
+    "model": "mimo-v2.6-pro",
+    "selection": "high",
+    "body": {
+      "thinking": true,
+      "reasoning_effort": "high"
+    },
+    "validated": true
+  },
+  {
+    "model": "mimo-v2.6-pro",
+    "selection": "xhigh",
+    "body": {
+      "thinking": true,
+      "reasoning_effort": "xhigh"
+    },
+    "validated": true
+  },
+  {
+    "model": "deepseek-v4.1-flash",
+    "selection": "default",
+    "body": {},
+    "validated": true
+  },
+  {
+    "model": "deepseek-v4.1-flash",
+    "selection": "enabled",
+    "body": {
+      "thinking": true
+    },
+    "validated": true
+  },
+  {
+    "model": "deepseek-v4.1-flash",
+    "selection": "disabled",
+    "body": {
+      "thinking": false
+    },
+    "validated": true
+  },
+  {
+    "model": "deepseek-v4.1-flash",
+    "selection": "minimal",
+    "body": {
+      "thinking": true,
+      "reasoning_effort": "low"
+    },
+    "validated": true
+  },
+  {
+    "model": "deepseek-v4.1-flash",
+    "selection": "low",
+    "body": {
+      "thinking": true,
+      "reasoning_effort": "low"
+    },
+    "validated": true
+  },
+  {
+    "model": "deepseek-v4.1-flash",
+    "selection": "medium",
+    "body": {
+      "thinking": true,
+      "reasoning_effort": "high"
+    },
+    "validated": true
+  },
+  {
+    "model": "deepseek-v4.1-flash",
+    "selection": "high",
+    "body": {
+      "thinking": true,
+      "reasoning_effort": "high"
+    },
+    "validated": true
+  },
+  {
+    "model": "glm-5.3",
+    "selection": "default",
+    "body": {},
+    "validated": true
+  },
+  {
+    "model": "glm-5.3",
+    "selection": "enabled",
+    "body": {
+      "thinking": true
+    },
+    "validated": true
+  },
+  {
+    "model": "glm-5.3",
+    "selection": "disabled",
+    "body": {
+      "thinking": false
+    },
+    "validated": true
+  },
+  {
+    "model": "glm-5.3",
+    "selection": "minimal",
+    "body": {
+      "thinking": true,
+      "reasoning_effort": "low"
+    },
+    "validated": true
+  },
+  {
+    "model": "glm-5.3",
+    "selection": "low",
+    "body": {
+      "thinking": true,
+      "reasoning_effort": "low"
+    },
+    "validated": true
+  },
+  {
+    "model": "glm-5.3",
+    "selection": "medium",
+    "body": {
+      "thinking": true,
+      "reasoning_effort": "high"
+    },
+    "validated": true
+  },
+  {
+    "model": "glm-5.3",
+    "selection": "high",
+    "body": {
+      "thinking": true,
+      "reasoning_effort": "high"
+    },
+    "validated": true
+  }
+]

@@ -5,6 +5,7 @@ import os from "node:os";
 import { spawn } from "node:child_process";
 import { brainExecutionKey, brainProviderSlug, reasoningBody, reasoningOptions } from "./brainReasoning.mjs";
 import { nativeResourcePath } from "./resourcePaths.mjs";
+import { parseEnvFile, userConfigPath } from "./configStore.mjs";
 
 export const BRAIN_PROVIDERS = {
   evren: { label: "Evren", baseUrl: "https://evren-llmapi.ssyz.org.tr/v1", catalogUrl: "https://evren-llmapi.ssyz.org.tr/v1/models" },
@@ -27,6 +28,17 @@ export const BRAIN_MODELS = [
   ["opencode", "nemotron-3.5-super-vl-free", "Nemotron 3.5 Super VL Free"],
 ].map(([provider, modelId, label]) => Object.freeze({ provider, modelId, label }));
 export const DEFAULT_BRAIN = Object.freeze({ provider: "evren", modelId: "qwen3.8-flash-next" });
+// Read the saved selection afresh: a scheduler process can outlive Brain setting changes.
+export function readSelectedBrain({ file = userConfigPath(), env = process.env } = {}) {
+  const saved = Object.create(null);
+  parseEnvFile(file, saved);
+  const source = Object.hasOwn(saved, "IRIS_BRAIN_PROVIDER") || Object.hasOwn(saved, "IRIS_BRAIN_MODEL") ? saved : env;
+  return validateBrainSelection({
+    provider: source.IRIS_BRAIN_PROVIDER || DEFAULT_BRAIN.provider,
+    modelId: source.IRIS_BRAIN_MODEL || DEFAULT_BRAIN.modelId,
+    reasoning: source.IRIS_BRAIN_REASONING || "default",
+  });
+}
 export const brainRouteKey = (route) => `${route.provider}/${route.modelId}`;
 function cleanApiKey(value) {
   if (typeof value !== "string" || value.length > 8192 || /[\r\n\0]/.test(value)) throw new Error("API anahtarı tek satırlı, geçerli bir metin olmalıdır.");

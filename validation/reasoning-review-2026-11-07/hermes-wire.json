@@ -1,0 +1,1808 @@
+{
+  "at": "2026-11-07T13:27:27.573Z",
+  "selected": {
+    "provider": "evren",
+    "modelId": "qwen3.8-flash-next",
+    "reasoning": "xhigh"
+  },
+  "current_global": "none",
+  "configured_avalon_providers": {
+    "iris-evren": {
+      "api": "https://evren-llmapi.ssyz.org.tr/v1",
+      "api_mode": "chat_completions",
+      "extra_body": null
+    },
+    "iris-evren-qwen3-8-flash-next-disabled": {
+      "api": "https://evren-llmapi.ssyz.org.tr/v1",
+      "api_mode": "chat_completions",
+      "extra_body": {
+        "thinking": false
+      }
+    },
+    "iris-evren-qwen3-8-flash-next-high": {
+      "api": "https://evren-llmapi.ssyz.org.tr/v1",
+      "api_mode": "chat_completions",
+      "extra_body": {
+        "thinking": true,
+        "reasoning_effort": "xhigh"
+      }
+    },
+    "iris-opencode": {
+      "api": "https://opencode.ai/inference/openai/v1",
+      "api_mode": "chat_completions",
+      "extra_body": null
+    },
+    "iris-evren-qwen3-8-flash-next-xhigh": {
+      "api": "https://evren-llmapi.ssyz.org.tr/v1",
+      "api_mode": "chat_completions",
+      "extra_body": {
+        "thinking": true,
+        "reasoning_effort": "xhigh"
+      }
+    },
+    "iris-evren-deepseek-v4-1-flash-medium": {
+      "api": "https://evren-llmapi.ssyz.org.tr/v1",
+      "api_mode": "chat_completions",
+      "extra_body": {
+        "thinking": true,
+        "reasoning_effort": "high"
+      }
+    }
+  },
+  "agent_max_tokens": null,
+  "model_max_tokens": null,
+  "results": [
+    {
+      "global": "none",
+      "provider": "evren",
+      "model": "gemma-4-31b",
+      "selection": "default",
+      "controls": {
+        "reasoning_effort": "none"
+      }
+    },
+    {
+      "global": "none",
+      "provider": "evren",
+      "model": "gemma-4-31b",
+      "selection": "enabled",
+      "controls": {
+        "reasoning_effort": "none",
+        "thinking": true
+      }
+    },
+    {
+      "global": "none",
+      "provider": "evren",
+      "model": "gemma-4-31b",
+      "selection": "disabled",
+      "controls": {
+        "reasoning_effort": "none",
+        "thinking": false
+      }
+    },
+    {
+      "global": "none",
+      "provider": "evren",
+      "model": "qwen3.8-flash-next",
+      "selection": "default",
+      "controls": {
+        "reasoning_effort": "none"
+      }
+    },
+    {
+      "global": "none",
+      "provider": "evren",
+      "model": "qwen3.8-flash-next",
+      "selection": "enabled",
+      "controls": {
+        "reasoning_effort": "none",
+        "thinking": true
+      }
+    },
+    {
+      "global": "none",
+      "provider": "evren",
+      "model": "qwen3.8-flash-next",
+      "selection": "disabled",
+      "controls": {
+        "reasoning_effort": "none",
+        "thinking": false
+      }
+    },
+    {
+      "global": "none",
+      "provider": "evren",
+      "model": "qwen3.8-flash-next",
+      "selection": "high",
+      "controls": {
+        "reasoning_effort": "xhigh",
+        "thinking": true
+      }
+    },
+    {
+      "global": "none",
+      "provider": "evren",
+      "model": "qwen3.8-flash-next",
+      "selection": "xhigh",
+      "controls": {
+        "reasoning_effort": "xhigh",
+        "thinking": true
+      }
+    },
+    {
+      "global": "none",
+      "provider": "evren",
+      "model": "mimo-v2.6-pro",
+      "selection": "default",
+      "controls": {
+        "reasoning_effort": "none"
+      }
+    },
+    {
+      "global": "none",
+      "provider": "evren",
+      "model": "mimo-v2.6-pro",
+      "selection": "enabled",
+      "controls": {
+        "reasoning_effort": "none",
+        "thinking": true
+      }
+    },
+    {
+      "global": "none",
+      "provider": "evren",
+      "model": "mimo-v2.6-pro",
+      "selection": "disabled",
+      "controls": {
+        "reasoning_effort": "none",
+        "thinking": false
+      }
+    },
+    {
+      "global": "none",
+      "provider": "evren",
+      "model": "mimo-v2.6-pro",
+      "selection": "none",
+      "controls": {
+        "reasoning_effort": "none",
+        "thinking": false
+      }
+    },
+    {
+      "global": "none",
+      "provider": "evren",
+      "model": "mimo-v2.6-pro",
+      "selection": "minimal",
+      "controls": {
+        "reasoning_effort": "minimal",
+        "thinking": true
+      }
+    },
+    {
+      "global": "none",
+      "provider": "evren",
+      "model": "mimo-v2.6-pro",
+      "selection": "low",
+      "controls": {
+        "reasoning_effort": "low",
+        "thinking": true
+      }
+    },
+    {
+      "global": "none",
+      "provider": "evren",
+      "model": "mimo-v2.6-pro",
+      "selection": "medium",
+      "controls": {
+        "reasoning_effort": "medium",
+        "thinking": true
+      }
+    },
+    {
+      "global": "none",
+      "provider": "evren",
+      "model": "mimo-v2.6-pro",
+      "selection": "high",
+      "controls": {
+        "reasoning_effort": "high",
+        "thinking": true
+      }
+    },
+    {
+      "global": "none",
+      "provider": "evren",
+      "model": "mimo-v2.6-pro",
+      "selection": "xhigh",
+      "controls": {
+        "reasoning_effort": "xhigh",
+        "thinking": true
+      }
+    },
+    {
+      "global": "none",
+      "provider": "evren",
+      "model": "deepseek-v4.1-flash",
+      "selection": "default",
+      "controls": {
+        "reasoning_effort": "none"
+      }
+    },
+    {
+      "global": "none",
+      "provider": "evren",
+      "model": "deepseek-v4.1-flash",
+      "selection": "enabled",
+      "controls": {
+        "reasoning_effort": "none",
+        "thinking": true
+      }
+    },
+    {
+      "global": "none",
+      "provider": "evren",
+      "model": "deepseek-v4.1-flash",
+      "selection": "disabled",
+      "controls": {
+        "reasoning_effort": "none",
+        "thinking": false
+      }
+    },
+    {
+      "global": "none",
+      "provider": "evren",
+      "model": "deepseek-v4.1-flash",
+      "selection": "minimal",
+      "controls": {
+        "reasoning_effort": "low",
+        "thinking": true
+      }
+    },
+    {
+      "global": "none",
+      "provider": "evren",
+      "model": "deepseek-v4.1-flash",
+      "selection": "low",
+      "controls": {
+        "reasoning_effort": "low",
+        "thinking": true
+      }
+    },
+    {
+      "global": "none",
+      "provider": "evren",
+      "model": "deepseek-v4.1-flash",
+      "selection": "medium",
+      "controls": {
+        "reasoning_effort": "high",
+        "thinking": true
+      }
+    },
+    {
+      "global": "none",
+      "provider": "evren",
+      "model": "deepseek-v4.1-flash",
+      "selection": "high",
+      "controls": {
+        "reasoning_effort": "high",
+        "thinking": true
+      }
+    },
+    {
+      "global": "none",
+      "provider": "evren",
+      "model": "glm-5.3",
+      "selection": "default",
+      "controls": {
+        "reasoning_effort": "none"
+      }
+    },
+    {
+      "global": "none",
+      "provider": "evren",
+      "model": "glm-5.3",
+      "selection": "enabled",
+      "controls": {
+        "reasoning_effort": "none",
+        "thinking": true
+      }
+    },
+    {
+      "global": "none",
+      "provider": "evren",
+      "model": "glm-5.3",
+      "selection": "disabled",
+      "controls": {
+        "reasoning_effort": "none",
+        "thinking": false
+      }
+    },
+    {
+      "global": "none",
+      "provider": "evren",
+      "model": "glm-5.3",
+      "selection": "minimal",
+      "controls": {
+        "reasoning_effort": "low",
+        "thinking": true
+      }
+    },
+    {
+      "global": "none",
+      "provider": "evren",
+      "model": "glm-5.3",
+      "selection": "low",
+      "controls": {
+        "reasoning_effort": "low",
+        "thinking": true
+      }
+    },
+    {
+      "global": "none",
+      "provider": "evren",
+      "model": "glm-5.3",
+      "selection": "medium",
+      "controls": {
+        "reasoning_effort": "high",
+        "thinking": true
+      }
+    },
+    {
+      "global": "none",
+      "provider": "evren",
+      "model": "glm-5.3",
+      "selection": "high",
+      "controls": {
+        "reasoning_effort": "high",
+        "thinking": true
+      }
+    },
+    {
+      "global": "none",
+      "provider": "opencode",
+      "model": "beam-free",
+      "selection": "default",
+      "controls": {
+        "reasoning_effort": "none"
+      }
+    },
+    {
+      "global": "none",
+      "provider": "opencode",
+      "model": "beam-free",
+      "selection": "low",
+      "controls": {
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "global": "none",
+      "provider": "opencode",
+      "model": "beam-free",
+      "selection": "medium",
+      "controls": {
+        "reasoning_effort": "medium"
+      }
+    },
+    {
+      "global": "none",
+      "provider": "opencode",
+      "model": "beam-free",
+      "selection": "high",
+      "controls": {
+        "reasoning_effort": "high"
+      }
+    },
+    {
+      "global": "none",
+      "provider": "opencode",
+      "model": "beam-free",
+      "selection": "xhigh",
+      "controls": {
+        "reasoning_effort": "xhigh"
+      }
+    },
+    {
+      "global": "none",
+      "provider": "opencode",
+      "model": "beam-free",
+      "selection": "max",
+      "controls": {
+        "reasoning_effort": "max"
+      }
+    },
+    {
+      "global": "none",
+      "provider": "opencode",
+      "model": "big-pickle",
+      "selection": "default",
+      "controls": {
+        "reasoning_effort": "none"
+      }
+    },
+    {
+      "global": "none",
+      "provider": "opencode",
+      "model": "deepseek-v4.1-flash-free",
+      "selection": "default",
+      "controls": {
+        "reasoning_effort": "none"
+      }
+    },
+    {
+      "global": "none",
+      "provider": "opencode",
+      "model": "deepseek-v4.1-flash-free",
+      "selection": "low",
+      "controls": {
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "global": "none",
+      "provider": "opencode",
+      "model": "deepseek-v4.1-flash-free",
+      "selection": "high",
+      "controls": {
+        "reasoning_effort": "high"
+      }
+    },
+    {
+      "global": "none",
+      "provider": "opencode",
+      "model": "deepseek-v4.1-flash-free",
+      "selection": "max",
+      "controls": {
+        "reasoning_effort": "max"
+      }
+    },
+    {
+      "global": "none",
+      "provider": "opencode",
+      "model": "flint-40b-free",
+      "selection": "default",
+      "controls": {
+        "reasoning_effort": "none"
+      }
+    },
+    {
+      "global": "none",
+      "provider": "opencode",
+      "model": "flint-40b-free",
+      "selection": "low",
+      "controls": {
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "global": "none",
+      "provider": "opencode",
+      "model": "flint-40b-free",
+      "selection": "medium",
+      "controls": {
+        "reasoning_effort": "medium"
+      }
+    },
+    {
+      "global": "none",
+      "provider": "opencode",
+      "model": "flint-40b-free",
+      "selection": "high",
+      "controls": {
+        "reasoning_effort": "high"
+      }
+    },
+    {
+      "global": "none",
+      "provider": "opencode",
+      "model": "flint-40b-free",
+      "selection": "xhigh",
+      "controls": {
+        "reasoning_effort": "xhigh"
+      }
+    },
+    {
+      "global": "none",
+      "provider": "opencode",
+      "model": "flint-40b-free",
+      "selection": "max",
+      "controls": {
+        "reasoning_effort": "max"
+      }
+    },
+    {
+      "global": "none",
+      "provider": "opencode",
+      "model": "glm-5.3-flash-free",
+      "selection": "default",
+      "controls": {
+        "reasoning_effort": "none"
+      }
+    },
+    {
+      "global": "none",
+      "provider": "opencode",
+      "model": "glm-5.3-flash-free",
+      "selection": "low",
+      "controls": {
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "global": "none",
+      "provider": "opencode",
+      "model": "glm-5.3-flash-free",
+      "selection": "high",
+      "controls": {
+        "reasoning_effort": "high"
+      }
+    },
+    {
+      "global": "none",
+      "provider": "opencode",
+      "model": "glm-5.3-flash-free",
+      "selection": "max",
+      "controls": {
+        "reasoning_effort": "max"
+      }
+    },
+    {
+      "global": "none",
+      "provider": "opencode",
+      "model": "mimo-v2.6-flash-free",
+      "selection": "default",
+      "controls": {
+        "reasoning_effort": "none"
+      }
+    },
+    {
+      "global": "none",
+      "provider": "opencode",
+      "model": "nemotron-3-ultra-free",
+      "selection": "default",
+      "controls": {
+        "reasoning_effort": "none"
+      }
+    },
+    {
+      "global": "none",
+      "provider": "opencode",
+      "model": "nemotron-3.5-lightning-free",
+      "selection": "default",
+      "controls": {
+        "reasoning_effort": "none"
+      }
+    },
+    {
+      "global": "none",
+      "provider": "opencode",
+      "model": "nemotron-3.5-super-vl-free",
+      "selection": "default",
+      "controls": {
+        "reasoning_effort": "none"
+      }
+    },
+    {
+      "global": "none",
+      "provider": "opencode",
+      "model": "nemotron-3.5-super-vl-free",
+      "selection": "none",
+      "controls": {
+        "reasoning_effort": "none"
+      }
+    },
+    {
+      "global": "none",
+      "provider": "opencode",
+      "model": "nemotron-3.5-super-vl-free",
+      "selection": "minimal",
+      "controls": {
+        "reasoning_effort": "minimal"
+      }
+    },
+    {
+      "global": "none",
+      "provider": "opencode",
+      "model": "nemotron-3.5-super-vl-free",
+      "selection": "low",
+      "controls": {
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "global": "none",
+      "provider": "opencode",
+      "model": "nemotron-3.5-super-vl-free",
+      "selection": "medium",
+      "controls": {
+        "reasoning_effort": "medium"
+      }
+    },
+    {
+      "global": "none",
+      "provider": "opencode",
+      "model": "nemotron-3.5-super-vl-free",
+      "selection": "high",
+      "controls": {
+        "reasoning_effort": "high"
+      }
+    },
+    {
+      "global": "none",
+      "provider": "opencode",
+      "model": "nemotron-3.5-super-vl-free",
+      "selection": "xhigh",
+      "controls": {
+        "reasoning_effort": "xhigh"
+      }
+    },
+    {
+      "global": "low",
+      "provider": "evren",
+      "model": "gemma-4-31b",
+      "selection": "default",
+      "controls": {
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "global": "low",
+      "provider": "evren",
+      "model": "gemma-4-31b",
+      "selection": "enabled",
+      "controls": {
+        "reasoning_effort": "low",
+        "thinking": true
+      }
+    },
+    {
+      "global": "low",
+      "provider": "evren",
+      "model": "gemma-4-31b",
+      "selection": "disabled",
+      "controls": {
+        "reasoning_effort": "low",
+        "thinking": false
+      }
+    },
+    {
+      "global": "low",
+      "provider": "evren",
+      "model": "qwen3.8-flash-next",
+      "selection": "default",
+      "controls": {
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "global": "low",
+      "provider": "evren",
+      "model": "qwen3.8-flash-next",
+      "selection": "enabled",
+      "controls": {
+        "reasoning_effort": "low",
+        "thinking": true
+      }
+    },
+    {
+      "global": "low",
+      "provider": "evren",
+      "model": "qwen3.8-flash-next",
+      "selection": "disabled",
+      "controls": {
+        "reasoning_effort": "low",
+        "thinking": false
+      }
+    },
+    {
+      "global": "low",
+      "provider": "evren",
+      "model": "qwen3.8-flash-next",
+      "selection": "high",
+      "controls": {
+        "reasoning_effort": "xhigh",
+        "thinking": true
+      }
+    },
+    {
+      "global": "low",
+      "provider": "evren",
+      "model": "qwen3.8-flash-next",
+      "selection": "xhigh",
+      "controls": {
+        "reasoning_effort": "xhigh",
+        "thinking": true
+      }
+    },
+    {
+      "global": "low",
+      "provider": "evren",
+      "model": "mimo-v2.6-pro",
+      "selection": "default",
+      "controls": {
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "global": "low",
+      "provider": "evren",
+      "model": "mimo-v2.6-pro",
+      "selection": "enabled",
+      "controls": {
+        "reasoning_effort": "low",
+        "thinking": true
+      }
+    },
+    {
+      "global": "low",
+      "provider": "evren",
+      "model": "mimo-v2.6-pro",
+      "selection": "disabled",
+      "controls": {
+        "reasoning_effort": "low",
+        "thinking": false
+      }
+    },
+    {
+      "global": "low",
+      "provider": "evren",
+      "model": "mimo-v2.6-pro",
+      "selection": "none",
+      "controls": {
+        "reasoning_effort": "none",
+        "thinking": false
+      }
+    },
+    {
+      "global": "low",
+      "provider": "evren",
+      "model": "mimo-v2.6-pro",
+      "selection": "minimal",
+      "controls": {
+        "reasoning_effort": "minimal",
+        "thinking": true
+      }
+    },
+    {
+      "global": "low",
+      "provider": "evren",
+      "model": "mimo-v2.6-pro",
+      "selection": "low",
+      "controls": {
+        "reasoning_effort": "low",
+        "thinking": true
+      }
+    },
+    {
+      "global": "low",
+      "provider": "evren",
+      "model": "mimo-v2.6-pro",
+      "selection": "medium",
+      "controls": {
+        "reasoning_effort": "medium",
+        "thinking": true
+      }
+    },
+    {
+      "global": "low",
+      "provider": "evren",
+      "model": "mimo-v2.6-pro",
+      "selection": "high",
+      "controls": {
+        "reasoning_effort": "high",
+        "thinking": true
+      }
+    },
+    {
+      "global": "low",
+      "provider": "evren",
+      "model": "mimo-v2.6-pro",
+      "selection": "xhigh",
+      "controls": {
+        "reasoning_effort": "xhigh",
+        "thinking": true
+      }
+    },
+    {
+      "global": "low",
+      "provider": "evren",
+      "model": "deepseek-v4.1-flash",
+      "selection": "default",
+      "controls": {
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "global": "low",
+      "provider": "evren",
+      "model": "deepseek-v4.1-flash",
+      "selection": "enabled",
+      "controls": {
+        "reasoning_effort": "low",
+        "thinking": true
+      }
+    },
+    {
+      "global": "low",
+      "provider": "evren",
+      "model": "deepseek-v4.1-flash",
+      "selection": "disabled",
+      "controls": {
+        "reasoning_effort": "low",
+        "thinking": false
+      }
+    },
+    {
+      "global": "low",
+      "provider": "evren",
+      "model": "deepseek-v4.1-flash",
+      "selection": "minimal",
+      "controls": {
+        "reasoning_effort": "low",
+        "thinking": true
+      }
+    },
+    {
+      "global": "low",
+      "provider": "evren",
+      "model": "deepseek-v4.1-flash",
+      "selection": "low",
+      "controls": {
+        "reasoning_effort": "low",
+        "thinking": true
+      }
+    },
+    {
+      "global": "low",
+      "provider": "evren",
+      "model": "deepseek-v4.1-flash",
+      "selection": "medium",
+      "controls": {
+        "reasoning_effort": "high",
+        "thinking": true
+      }
+    },
+    {
+      "global": "low",
+      "provider": "evren",
+      "model": "deepseek-v4.1-flash",
+      "selection": "high",
+      "controls": {
+        "reasoning_effort": "high",
+        "thinking": true
+      }
+    },
+    {
+      "global": "low",
+      "provider": "evren",
+      "model": "glm-5.3",
+      "selection": "default",
+      "controls": {
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "global": "low",
+      "provider": "evren",
+      "model": "glm-5.3",
+      "selection": "enabled",
+      "controls": {
+        "reasoning_effort": "low",
+        "thinking": true
+      }
+    },
+    {
+      "global": "low",
+      "provider": "evren",
+      "model": "glm-5.3",
+      "selection": "disabled",
+      "controls": {
+        "reasoning_effort": "low",
+        "thinking": false
+      }
+    },
+    {
+      "global": "low",
+      "provider": "evren",
+      "model": "glm-5.3",
+      "selection": "minimal",
+      "controls": {
+        "reasoning_effort": "low",
+        "thinking": true
+      }
+    },
+    {
+      "global": "low",
+      "provider": "evren",
+      "model": "glm-5.3",
+      "selection": "low",
+      "controls": {
+        "reasoning_effort": "low",
+        "thinking": true
+      }
+    },
+    {
+      "global": "low",
+      "provider": "evren",
+      "model": "glm-5.3",
+      "selection": "medium",
+      "controls": {
+        "reasoning_effort": "high",
+        "thinking": true
+      }
+    },
+    {
+      "global": "low",
+      "provider": "evren",
+      "model": "glm-5.3",
+      "selection": "high",
+      "controls": {
+        "reasoning_effort": "high",
+        "thinking": true
+      }
+    },
+    {
+      "global": "low",
+      "provider": "opencode",
+      "model": "beam-free",
+      "selection": "default",
+      "controls": {
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "global": "low",
+      "provider": "opencode",
+      "model": "beam-free",
+      "selection": "low",
+      "controls": {
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "global": "low",
+      "provider": "opencode",
+      "model": "beam-free",
+      "selection": "medium",
+      "controls": {
+        "reasoning_effort": "medium"
+      }
+    },
+    {
+      "global": "low",
+      "provider": "opencode",
+      "model": "beam-free",
+      "selection": "high",
+      "controls": {
+        "reasoning_effort": "high"
+      }
+    },
+    {
+      "global": "low",
+      "provider": "opencode",
+      "model": "beam-free",
+      "selection": "xhigh",
+      "controls": {
+        "reasoning_effort": "xhigh"
+      }
+    },
+    {
+      "global": "low",
+      "provider": "opencode",
+      "model": "beam-free",
+      "selection": "max",
+      "controls": {
+        "reasoning_effort": "max"
+      }
+    },
+    {
+      "global": "low",
+      "provider": "opencode",
+      "model": "big-pickle",
+      "selection": "default",
+      "controls": {
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "global": "low",
+      "provider": "opencode",
+      "model": "deepseek-v4.1-flash-free",
+      "selection": "default",
+      "controls": {
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "global": "low",
+      "provider": "opencode",
+      "model": "deepseek-v4.1-flash-free",
+      "selection": "low",
+      "controls": {
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "global": "low",
+      "provider": "opencode",
+      "model": "deepseek-v4.1-flash-free",
+      "selection": "high",
+      "controls": {
+        "reasoning_effort": "high"
+      }
+    },
+    {
+      "global": "low",
+      "provider": "opencode",
+      "model": "deepseek-v4.1-flash-free",
+      "selection": "max",
+      "controls": {
+        "reasoning_effort": "max"
+      }
+    },
+    {
+      "global": "low",
+      "provider": "opencode",
+      "model": "flint-40b-free",
+      "selection": "default",
+      "controls": {
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "global": "low",
+      "provider": "opencode",
+      "model": "flint-40b-free",
+      "selection": "low",
+      "controls": {
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "global": "low",
+      "provider": "opencode",
+      "model": "flint-40b-free",
+      "selection": "medium",
+      "controls": {
+        "reasoning_effort": "medium"
+      }
+    },
+    {
+      "global": "low",
+      "provider": "opencode",
+      "model": "flint-40b-free",
+      "selection": "high",
+      "controls": {
+        "reasoning_effort": "high"
+      }
+    },
+    {
+      "global": "low",
+      "provider": "opencode",
+      "model": "flint-40b-free",
+      "selection": "xhigh",
+      "controls": {
+        "reasoning_effort": "xhigh"
+      }
+    },
+    {
+      "global": "low",
+      "provider": "opencode",
+      "model": "flint-40b-free",
+      "selection": "max",
+      "controls": {
+        "reasoning_effort": "max"
+      }
+    },
+    {
+      "global": "low",
+      "provider": "opencode",
+      "model": "glm-5.3-flash-free",
+      "selection": "default",
+      "controls": {
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "global": "low",
+      "provider": "opencode",
+      "model": "glm-5.3-flash-free",
+      "selection": "low",
+      "controls": {
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "global": "low",
+      "provider": "opencode",
+      "model": "glm-5.3-flash-free",
+      "selection": "high",
+      "controls": {
+        "reasoning_effort": "high"
+      }
+    },
+    {
+      "global": "low",
+      "provider": "opencode",
+      "model": "glm-5.3-flash-free",
+      "selection": "max",
+      "controls": {
+        "reasoning_effort": "max"
+      }
+    },
+    {
+      "global": "low",
+      "provider": "opencode",
+      "model": "mimo-v2.6-flash-free",
+      "selection": "default",
+      "controls": {
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "global": "low",
+      "provider": "opencode",
+      "model": "nemotron-3-ultra-free",
+      "selection": "default",
+      "controls": {
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "global": "low",
+      "provider": "opencode",
+      "model": "nemotron-3.5-lightning-free",
+      "selection": "default",
+      "controls": {
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "global": "low",
+      "provider": "opencode",
+      "model": "nemotron-3.5-super-vl-free",
+      "selection": "default",
+      "controls": {
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "global": "low",
+      "provider": "opencode",
+      "model": "nemotron-3.5-super-vl-free",
+      "selection": "none",
+      "controls": {
+        "reasoning_effort": "none"
+      }
+    },
+    {
+      "global": "low",
+      "provider": "opencode",
+      "model": "nemotron-3.5-super-vl-free",
+      "selection": "minimal",
+      "controls": {
+        "reasoning_effort": "minimal"
+      }
+    },
+    {
+      "global": "low",
+      "provider": "opencode",
+      "model": "nemotron-3.5-super-vl-free",
+      "selection": "low",
+      "controls": {
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "global": "low",
+      "provider": "opencode",
+      "model": "nemotron-3.5-super-vl-free",
+      "selection": "medium",
+      "controls": {
+        "reasoning_effort": "medium"
+      }
+    },
+    {
+      "global": "low",
+      "provider": "opencode",
+      "model": "nemotron-3.5-super-vl-free",
+      "selection": "high",
+      "controls": {
+        "reasoning_effort": "high"
+      }
+    },
+    {
+      "global": "low",
+      "provider": "opencode",
+      "model": "nemotron-3.5-super-vl-free",
+      "selection": "xhigh",
+      "controls": {
+        "reasoning_effort": "xhigh"
+      }
+    },
+    {
+      "global": "high",
+      "provider": "evren",
+      "model": "gemma-4-31b",
+      "selection": "default",
+      "controls": {
+        "reasoning_effort": "high"
+      }
+    },
+    {
+      "global": "high",
+      "provider": "evren",
+      "model": "gemma-4-31b",
+      "selection": "enabled",
+      "controls": {
+        "reasoning_effort": "high",
+        "thinking": true
+      }
+    },
+    {
+      "global": "high",
+      "provider": "evren",
+      "model": "gemma-4-31b",
+      "selection": "disabled",
+      "controls": {
+        "reasoning_effort": "high",
+        "thinking": false
+      }
+    },
+    {
+      "global": "high",
+      "provider": "evren",
+      "model": "qwen3.8-flash-next",
+      "selection": "default",
+      "controls": {
+        "reasoning_effort": "high"
+      }
+    },
+    {
+      "global": "high",
+      "provider": "evren",
+      "model": "qwen3.8-flash-next",
+      "selection": "enabled",
+      "controls": {
+        "reasoning_effort": "high",
+        "thinking": true
+      }
+    },
+    {
+      "global": "high",
+      "provider": "evren",
+      "model": "qwen3.8-flash-next",
+      "selection": "disabled",
+      "controls": {
+        "reasoning_effort": "high",
+        "thinking": false
+      }
+    },
+    {
+      "global": "high",
+      "provider": "evren",
+      "model": "qwen3.8-flash-next",
+      "selection": "high",
+      "controls": {
+        "reasoning_effort": "xhigh",
+        "thinking": true
+      }
+    },
+    {
+      "global": "high",
+      "provider": "evren",
+      "model": "qwen3.8-flash-next",
+      "selection": "xhigh",
+      "controls": {
+        "reasoning_effort": "xhigh",
+        "thinking": true
+      }
+    },
+    {
+      "global": "high",
+      "provider": "evren",
+      "model": "mimo-v2.6-pro",
+      "selection": "default",
+      "controls": {
+        "reasoning_effort": "high"
+      }
+    },
+    {
+      "global": "high",
+      "provider": "evren",
+      "model": "mimo-v2.6-pro",
+      "selection": "enabled",
+      "controls": {
+        "reasoning_effort": "high",
+        "thinking": true
+      }
+    },
+    {
+      "global": "high",
+      "provider": "evren",
+      "model": "mimo-v2.6-pro",
+      "selection": "disabled",
+      "controls": {
+        "reasoning_effort": "high",
+        "thinking": false
+      }
+    },
+    {
+      "global": "high",
+      "provider": "evren",
+      "model": "mimo-v2.6-pro",
+      "selection": "none",
+      "controls": {
+        "reasoning_effort": "none",
+        "thinking": false
+      }
+    },
+    {
+      "global": "high",
+      "provider": "evren",
+      "model": "mimo-v2.6-pro",
+      "selection": "minimal",
+      "controls": {
+        "reasoning_effort": "minimal",
+        "thinking": true
+      }
+    },
+    {
+      "global": "high",
+      "provider": "evren",
+      "model": "mimo-v2.6-pro",
+      "selection": "low",
+      "controls": {
+        "reasoning_effort": "low",
+        "thinking": true
+      }
+    },
+    {
+      "global": "high",
+      "provider": "evren",
+      "model": "mimo-v2.6-pro",
+      "selection": "medium",
+      "controls": {
+        "reasoning_effort": "medium",
+        "thinking": true
+      }
+    },
+    {
+      "global": "high",
+      "provider": "evren",
+      "model": "mimo-v2.6-pro",
+      "selection": "high",
+      "controls": {
+        "reasoning_effort": "high",
+        "thinking": true
+      }
+    },
+    {
+      "global": "high",
+      "provider": "evren",
+      "model": "mimo-v2.6-pro",
+      "selection": "xhigh",
+      "controls": {
+        "reasoning_effort": "xhigh",
+        "thinking": true
+      }
+    },
+    {
+      "global": "high",
+      "provider": "evren",
+      "model": "deepseek-v4.1-flash",
+      "selection": "default",
+      "controls": {
+        "reasoning_effort": "high"
+      }
+    },
+    {
+      "global": "high",
+      "provider": "evren",
+      "model": "deepseek-v4.1-flash",
+      "selection": "enabled",
+      "controls": {
+        "reasoning_effort": "high",
+        "thinking": true
+      }
+    },
+    {
+      "global": "high",
+      "provider": "evren",
+      "model": "deepseek-v4.1-flash",
+      "selection": "disabled",
+      "controls": {
+        "reasoning_effort": "high",
+        "thinking": false
+      }
+    },
+    {
+      "global": "high",
+      "provider": "evren",
+      "model": "deepseek-v4.1-flash",
+      "selection": "minimal",
+      "controls": {
+        "reasoning_effort": "low",
+        "thinking": true
+      }
+    },
+    {
+      "global": "high",
+      "provider": "evren",
+      "model": "deepseek-v4.1-flash",
+      "selection": "low",
+      "controls": {
+        "reasoning_effort": "low",
+        "thinking": true
+      }
+    },
+    {
+      "global": "high",
+      "provider": "evren",
+      "model": "deepseek-v4.1-flash",
+      "selection": "medium",
+      "controls": {
+        "reasoning_effort": "high",
+        "thinking": true
+      }
+    },
+    {
+      "global": "high",
+      "provider": "evren",
+      "model": "deepseek-v4.1-flash",
+      "selection": "high",
+      "controls": {
+        "reasoning_effort": "high",
+        "thinking": true
+      }
+    },
+    {
+      "global": "high",
+      "provider": "evren",
+      "model": "glm-5.3",
+      "selection": "default",
+      "controls": {
+        "reasoning_effort": "high"
+      }
+    },
+    {
+      "global": "high",
+      "provider": "evren",
+      "model": "glm-5.3",
+      "selection": "enabled",
+      "controls": {
+        "reasoning_effort": "high",
+        "thinking": true
+      }
+    },
+    {
+      "global": "high",
+      "provider": "evren",
+      "model": "glm-5.3",
+      "selection": "disabled",
+      "controls": {
+        "reasoning_effort": "high",
+        "thinking": false
+      }
+    },
+    {
+      "global": "high",
+      "provider": "evren",
+      "model": "glm-5.3",
+      "selection": "minimal",
+      "controls": {
+        "reasoning_effort": "low",
+        "thinking": true
+      }
+    },
+    {
+      "global": "high",
+      "provider": "evren",
+      "model": "glm-5.3",
+      "selection": "low",
+      "controls": {
+        "reasoning_effort": "low",
+        "thinking": true
+      }
+    },
+    {
+      "global": "high",
+      "provider": "evren",
+      "model": "glm-5.3",
+      "selection": "medium",
+      "controls": {
+        "reasoning_effort": "high",
+        "thinking": true
+      }
+    },
+    {
+      "global": "high",
+      "provider": "evren",
+      "model": "glm-5.3",
+      "selection": "high",
+      "controls": {
+        "reasoning_effort": "high",
+        "thinking": true
+      }
+    },
+    {
+      "global": "high",
+      "provider": "opencode",
+      "model": "beam-free",
+      "selection": "default",
+      "controls": {
+        "reasoning_effort": "high"
+      }
+    },
+    {
+      "global": "high",
+      "provider": "opencode",
+      "model": "beam-free",
+      "selection": "low",
+      "controls": {
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "global": "high",
+      "provider": "opencode",
+      "model": "beam-free",
+      "selection": "medium",
+      "controls": {
+        "reasoning_effort": "medium"
+      }
+    },
+    {
+      "global": "high",
+      "provider": "opencode",
+      "model": "beam-free",
+      "selection": "high",
+      "controls": {
+        "reasoning_effort": "high"
+      }
+    },
+    {
+      "global": "high",
+      "provider": "opencode",
+      "model": "beam-free",
+      "selection": "xhigh",
+      "controls": {
+        "reasoning_effort": "xhigh"
+      }
+    },
+    {
+      "global": "high",
+      "provider": "opencode",
+      "model": "beam-free",
+      "selection": "max",
+      "controls": {
+        "reasoning_effort": "max"
+      }
+    },
+    {
+      "global": "high",
+      "provider": "opencode",
+      "model": "big-pickle",
+      "selection": "default",
+      "controls": {
+        "reasoning_effort": "high"
+      }
+    },
+    {
+      "global": "high",
+      "provider": "opencode",
+      "model": "deepseek-v4.1-flash-free",
+      "selection": "default",
+      "controls": {
+        "reasoning_effort": "high"
+      }
+    },
+    {
+      "global": "high",
+      "provider": "opencode",
+      "model": "deepseek-v4.1-flash-free",
+      "selection": "low",
+      "controls": {
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "global": "high",
+      "provider": "opencode",
+      "model": "deepseek-v4.1-flash-free",
+      "selection": "high",
+      "controls": {
+        "reasoning_effort": "high"
+      }
+    },
+    {
+      "global": "high",
+      "provider": "opencode",
+      "model": "deepseek-v4.1-flash-free",
+      "selection": "max",
+      "controls": {
+        "reasoning_effort": "max"
+      }
+    },
+    {
+      "global": "high",
+      "provider": "opencode",
+      "model": "flint-40b-free",
+      "selection": "default",
+      "controls": {
+        "reasoning_effort": "high"
+      }
+    },
+    {
+      "global": "high",
+      "provider": "opencode",
+      "model": "flint-40b-free",
+      "selection": "low",
+      "controls": {
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "global": "high",
+      "provider": "opencode",
+      "model": "flint-40b-free",
+      "selection": "medium",
+      "controls": {
+        "reasoning_effort": "medium"
+      }
+    },
+    {
+      "global": "high",
+      "provider": "opencode",
+      "model": "flint-40b-free",
+      "selection": "high",
+      "controls": {
+        "reasoning_effort": "high"
+      }
+    },
+    {
+      "global": "high",
+      "provider": "opencode",
+      "model": "flint-40b-free",
+      "selection": "xhigh",
+      "controls": {
+        "reasoning_effort": "xhigh"
+      }
+    },
+    {
+      "global": "high",
+      "provider": "opencode",
+      "model": "flint-40b-free",
+      "selection": "max",
+      "controls": {
+        "reasoning_effort": "max"
+      }
+    },
+    {
+      "global": "high",
+      "provider": "opencode",
+      "model": "glm-5.3-flash-free",
+      "selection": "default",
+      "controls": {
+        "reasoning_effort": "high"
+      }
+    },
+    {
+      "global": "high",
+      "provider": "opencode",
+      "model": "glm-5.3-flash-free",
+      "selection": "low",
+      "controls": {
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "global": "high",
+      "provider": "opencode",
+      "model": "glm-5.3-flash-free",
+      "selection": "high",
+      "controls": {
+        "reasoning_effort": "high"
+      }
+    },
+    {
+      "global": "high",
+      "provider": "opencode",
+      "model": "glm-5.3-flash-free",
+      "selection": "max",
+      "controls": {
+        "reasoning_effort": "max"
+      }
+    },
+    {
+      "global": "high",
+      "provider": "opencode",
+      "model": "mimo-v2.6-flash-free",
+      "selection": "default",
+      "controls": {
+        "reasoning_effort": "high"
+      }
+    },
+    {
+      "global": "high",
+      "provider": "opencode",
+      "model": "nemotron-3-ultra-free",
+      "selection": "default",
+      "controls": {
+        "reasoning_effort": "high"
+      }
+    },
+    {
+      "global": "high",
+      "provider": "opencode",
+      "model": "nemotron-3.5-lightning-free",
+      "selection": "default",
+      "controls": {
+        "reasoning_effort": "high"
+      }
+    },
+    {
+      "global": "high",
+      "provider": "opencode",
+      "model": "nemotron-3.5-super-vl-free",
+      "selection": "default",
+      "controls": {
+        "reasoning_effort": "high"
+      }
+    },
+    {
+      "global": "high",
+      "provider": "opencode",
+      "model": "nemotron-3.5-super-vl-free",
+      "selection": "none",
+      "controls": {
+        "reasoning_effort": "none"
+      }
+    },
+    {
+      "global": "high",
+      "provider": "opencode",
+      "model": "nemotron-3.5-super-vl-free",
+      "selection": "minimal",
+      "controls": {
+        "reasoning_effort": "minimal"
+      }
+    },
+    {
+      "global": "high",
+      "provider": "opencode",
+      "model": "nemotron-3.5-super-vl-free",
+      "selection": "low",
+      "controls": {
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "global": "high",
+      "provider": "opencode",
+      "model": "nemotron-3.5-super-vl-free",
+      "selection": "medium",
+      "controls": {
+        "reasoning_effort": "medium"
+      }
+    },
+    {
+      "global": "high",
+      "provider": "opencode",
+      "model": "nemotron-3.5-super-vl-free",
+      "selection": "high",
+      "controls": {
+        "reasoning_effort": "high"
+      }
+    },
+    {
+      "global": "high",
+      "provider": "opencode",
+      "model": "nemotron-3.5-super-vl-free",
+      "selection": "xhigh",
+      "controls": {
+        "reasoning_effort": "xhigh"
+      }
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+[
+  {
+    "id": "easy",
+    "prompt": "Compute 37*43 + 19*23. Return only the final integer.",
+    "expected": 2028
+  },
+  {
+    "id": "assignment",
+    "prompt": "Assign four workers (rows 1..4) to four jobs (columns 1..4), using each job once. Cost matrix: [[17,8,21,14],[9,19,7,16],[12,6,18,9],[15,11,13,5]]. Minimize total cost. Return only JSON with keys cost (integer minimum) and jobs (array of four 1-based column numbers, in row order).",
+    "costs": [
+      [
+        17,
+        8,
+        21,
+        14
+      ],
+      [
+        9,
+        19,
+        7,
+        16
+      ],
+      [
+        12,
+        6,
+        18,
+        9
+      ],
+      [
+        15,
+        11,
+        13,
+        5
+      ]
+    ],
+    "optimum": 32
+  }
+]

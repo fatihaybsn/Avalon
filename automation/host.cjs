@@ -9,20 +9,27 @@ const { createRequire } = require("node:module");
 const { checkEditorFlows } = require("./flows.cjs");
 const { bus } = require("./nodes/avalon.js");
 
+function runtimeSettings(install, userDir) {
+  const fromInstall = createRequire(path.join(install, "package.json"));
+  return {
+    userDir, flowFile: path.join(userDir, "flows.json"), httpNodeRoot: false,
+    coreNodesDir: path.dirname(fromInstall.resolve("@node-red/nodes/package.json")),
+    nodesDir: path.join(__dirname, "nodes"),
+    nodesIncludes: ["avalon.js", "10-switch.js", "15-change.js", "25-catch.js", "90-comment.js"],
+    telemetry: { enabled: false, updateNotification: false },
+    externalModules: { autoInstall: false, palette: { allowInstall: false, allowUpload: false } },
+    logging: { console: { level: "warn", metrics: false, audit: false } },
+  };
+}
+
 async function main() {
   const [mode, install, userDir] = process.argv.slice(2);
   if (mode !== "editor" && mode !== "execute") throw new Error("Invalid Node-RED host mode");
   const fromInstall = createRequire(path.join(install, "package.json"));
   const RED = fromInstall("node-red");
-  const flowFile = path.join(userDir, "flows.json");
-  const localFlows = JSON.parse(fs.readFileSync(flowFile, "utf8"));
+  const settings = runtimeSettings(install, userDir);
+  const localFlows = JSON.parse(fs.readFileSync(settings.flowFile, "utf8"));
   checkEditorFlows(localFlows);
-  const settings = {
-    userDir, flowFile, httpNodeRoot: false, coreNodesDir: path.join(__dirname, "nodes"),
-    telemetry: { enabled: false, updateNotification: false },
-    externalModules: { autoInstall: false, palette: { allowInstall: false, allowUpload: false } },
-    logging: { console: { level: "warn", metrics: false, audit: false } },
-  };
 
   process.once("disconnect", () => process.exit(0));
   if (mode === "execute") {
@@ -31,8 +38,8 @@ async function main() {
     await RED.start();
     await flowsStarted;
     process.on("message", (message) => {
-      if (message.kind === "start") bus.emit("start");
-      if (message.kind === "stepResult") bus.emit(message.id, message.ok);
+      if (message.kind === "start") bus.emit("start", message);
+      if (message.kind === "taskResult") bus.emit("result:" + message.requestId, message.result);
     });
     process.send({ kind: "ready" });
     return;
@@ -45,8 +52,9 @@ async function main() {
   const json = express.json({ limit: "2mb" });
   RED.init(server, {
     ...settings, httpAdminRoot: "/",
-    paletteCategories: ["Avalon"],
+    paletteCategories: ["Avalon", "function", "common"],
     editorTheme: {
+      menu: { "menu-item-export": false },
       tours: false, page: { title: "Avalon | Akış Düzenleyicisi", css: path.join(__dirname, "editor.css") },
       header: { title: "Avalon | Akış Düzenleyicisi" },
     },
@@ -89,7 +97,8 @@ async function main() {
   process.send({ kind: "ready", port: server.address().port, token });
 }
 
-main().catch((error) => {
+module.exports = { runtimeSettings };
+if (require.main === module) main().catch((error) => {
   if (process.connected) process.send({ kind: "error", error: error.message }, () => process.exit(1));
   else process.exit(1);
 });

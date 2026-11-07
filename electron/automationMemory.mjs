@@ -5,7 +5,21 @@ import { canonicalUrl, writeJson } from "./researchStore.mjs";
 const localName = /^[a-zA-Z0-9_-]+\.md$/;
 const groupName = /^[a-z][a-z0-9_-]{0,39}$/;
 const outcomes = new Set(["completed", "pending"]);
-const manifest = /^\x60{3}avalon-records[ \t]*\r?\n([\s\S]*?)^\x60{3}[ \t]*\r?$/gm;
+const manifest = /^\x60{3}(avalon-records|json)[ \t]*\r?\n([\s\S]*?)^\x60{3}[ \t]*\r?$/gm;
+
+function recordBlocks(markdown) {
+  return [...markdown.matchAll(manifest)].flatMap((match) => {
+    try {
+      const value = JSON.parse(match[2]);
+      if (match[1] === "avalon-records" || (Array.isArray(value?.records) && Array.isArray(value?.coverage))) {
+        return [{ text: match[0], value }];
+      }
+    } catch (error) {
+      if (match[1] === "avalon-records") throw new Error("Avalon kayıt bloğundaki JSON okunamadı.", { cause: error });
+    }
+    return [];
+  });
+}
 
 function load(file, fallback) {
   try { return JSON.parse(fs.readFileSync(file, "utf8")); }
@@ -15,8 +29,20 @@ function load(file, fallback) {
   }
 }
 
+function domainIdentity(value) {
+  const url = new URL(value);
+  const host = url.hostname.replace(/^www\./, "");
+  // A LinkedIn host contains many companies; the company profile identifies the entity.
+  const profile = /^\/company\/([^/]+)(?:\/|$)/i.exec(url.pathname);
+  if ((host === "linkedin.com" || host.endsWith(".linkedin.com")) && profile) {
+    return `linkedin.com/company/${profile[1].toLowerCase()}`;
+  }
+  return host;
+}
+
 export function withoutRecordManifest(markdown) {
-  return markdown.replace(manifest, "").trim();
+  for (const block of recordBlocks(markdown)) markdown = markdown.replace(block.text, "");
+  return markdown.trim();
 }
 
 export function openAutomationMemory(root, flow) {
@@ -99,15 +125,23 @@ export function openAutomationMemory(root, flow) {
     commit(step, markdown) {
       const settings = Object.hasOwn(byStep, step.id) && byStep[step.id];
       if (!settings?.group && !settings?.coverage) return;
-      const blocks = [...markdown.matchAll(manifest)];
+      const blocks = recordBlocks(markdown);
       if (blocks.length !== 1) throw new Error("Raporda doğrulanabilir Avalon kayıt bloğu bulunamadı.");
-      const { records, coverage: updates } = JSON.parse(blocks[0][1]);
+      const { records, coverage: updates } = blocks[0].value;
       if (!Array.isArray(records) || !Array.isArray(updates) || records.length > 1000 || updates.length > 1000 ||
-          (!settings.group && records.length) || (!settings.coverage && updates.length)) throw new Error("Avalon kayıt bloğu geçersiz.");
+          (!settings.group && !settings.coverage && records.length) || (!settings.coverage && updates.length)) throw new Error("Avalon kayıt bloğu geçersiz.");
       const now = Date.now();
       const existing = new Map(group(settings.group).map((item) => [item.key, item]));
+      const knownIdentities = new Map([...existing.values()].flatMap((item) => {
+        const url = canonicalUrl(item.url);
+        return url ? [[domainIdentity(url), item.key]] : [];
+      }));
       const queue = queueFor(step.id, settings.coverage);
       const allowed = new Set(queue.map(({ key }) => key));
+      // Coverage-only stages may repeat the input records. They cannot rewrite that group.
+      if (!settings.group && records.some((item) => !allowed.has(keyFor(item?.key)))) {
+        throw new Error("İşleme sonucunda kuyruk dışında bir kayıt var.");
+      }
       const nextCoverage = { ...coverage(step.id) };
       for (const key of allowed) nextCoverage[key] = { status: "pending", at: now };
       const accounted = new Set();
@@ -119,9 +153,11 @@ export function openAutomationMemory(root, flow) {
         nextCoverage[key] = { status: item.status, at: now, note: item.note.trim() };
       }
       const seen = new Set();
-      for (const item of records) {
+      for (const item of settings.group ? records : []) {
         const url = canonicalUrl(item?.url);
-        const key = settings.identity === "domain" && url ? new URL(url).hostname.replace(/^www\./, "") : keyFor(item?.key);
+        const identity = settings.identity === "domain" && url ? domainIdentity(url) : keyFor(item?.key);
+        // Keep older keys stable so existing analysis/coverage references still match.
+        const key = keyFor(settings.identity === "domain" ? knownIdentities.get(identity) || identity : identity);
         if (seen.has(key) || !url || !outcomes.has(item.status) ||
             typeof item.name !== "string" || !item.name.trim() || item.name.length > 240 ||
             typeof item.note !== "string" || !item.note.trim() || item.note.length > 300) {

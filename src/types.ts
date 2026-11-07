@@ -36,7 +36,7 @@ export type HermesInteraction = {
 
 export type TaskCard = {
   id: string;
-  kind?: "research" | "deep_research";
+  kind?: "research" | "deep_research" | "automation";
   phase?: string;
   startedAt?: number;
   deadline?: number;

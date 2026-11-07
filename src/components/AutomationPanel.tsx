@@ -6,7 +6,24 @@ const days = ["Pazar", "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", 
 const statusLabel: Record<string, string> = {
   waiting: "Bekliyor", starting: "Başlıyor", running: "Çalışıyor", completed: "Tamamlandı",
   partial: "Kısmi sonuç", failed: "Başarısız", interrupted: "Kesildi", cancelled: "Durduruldu",
+  needs_review: "İnceleme gerekiyor", waiting_for_approval: "Onay bekliyor", waiting_for_input: "Yanıt bekliyor",
 };
+type AutomationStep = AutomationFlow["history"][number]["steps"][number];
+
+function AutomationInput({ step, onReply, busy }: { step: AutomationStep; onReply: (value: string) => void; busy: boolean }) {
+  const [value, setValue] = useState("");
+  const interaction = step.interaction;
+  if (!interaction) return null;
+  return <div className="automation-step-actions" role="group" aria-label="Görev kullanıcı girişi">
+    <p>{interaction.question}</p>
+    {interaction.command && <pre>{interaction.command}</pre>}
+    {interaction.type === "approval" ? interaction.choices.map((choice) => <button key={choice} type="button" className="automation-button compact" disabled={busy}
+      onClick={() => onReply(choice)}>{choice === "once" ? "Bu kez izin ver" : "Reddet"}</button>) : <>
+      <label>Yanıt<input value={value} maxLength={12000} onChange={(event) => setValue(event.target.value)} /></label>
+      <button type="button" className="automation-button compact" disabled={busy || !value.trim()} onClick={() => { onReply(value); setValue(""); }}>Gönder</button>
+    </>}
+  </div>;
+}
 const dateLabel = (value: number | string) => new Date(value).toLocaleString("tr-TR", { timeZone: "Europe/Istanbul" });
 const defaultSchedule = (): ResearchSchedule => ({
   kind: "weekly", day: 1, time: "11:30", timezone: "Europe/Istanbul",
@@ -34,7 +51,6 @@ export default function AutomationPanel({ onOpenTask, schedulerAvailable, mobile
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [confirmRemove, setConfirmRemove] = useState("");
-  const [confirmCancel, setConfirmCancel] = useState("");
   async function refresh() {
     const value = await window.iris.listAutomations?.();
     if (value) setSnapshot(value);
@@ -56,8 +72,12 @@ export default function AutomationPanel({ onOpenTask, schedulerAvailable, mobile
       <h3>Otomasyonlar</h3>
       {!mobile && snapshot?.installed && <button type="button" className="automation-button" disabled={Boolean(busy)}
         onClick={() => void run("editor", () => window.iris.openAutomationEditor?.())}>
-        <Workflow size={15} aria-hidden="true" /> Akışı düzenle
+        <Workflow size={15} aria-hidden="true" /> Yeni otomasyon oluştur / düzenle
       </button>}
+      {!mobile && snapshot?.installed && <label className="automation-button">JSON içe aktar<input type="file" accept="application/json,.json" disabled={Boolean(busy)} onChange={(event) => {
+        const file = event.target.files?.[0]; event.target.value = "";
+        if (file) void run("import", async () => { if (file.size > 2_000_000) throw new Error("JSON dosyası 2 MB sınırını aşıyor."); await window.iris.importAutomation?.(JSON.parse(await file.text())); });
+      }} /></label>}
     </div>
     {error && <p className="research-error" role="alert">{error}</p>}
     {!snapshot && <p className="research-help">Otomasyonlar yükleniyor…</p>}
@@ -73,40 +93,49 @@ export default function AutomationPanel({ onOpenTask, schedulerAvailable, mobile
         const schedule = flow.schedule;
         const last = flow.history[0];
         const editing = draft?.id === flow.id;
+        const displayedSteps: AutomationStep[] = last?.steps.length ? last.steps : flow.steps?.map((step) => ({ ...step, status: "waiting" })) || [];
         return <article className="scheduled-card automation-card" key={flow.id}>
           <header className="automation-card-header"><strong>{flow.name}</strong>
             <span className="automation-status" data-status={schedule ? schedule.paused ? "partial" : "enabled" : "waiting"}>{schedule ? schedule.paused ? "Duraklatıldı" : "Etkin" : "Zamanlanmadı"}</span>
           </header>
           {flow.error && <p className="research-error">{flow.error}</p>}
           {schedule?.error && <p className="research-error">{schedule.error}</p>}
-          {schedule?.lastSkip && <p className="research-help">{schedule.lastSkip.reason === "already_running" ? "Önceki tur hâlâ çalışıyor." : "Bu tetikleme daha önce işlendi."}</p>}
+          {schedule?.lastSkip && <p className="research-help">{schedule.lastSkip.reason === "needs_review" ? "Önceki Hermes görevi inceleme beklediği için tetikleme durduruldu." : schedule.lastSkip.reason === "already_running" ? "Önceki tur hâlâ çalışıyor." : "Bu tetikleme daha önce işlendi."}</p>}
+          {flow.needsReview && <div className="research-error"><p>Hermes'in durduğu doğrulanamadı. Önceki görevleri ve dış işlemleri kontrol edin; yeni başlangıçlar inceleme kaydınızı bekliyor.</p>
+            <button type="button" className="automation-button" disabled={Boolean(busy)} onClick={() => void run("review", () => window.iris.acknowledgeAutomationReview?.(flow.id, flow.needsReview!.runId))}>Görevi ve dış işlemleri kontrol ettim</button></div>}
           {schedule && <p>{schedule.spec.kind === "weekly" ? days[schedule.spec.day] : schedule.spec.kind === "daily" ? "Her gün" : schedule.spec.date} · {schedule.spec.time} · Sonraki {schedule.nextRunAt ? dateLabel(schedule.nextRunAt) : "—"}</p>}
+          <p className="research-help">Her tur, Ayarlar → Beyin’de kaydedilen güncel model ve düşünme seviyesiyle başlar. Tur boyunca seçim korunur.</p>
           {last && <p>Son tur {dateLabel(last.startedAt)} · {statusLabel[last.status] || last.status}</p>}
+          {last?.modelLabel && <p className="research-help">Son turun modeli: {last.modelLabel}</p>}
           {last?.error && <p className="research-error">{last.error}</p>}
-          <ol className="automation-steps">{(last?.steps.length ? last.steps : flow.steps?.map((step) => ({ ...step, status: "waiting", task: undefined })))?.map((step, index) =>
-            <li key={step.id}>
+          <ol className="automation-steps">{displayedSteps.map((step, index) =>
+            <li key={step.attemptId || step.id}>
               <span className="automation-step-index" aria-hidden="true">{index + 1}</span>
-              <span className="automation-step-name">{step.name}</span>
+              <span className="automation-step-name">{step.name}{(step.attempt || 0) > 1 ? ` · Deneme ${step.attempt}` : ""}</span>
               <span className="automation-status" data-status={step.status}>{statusLabel[step.status] || step.status}</span>
               {(step.task?.output || (!mobile && step.task && step.status === "running")) && <div className="automation-step-actions">
-                {step.task?.output && <button type="button" className="automation-button compact" onClick={() => onOpenTask(step.task!)}><FileText size={14} aria-hidden="true" /> Raporu aç</button>}
-                {!mobile && step.task && step.status === "running" && <button type="button" className="automation-button compact" disabled={Boolean(busy)} onClick={() => void run("stop", () => window.iris.stopTask(step.task!.id))}>Durdur</button>}
+                {step.task?.output && <button type="button" className="automation-button compact" onClick={() => onOpenTask(step.task!)}><FileText size={14} aria-hidden="true" /> Sonucu aç</button>}
+                {!mobile && step.task?.outputPath && step.attemptId && last && <button type="button" className="automation-button compact" onClick={() => void run("output", () => window.iris.openAutomationOutput?.(flow.id, last.id, step.attemptId!))}>Dosya klasörünü aç</button>}
               </div>}
+              {step.kind === "hermes" && Boolean(step.files?.length) && <ul>{step.files!.map((file) => <li key={file}><code>{file}</code></li>)}</ul>}
+              {step.interaction && last && window.iris.respondAutomation && <AutomationInput step={step} busy={Boolean(busy)} onReply={(value) => void run("respond", () =>
+                window.iris.respondAutomation?.(flow.id, last.id, step.attemptId!, step.interaction!.id, value))} />}
             </li>)}</ol>
           {!editing && <div className="automation-actions">
-            {!mobile && schedule && <button type="button" className="automation-button primary" disabled={Boolean(busy || flow.error || schedule.paused || last?.status === "running") || !schedulerAvailable}
-              onClick={() => void run("run", () => window.iris.researchScheduleAction(schedule.id, "run"))}><Play size={14} aria-hidden="true" /> Şimdi çalıştır</button>}
+            {!mobile && <button type="button" className="automation-button primary" disabled={Boolean(busy || flow.error || flow.needsReview || last?.status === "running")}
+              onClick={() => void run("run", () => window.iris.runAutomation?.(flow.id))}><Play size={14} aria-hidden="true" /> Şimdi çalıştır</button>}
+            {!mobile && <button type="button" className="automation-button" disabled={Boolean(busy || flow.error)} onClick={() => void run("export", async () => {
+              const data = await window.iris.exportAutomation?.(flow.id);
+              const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
+              const link = document.createElement("a"); link.href = url; link.download = "avalon-otomasyon-sablonu.json"; link.click();
+              window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+            })}>Güvenli JSON şablonu</button>}
+            {last?.status === "running" && <button type="button" className="automation-button danger" disabled={Boolean(busy)} onClick={() => void run("cancel", () => window.iris.cancelAutomationRun?.(flow.id, last.id))}>Turu iptal et</button>}
             {(!mobile || schedule) && <button type="button" className={`automation-button${schedule ? "" : " primary"}`} disabled={Boolean(busy || flow.error) || !schedulerAvailable} onClick={() => setDraft({ id: flow.id, schedule: { ...defaultSchedule(), ...schedule?.spec } })}><CalendarClock size={15} aria-hidden="true" /> {schedule ? "Zamanlamayı düzenle" : "Zamanla"}</button>}
             {schedule && <>
               <details className="automation-details"><summary>Diğer işlemler</summary>
                 <div className="automation-actions">
                   <button type="button" className="automation-button" disabled={Boolean(busy) || !schedulerAvailable} onClick={() => void run("pause", () => window.iris.researchScheduleAction(schedule.id, schedule.paused ? "resume" : "pause"))}>{schedule.paused ? "Devam et" : "Duraklat"}</button>
-                  {mobile && last?.status === "running" && (confirmCancel === last.id ? <>
-                    <button type="button" className="automation-button danger" disabled={Boolean(busy)} onClick={() => void run("cancel", async () => {
-                      await window.iris.cancelAutomationRun?.(flow.id, last.id); setConfirmCancel("");
-                    })}>Turu iptal etmeyi onayla</button>
-                    <button type="button" className="automation-button" onClick={() => setConfirmCancel("")}>Vazgeç</button>
-                  </> : <button type="button" className="automation-button danger" disabled={Boolean(busy)} onClick={() => setConfirmCancel(last.id)}>Bu turu iptal et</button>)}
                   {!mobile && (confirmRemove === flow.id ? <>
                     <button type="button" className="automation-button danger" disabled={Boolean(busy) || !schedulerAvailable} onClick={() => void run("remove", async () => { await window.iris.researchScheduleAction(schedule.id, "remove"); setConfirmRemove(""); })}>Kaldırmayı onayla</button>
                     <button type="button" className="automation-button" onClick={() => setConfirmRemove("")}>Vazgeç</button>
@@ -129,7 +158,8 @@ export default function AutomationPanel({ onOpenTask, schedulerAvailable, mobile
           {flow.history.length > 1 && <details className="automation-details"><summary>Önceki turlar</summary>
             {flow.history.slice(1).map((prior) => <div key={prior.id}>
               <p>{dateLabel(prior.startedAt)} · {statusLabel[prior.status] || prior.status}</p>
-              <div className="automation-actions">{prior.steps.filter((step) => step.task?.output).map((step) => <button type="button" className="automation-button compact" key={step.id} onClick={() => onOpenTask(step.task!)}>{step.name}</button>)}</div>
+              {prior.modelLabel && <p className="research-help">Model: {prior.modelLabel}</p>}
+              <div className="automation-actions">{prior.steps.filter((step) => step.task?.output).map((step) => <button type="button" className="automation-button compact" key={step.attemptId || step.id} onClick={() => onOpenTask(step.task!)}>{step.name}{(step.attempt || 0) > 1 ? ` · ${step.attempt}` : ""}</button>)}</div>
             </div>)}
           </details>}
         </article>;

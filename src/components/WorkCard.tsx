@@ -124,7 +124,7 @@ export default function WorkCard({
         <code title={task.id}>{shortRunId(task.id)}</code>
       </div>
       <p className="wcard-task">{task.task}</p>
-      {task.kind && <ResearchMeta task={task} />}
+      {(task.kind === "research" || task.kind === "deep_research") && <ResearchMeta task={task} />}
       {expandable ? (
         <div className="wcard-preview">{task.kind ? normalizeMarkdown(task.output || task.error).slice(0, 600) : normalizeMarkdown(task.error || task.output)}</div>
       ) : null}

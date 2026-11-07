@@ -1,0 +1,47 @@
+{
+  "at": "2026-11-05T14:56:36.558Z",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Compute 37*43 + 19*23. Return only the final integer."
+    }
+  ],
+  "max_tokens": 512,
+  "results": [
+    {
+      "model": "qwen3.8-flash-next",
+      "reasoning": "medium",
+      "controls": {
+        "thinking": true,
+        "reasoning_effort": "medium"
+      },
+      "max_tokens": 512,
+      "injectedHermesNone": false,
+      "reasoningChars": 177,
+      "content": "\n\n2028",
+      "chunks": 36,
+      "httpStatus": 200,
+      "headerSeconds": 0.26,
+      "requestId": "392b3875-9eb0-4762-9f2a-5972cebdbbaf",
+      "responseModel": "qwen/qwen3.8-flash-next",
+      "firstReasoningSeconds": 4.89,
+      "firstContentSeconds": 9.67,
+      "finishReason": "stop",
+      "usage": {
+        "prompt_tokens": 31,
+        "total_tokens": 150,
+        "completion_tokens": 119,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "created_cache_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 112
+        }
+      },
+      "completed": true,
+      "seconds": 9.96,
+      "correct": true
+    }
+  ]
+}

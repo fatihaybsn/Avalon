@@ -94,10 +94,11 @@ export class ResearchStore {
       createdAt: Date.now(), updatedAt: Date.now(), outputPath, lastActivity: "Araştırma hazırlanıyor." };
     fs.mkdirSync(outputPath, { recursive: true }); this.save(state); return state;
   }
-  reconcile() {
+  reconcile({ force = false, ids } = {}) {
     for (const state of this.list()) {
-      if (!RESEARCH_TERMINAL.has(state.status) && Date.now() - state.updatedAt > 20000 && !processAlive(state.pid)) {
-        const recovered = { ...state, status: "interrupted", phase: "done", error: "Araştırma çalıştırıcısı kesildi. Toplanan sonuçlar korundu.", finishedAt: Date.now() };
+      if (ids && !ids.includes(state.id)) continue;
+      if ((!RESEARCH_TERMINAL.has(state.status) || state.executionPending) && (force || Date.now() - state.updatedAt > 20000) && !processAlive(state.pid)) {
+        const recovered = { ...state, status: "interrupted", executionPending: false, phase: "done", error: "Araştırma çalıştırıcısı kesildi. Toplanan sonuçlar korundu.", finishedAt: Date.now() };
         const checkpoint = readJson(this.file(state.id, "checkpoint.json"));
         if (checkpoint?.engine === "gpt-researcher" && checkpoint.runId === state.id) {
           try {
